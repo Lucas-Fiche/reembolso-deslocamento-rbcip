@@ -1,0 +1,970 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Registro de Deslocamento — RBCIP</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,400;0,500;0,600;0,700&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #F4F6FA;
+  --surface: #FFFFFF;
+  --primary: #1A3A5C;
+  --primary-light: #2E6BAD;
+  --accent: #0EA5E9;
+  --accent-glow: rgba(14,165,233,.12);
+  --success: #10B981;
+  --success-bg: #ECFDF5;
+  --warning: #F59E0B;
+  --warning-bg: #FFFBEB;
+  --danger: #EF4444;
+  --danger-bg: #FEF2F2;
+  --text: #1E293B;
+  --text-secondary: #64748B;
+  --text-muted: #94A3B8;
+  --border: #E2E8F0;
+  --border-focus: #0EA5E9;
+  --radius: 14px;
+  --radius-sm: 10px;
+  --shadow-sm: 0 1px 3px rgba(0,0,0,.06);
+  --shadow-md: 0 4px 16px rgba(0,0,0,.08);
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+body {
+  font-family: 'DM Sans', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100dvh;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ── Header ── */
+.app-header {
+  background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
+  color: white;
+  padding: 20px 20px 24px;
+  position: sticky; top: 0; z-index: 100;
+  box-shadow: 0 4px 20px rgba(26,58,92,.25);
+}
+.app-header h1 { font-size: 18px; font-weight: 700; letter-spacing: -.3px; margin-bottom: 2px; }
+.app-header p { font-size: 13px; opacity: .75; }
+
+.container { max-width: 480px; margin: 0 auto; padding: 16px 16px 100px; }
+
+/* ── Cards ── */
+.card {
+  background: var(--surface);
+  border-radius: var(--radius);
+  padding: 20px;
+  margin-bottom: 14px;
+  box-shadow: var(--shadow-sm);
+  border: 1px solid var(--border);
+  animation: cardIn .4s ease both;
+}
+@keyframes cardIn { from { opacity:0; transform:translateY(12px); } to { opacity:1; transform:translateY(0); } }
+
+.card-title {
+  font-size: 13px; font-weight: 600; color: var(--text-secondary);
+  text-transform: uppercase; letter-spacing: .8px; margin-bottom: 14px;
+  display: flex; align-items: center; gap: 8px;
+}
+.card-title .icon {
+  width: 28px; height: 28px; border-radius: 8px;
+  display: flex; align-items: center; justify-content: center; font-size: 14px; flex-shrink: 0;
+}
+
+/* ── Form ── */
+.field { margin-bottom: 14px; }
+.field:last-child { margin-bottom: 0; }
+.field label { display: block; font-size: 13px; font-weight: 600; color: var(--text); margin-bottom: 6px; }
+.field label .req { color: var(--danger); margin-left: 2px; }
+.field input, .field select, .field textarea {
+  width: 100%; padding: 12px 14px;
+  border: 1.5px solid var(--border); border-radius: var(--radius-sm);
+  font-family: 'DM Sans', sans-serif; font-size: 15px; color: var(--text);
+  background: var(--surface); transition: border-color .2s, box-shadow .2s; outline: none;
+  -webkit-appearance: none;
+}
+.field input:focus, .field select:focus, .field textarea:focus {
+  border-color: var(--border-focus); box-shadow: 0 0 0 3px var(--accent-glow);
+}
+.field select {
+  padding-right: 36px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%2364748B' stroke-width='1.5' fill='none'/%3E%3C/svg%3E");
+  background-repeat: no-repeat; background-position: right 14px center;
+}
+.field textarea { resize: vertical; min-height: 80px; }
+.field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+
+/* ── Capture zones ── */
+.capture-zone {
+  border: 2px dashed var(--border); border-radius: var(--radius);
+  padding: 28px 16px; text-align: center; cursor: pointer;
+  transition: all .25s; position: relative; overflow: hidden;
+}
+.capture-zone:active { border-color: var(--accent); background: var(--accent-glow); }
+.capture-zone.has-photo { border-style: solid; border-color: var(--success); padding: 0; background: #000; }
+.capture-zone .placeholder-icon { font-size: 32px; margin-bottom: 8px; }
+.capture-zone .placeholder-text { font-size: 14px; color: var(--text-secondary); font-weight: 500; }
+.capture-zone .placeholder-sub { font-size: 12px; color: var(--text-muted); margin-top: 4px; }
+.capture-zone img { width: 100%; display: block; border-radius: calc(var(--radius) - 2px); }
+.capture-zone input[type="file"] { position: absolute; inset: 0; opacity: 0; cursor: pointer; font-size: 0; }
+
+.capture-meta {
+  margin-top: 8px; padding: 10px 12px;
+  background: var(--success-bg); border-radius: var(--radius-sm);
+  font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #065F46; line-height: 1.6;
+  display: none;
+}
+.capture-meta.visible { display: block; }
+.capture-meta .meta-row { display: flex; justify-content: space-between; align-items: center; }
+.capture-meta .meta-label { font-family: 'DM Sans', sans-serif; font-weight: 600; font-size: 11px; color: #047857; }
+
+/* ── GPS ── */
+.gps-status {
+  display: flex; align-items: center; gap: 8px;
+  padding: 10px 14px; border-radius: var(--radius-sm);
+  font-size: 13px; font-weight: 500; margin-bottom: 14px;
+}
+.gps-status.pending { background: var(--warning-bg); color: #92400E; }
+.gps-status.acquired { background: var(--success-bg); color: #065F46; }
+.gps-status.error { background: var(--danger-bg); color: #991B1B; }
+.gps-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+.gps-status.pending .gps-dot { background: var(--warning); animation: pulse 1.5s infinite; }
+.gps-status.acquired .gps-dot { background: var(--success); }
+.gps-status.error .gps-dot { background: var(--danger); }
+@keyframes pulse { 0%,100% { opacity:1; } 50% { opacity:.3; } }
+
+/* ── Toggle ── */
+.toggle-row { display: flex; align-items: center; justify-content: space-between; padding: 12px 0; }
+.toggle {
+  width: 48px; height: 28px; background: var(--border); border-radius: 14px;
+  position: relative; cursor: pointer; transition: background .25s; flex-shrink: 0;
+}
+.toggle.on { background: var(--accent); }
+.toggle .knob {
+  width: 22px; height: 22px; background: white; border-radius: 50%;
+  position: absolute; top: 3px; left: 3px; transition: transform .25s;
+  box-shadow: 0 1px 4px rgba(0,0,0,.15);
+}
+.toggle.on .knob { transform: translateX(20px); }
+.pedagio-fields { max-height: 0; overflow: hidden; transition: max-height .35s ease; }
+.pedagio-fields.open { max-height: 300px; }
+
+/* ── Buttons ── */
+.btn-primary {
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  width: 100%; padding: 16px; border: none; border-radius: var(--radius);
+  background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
+  color: white; font-family: 'DM Sans', sans-serif; font-size: 16px; font-weight: 700;
+  cursor: pointer; transition: transform .15s, box-shadow .2s; box-shadow: var(--shadow-md);
+}
+.btn-primary:active { transform: scale(.98); }
+.btn-primary:disabled { opacity: .5; cursor: not-allowed; transform: none; }
+
+.btn-checkin {
+  background: linear-gradient(135deg, #059669 0%, #10B981 100%);
+}
+.btn-checkout {
+  background: linear-gradient(135deg, #D97706 0%, #F59E0B 100%);
+  color: #1E293B;
+}
+
+.btn-secondary {
+  display: block; width: 100%; padding: 12px;
+  border: 1.5px solid var(--border); border-radius: var(--radius);
+  background: transparent; color: var(--text-secondary);
+  font-family: 'DM Sans', sans-serif; font-size: 14px; font-weight: 600;
+  cursor: pointer; margin-top: 10px;
+}
+
+/* ── Mode selector (home) ── */
+.mode-card {
+  background: var(--surface); border-radius: var(--radius);
+  padding: 24px 20px; margin-bottom: 14px;
+  box-shadow: var(--shadow-sm); border: 2px solid var(--border);
+  cursor: pointer; transition: all .25s; animation: cardIn .4s ease both;
+  display: flex; align-items: center; gap: 16px;
+}
+.mode-card:active { transform: scale(.98); border-color: var(--accent); }
+.mode-card .mode-icon {
+  width: 52px; height: 52px; border-radius: 14px;
+  display: flex; align-items: center; justify-content: center; font-size: 24px; flex-shrink: 0;
+}
+.mode-card .mode-info h3 { font-size: 16px; font-weight: 700; margin-bottom: 4px; }
+.mode-card .mode-info p { font-size: 13px; color: var(--text-secondary); line-height: 1.4; }
+
+/* ── Open trip badge ── */
+.open-trip-banner {
+  background: var(--warning-bg); border: 1.5px solid #FCD34D;
+  border-radius: var(--radius); padding: 14px 16px; margin-bottom: 14px;
+  display: none; animation: cardIn .3s ease both;
+}
+.open-trip-banner.visible { display: block; }
+.open-trip-banner .banner-title { font-size: 13px; font-weight: 700; color: #92400E; margin-bottom: 4px; }
+.open-trip-banner .banner-detail { font-size: 12px; color: #A16207; line-height: 1.5; }
+
+/* ── Sections ── */
+.section { display: none; }
+.section.active { display: block; }
+
+/* ── Success ── */
+.success-screen { text-align: center; padding: 40px 20px; animation: cardIn .5s ease both; }
+.success-icon {
+  width: 72px; height: 72px; background: var(--success-bg); border-radius: 50%;
+  display: flex; align-items: center; justify-content: center; margin: 0 auto 20px; font-size: 36px;
+}
+.success-screen h2 { font-size: 22px; color: var(--text); margin-bottom: 8px; }
+.success-screen p { font-size: 14px; color: var(--text-secondary); line-height: 1.6; }
+.success-id {
+  display: inline-block; margin-top: 16px; padding: 8px 16px;
+  background: var(--bg); border-radius: var(--radius-sm);
+  font-family: 'JetBrains Mono', monospace; font-size: 13px; color: var(--primary); font-weight: 500;
+}
+
+/* ── Loading ── */
+.loading-overlay {
+  position: fixed; inset: 0; background: rgba(255,255,255,.85);
+  backdrop-filter: blur(4px); display: none; align-items: center; justify-content: center;
+  z-index: 999; flex-direction: column; gap: 16px;
+}
+.loading-overlay.show { display: flex; }
+.spinner {
+  width: 40px; height: 40px; border: 3px solid var(--border);
+  border-top-color: var(--accent); border-radius: 50%; animation: spin .7s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+.loading-overlay p { font-size: 14px; color: var(--text-secondary); font-weight: 500; }
+
+/* ── Timestamp display ── */
+.live-clock {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 20px; font-weight: 500; color: var(--primary);
+  text-align: center; padding: 8px 0; letter-spacing: 1px;
+}
+</style>
+</head>
+<body>
+
+<header class="app-header">
+  <h1>Registro de Deslocamento</h1>
+  <p>RBCIP — Reembolso de Campo</p>
+</header>
+
+<div class="container">
+
+  <!-- ═══════════ HOME ═══════════ -->
+  <div class="section active" id="secHome">
+    <div class="open-trip-banner" id="openTripBanner">
+      <div class="banner-title">⚠️ Viagem em andamento</div>
+      <div class="banner-detail" id="openTripDetail"></div>
+    </div>
+
+    <div class="mode-card" onclick="startCheckin()" id="cardCheckin">
+      <div class="mode-icon" style="background:#ECFDF5;color:#059669">🚀</div>
+      <div class="mode-info">
+        <h3>Check-in (Saída)</h3>
+        <p>Registre o odômetro e sua localização antes de iniciar o deslocamento.</p>
+      </div>
+    </div>
+
+    <div class="mode-card" onclick="startCheckout()" id="cardCheckout" style="animation-delay:.1s;opacity:.5;pointer-events:none">
+      <div class="mode-icon" style="background:#FFFBEB;color:#D97706">🏁</div>
+      <div class="mode-info">
+        <h3>Check-out (Chegada)</h3>
+        <p>Finalize o registro, envie a foto de chegada e os dados do deslocamento.</p>
+      </div>
+    </div>
+
+    <div class="card" style="animation-delay:.2s;background:var(--bg);border:1px dashed var(--border)">
+      <p style="font-size:13px;color:var(--text-muted);line-height:1.6;text-align:center">
+        📋 Primeiro faça o <strong>check-in</strong> antes de sair. Ao chegar no destino (ou retornar), faça o <strong>check-out</strong> para completar a solicitação.
+      </p>
+    </div>
+  </div>
+
+  <!-- ═══════════ CHECK-IN ═══════════ -->
+  <div class="section" id="secCheckin">
+    <div class="card">
+      <div class="card-title">
+        <span class="icon" style="background:#EFF6FF;color:#2563EB">👤</span>
+        Identificação
+      </div>
+      <div class="field">
+        <label>Nome completo <span class="req">*</span></label>
+        <input type="text" id="ci_nome" placeholder="Ex: João da Silva" autocomplete="name">
+      </div>
+      <div class="field">
+        <label>CPF <span class="req">*</span></label>
+        <input type="text" id="ci_cpf" placeholder="000.000.000-00" inputmode="numeric" maxlength="14">
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <label>E-mail <span class="req">*</span></label>
+          <input type="email" id="ci_email" placeholder="email@rbcip.org.br">
+        </div>
+        <div class="field">
+          <label>Telefone <span class="req">*</span></label>
+          <input type="tel" id="ci_telefone" placeholder="(61) 99999-0000" maxlength="15">
+        </div>
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <label>Veículo <span class="req">*</span></label>
+          <select id="ci_veiculo">
+            <option value="">Selecione</option>
+            <option value="Carro">Carro</option>
+            <option value="Moto">Moto</option>
+            <option value="Van">Van</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Placa <span class="req">*</span></label>
+          <input type="text" id="ci_placa" placeholder="ABC-1D23" maxlength="8" style="text-transform:uppercase">
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">
+        <span class="icon" style="background:#ECFDF5;color:#059669">📡</span>
+        Localização Atual
+      </div>
+      <div class="gps-status pending" id="ci_gpsStatus">
+        <div class="gps-dot"></div>
+        <span id="ci_gpsText">Obtendo localização…</span>
+      </div>
+      <div class="live-clock" id="ci_clock">--:--:--</div>
+      <p style="font-size:11px;color:var(--text-muted);text-align:center;margin-top:4px">
+        Horário e GPS capturados automaticamente ao tirar a foto
+      </p>
+    </div>
+
+    <div class="card">
+      <div class="card-title">
+        <span class="icon" style="background:#EFF6FF;color:#2563EB">📸</span>
+        Foto do Odômetro — SAÍDA
+      </div>
+      <p style="font-size:13px;color:var(--text-secondary);margin-bottom:12px;line-height:1.5">
+        Tire a foto do painel do veículo mostrando a quilometragem <strong>agora, antes de sair</strong>.
+      </p>
+      <div class="capture-zone" id="ci_captureZone" onclick="document.getElementById('ci_inputFoto').click()">
+        <div id="ci_placeholder">
+          <div class="placeholder-icon">📷</div>
+          <div class="placeholder-text">Toque para fotografar</div>
+          <div class="placeholder-sub">Câmera traseira será ativada</div>
+        </div>
+        <img id="ci_preview" style="display:none">
+        <input type="file" accept="image/*" capture="environment" id="ci_inputFoto" onchange="handleCaptureCI(this)">
+      </div>
+      <div class="capture-meta" id="ci_meta">
+        <div class="meta-row"><span class="meta-label">⏱ Timestamp</span><span id="ci_ts">—</span></div>
+        <div class="meta-row"><span class="meta-label">📍 Coordenadas</span><span id="ci_coords">—</span></div>
+      </div>
+    </div>
+
+    <button class="btn-primary btn-checkin" onclick="confirmarCheckin()">
+      ✅ Confirmar Check-in
+    </button>
+    <button class="btn-secondary" onclick="showSection('secHome')">← Voltar</button>
+  </div>
+
+  <!-- ═══════════ CHECK-IN CONFIRMADO ═══════════ -->
+  <div class="section" id="secCheckinOk">
+    <div class="success-screen">
+      <div class="success-icon" style="background:#ECFDF5">🚀</div>
+      <h2>Check-in Registrado!</h2>
+      <p>Sua saída foi registrada com GPS e timestamp. Quando chegar ao destino (ou retornar), volte aqui e faça o <strong>check-out</strong>.</p>
+      <div class="success-id" id="ci_protocolo"></div>
+      <button class="btn-primary" style="margin-top:24px" onclick="showSection('secHome');checkOpenTrip()">
+        ← Voltar ao Início
+      </button>
+    </div>
+  </div>
+
+  <!-- ═══════════ CHECK-OUT ═══════════ -->
+  <div class="section" id="secCheckout">
+    <div class="card" style="background:var(--success-bg);border-color:var(--success)">
+      <div style="font-size:13px;font-weight:600;color:#065F46;margin-bottom:6px">📋 Check-in encontrado</div>
+      <div id="co_checkinInfo" style="font-size:12px;color:#047857;line-height:1.6;font-family:'JetBrains Mono',monospace"></div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">
+        <span class="icon" style="background:#ECFDF5;color:#059669">📡</span>
+        Localização Atual
+      </div>
+      <div class="gps-status pending" id="co_gpsStatus">
+        <div class="gps-dot"></div>
+        <span id="co_gpsText">Obtendo localização…</span>
+      </div>
+      <div class="live-clock" id="co_clock">--:--:--</div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">
+        <span class="icon" style="background:#FEF3C7;color:#D97706">📸</span>
+        Foto do Odômetro — CHEGADA
+      </div>
+      <p style="font-size:13px;color:var(--text-secondary);margin-bottom:12px;line-height:1.5">
+        Tire a foto do painel mostrando a quilometragem <strong>agora, após o percurso</strong>.
+      </p>
+      <div class="capture-zone" id="co_captureZone" onclick="document.getElementById('co_inputFoto').click()">
+        <div id="co_placeholder">
+          <div class="placeholder-icon">📷</div>
+          <div class="placeholder-text">Toque para fotografar</div>
+          <div class="placeholder-sub">Câmera traseira será ativada</div>
+        </div>
+        <img id="co_preview" style="display:none">
+        <input type="file" accept="image/*" capture="environment" id="co_inputFoto" onchange="handleCaptureCO(this)">
+      </div>
+      <div class="capture-meta" id="co_meta">
+        <div class="meta-row"><span class="meta-label">⏱ Timestamp</span><span id="co_ts">—</span></div>
+        <div class="meta-row"><span class="meta-label">📍 Coordenadas</span><span id="co_coords">—</span></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">
+        <span class="icon" style="background:#FEF3C7;color:#D97706">📍</span>
+        Dados do Deslocamento
+      </div>
+      <div class="field">
+        <label>Data do deslocamento <span class="req">*</span></label>
+        <input type="date" id="co_data">
+      </div>
+      <div class="field">
+        <label>Origem (endereço completo) <span class="req">*</span></label>
+        <input type="text" id="co_origem" placeholder="Rua, nº — Bairro, Cidade/UF">
+      </div>
+      <div class="field">
+        <label>Destino (endereço completo) <span class="req">*</span></label>
+        <input type="text" id="co_destino" placeholder="Rua, nº — Bairro, Cidade/UF">
+      </div>
+      <div class="field">
+        <label>Distância total ida e volta (km) <span class="req">*</span></label>
+        <input type="number" id="co_distancia" placeholder="Ex: 80" inputmode="decimal" step="0.1">
+      </div>
+      <div class="field">
+        <label>Projeto/Pesquisa <span class="req">*</span></label>
+        <input type="text" id="co_projeto" placeholder="Nome do projeto">
+      </div>
+      <div class="field">
+        <label>Motivo do deslocamento <span class="req">*</span></label>
+        <textarea id="co_motivo" placeholder="Descreva brevemente"></textarea>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">
+        <span class="icon" style="background:#FEF2F2;color:#DC2626">🛣️</span>
+        Pedágio
+      </div>
+      <div class="toggle-row">
+        <label style="font-size:14px;font-weight:600">Houve pedágio?</label>
+        <div class="toggle" id="co_togglePedagio" onclick="togglePedagio()"><div class="knob"></div></div>
+      </div>
+      <div class="pedagio-fields" id="co_pedagioFields">
+        <div class="field">
+          <label>Valor total (R$) <span class="req">*</span></label>
+          <input type="number" id="co_valorPedagio" placeholder="Ex: 15.40" inputmode="decimal" step="0.01">
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">
+        <span class="icon" style="background:#F0FDF4;color:#16A34A">🗺️</span>
+        Print do Google Maps
+      </div>
+      <p style="font-size:13px;color:var(--text-secondary);margin-bottom:12px;line-height:1.5">
+        Anexe o print da rota mostrando origem, destino e km.
+      </p>
+      <div class="capture-zone" id="co_captureMaps" onclick="document.getElementById('co_inputMaps').click()">
+        <div id="co_placeholderMaps">
+          <div class="placeholder-icon">🗺️</div>
+          <div class="placeholder-text">Toque para anexar</div>
+          <div class="placeholder-sub">Imagem da galeria ou screenshot</div>
+        </div>
+        <img id="co_previewMaps" style="display:none">
+        <input type="file" accept="image/*" id="co_inputMaps" onchange="handleFilePreview(this,'co_previewMaps','co_placeholderMaps','co_captureMaps')">
+      </div>
+    </div>
+
+    <div class="card" id="co_cardPedagioUpload" style="display:none">
+      <div class="card-title">
+        <span class="icon" style="background:#FEF2F2;color:#DC2626">🧾</span>
+        Comprovante de Pedágio
+      </div>
+      <div class="capture-zone" id="co_capturePedagioZone" onclick="document.getElementById('co_inputPedagio').click()">
+        <div id="co_placeholderPedagio">
+          <div class="placeholder-icon">🧾</div>
+          <div class="placeholder-text">Toque para anexar</div>
+        </div>
+        <img id="co_previewPedagio" style="display:none">
+        <input type="file" accept="image/*" id="co_inputPedagio" onchange="handleFilePreview(this,'co_previewPedagio','co_placeholderPedagio','co_capturePedagioZone')">
+      </div>
+    </div>
+
+    <div class="field">
+      <label>Observações adicionais</label>
+      <textarea id="co_obs" placeholder="Opcional — desvios de rota, problemas, etc."></textarea>
+    </div>
+
+    <!-- Resumo do cálculo -->
+    <div class="card" id="co_resumoCard" style="display:none; background:var(--bg)">
+      <div id="co_resumo" style="font-size:14px;line-height:1.8;color:var(--text-secondary)"></div>
+    </div>
+
+    <button class="btn-primary" onclick="calcularResumo()" id="btnCalcular" style="background:linear-gradient(135deg,#2563EB,#0EA5E9)">
+      🧮 Calcular Reembolso
+    </button>
+
+    <button class="btn-primary btn-checkout" id="btnEnviar" onclick="enviarCheckout()" style="display:none;margin-top:10px">
+      📤 Enviar Solicitação
+    </button>
+
+    <button class="btn-secondary" onclick="showSection('secHome');checkOpenTrip()">← Voltar</button>
+  </div>
+
+  <!-- ═══════════ SUCESSO FINAL ═══════════ -->
+  <div class="section" id="secDone">
+    <div class="success-screen">
+      <div class="success-icon">✅</div>
+      <h2>Solicitação Enviada!</h2>
+      <p>Sua solicitação de reembolso foi registrada com todos os comprovantes, GPS e timestamps de check-in e check-out.</p>
+      <div class="success-id" id="finalProtocolo"></div>
+      <button class="btn-primary" style="margin-top:24px" onclick="novoRegistro()">
+        + Novo Registro
+      </button>
+    </div>
+  </div>
+
+</div>
+
+<div class="loading-overlay" id="loading">
+  <div class="spinner"></div>
+  <p id="loadingText">Enviando solicitação…</p>
+</div>
+
+<script>
+// ══════════════════════════════════════════
+// CONFIG — Cole a URL do seu Apps Script
+// ══════════════════════════════════════════
+const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwaKl_Iglg_hVzG6_wS9GxTxZd8svu836zLxVJ45PAh7viqtxALlRfOdEAvebeisogx/exec";
+
+// ── State ──
+let gpsCoords = null;
+let pedagioAtivo = false;
+let checkinData = null; // dados do check-in em andamento
+let checkoutCapture = { timestamp: null, lat: null, lng: null, base64: null };
+let clockInterval = null;
+
+// ── Helpers ──
+function formatDate(d) {
+  const p = n => String(n).padStart(2, "0");
+  return `${p(d.getDate())}/${p(d.getMonth()+1)}/${d.getFullYear()} ${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`;
+}
+function showSection(id) {
+  document.querySelectorAll(".section").forEach(s => s.classList.remove("active"));
+  document.getElementById(id).classList.add("active");
+  window.scrollTo({ top: 0, behavior: "smooth" });
+  if (clockInterval) clearInterval(clockInterval);
+}
+
+// ── GPS ──
+function requestGPS(statusId, textId, cb) {
+  const el = document.getElementById(statusId);
+  el.className = "gps-status pending";
+  document.getElementById(textId).textContent = "Obtendo localização…";
+  if (!navigator.geolocation) {
+    el.className = "gps-status error";
+    document.getElementById(textId).textContent = "GPS não disponível";
+    return;
+  }
+  navigator.geolocation.getCurrentPosition(
+    pos => {
+      gpsCoords = { lat: pos.coords.latitude, lng: pos.coords.longitude, acc: pos.coords.accuracy };
+      el.className = "gps-status acquired";
+      document.getElementById(textId).textContent =
+        `${pos.coords.latitude.toFixed(5)}, ${pos.coords.longitude.toFixed(5)} (±${Math.round(pos.coords.accuracy)}m)`;
+      if (cb) cb(gpsCoords);
+    },
+    () => {
+      el.className = "gps-status error";
+      document.getElementById(textId).textContent = "Permita o acesso à localização";
+    },
+    { enableHighAccuracy: true, timeout: 15000 }
+  );
+}
+
+function startClock(elId) {
+  const update = () => {
+    document.getElementById(elId).textContent = formatDate(new Date());
+  };
+  update();
+  clockInterval = setInterval(update, 1000);
+}
+
+// ── Masks ──
+document.addEventListener("input", function(e) {
+  if (e.target.id === "ci_cpf") {
+    let v = e.target.value.replace(/\D/g, "").slice(0, 11);
+    if (v.length > 9) v = v.replace(/(\d{3})(\d{3})(\d{3})(\d{1,2})/, "$1.$2.$3-$4");
+    else if (v.length > 6) v = v.replace(/(\d{3})(\d{3})(\d{1,3})/, "$1.$2.$3");
+    else if (v.length > 3) v = v.replace(/(\d{3})(\d{1,3})/, "$1.$2");
+    e.target.value = v;
+  }
+  if (e.target.id === "ci_telefone") {
+    let v = e.target.value.replace(/\D/g, "").slice(0, 11);
+    if (v.length > 6) v = v.replace(/(\d{2})(\d{5})(\d{1,4})/, "($1) $2-$3");
+    else if (v.length > 2) v = v.replace(/(\d{2})(\d{1,5})/, "($1) $2");
+    e.target.value = v;
+  }
+});
+
+// ── LocalStorage persistence ──
+function saveOpenTrip(data) {
+  localStorage.setItem("rbcip_open_trip", JSON.stringify(data));
+}
+function loadOpenTrip() {
+  const raw = localStorage.getItem("rbcip_open_trip");
+  return raw ? JSON.parse(raw) : null;
+}
+function clearOpenTrip() {
+  localStorage.removeItem("rbcip_open_trip");
+}
+
+// ── Check for open trip on load ──
+function checkOpenTrip() {
+  const trip = loadOpenTrip();
+  const banner = document.getElementById("openTripBanner");
+  const cardCO = document.getElementById("cardCheckout");
+  const cardCI = document.getElementById("cardCheckin");
+
+  if (trip) {
+    checkinData = trip;
+    banner.classList.add("visible");
+    document.getElementById("openTripDetail").innerHTML =
+      `<strong>${trip.nome}</strong> — ${trip.veiculo} (${trip.placa})<br>` +
+      `Check-in: ${formatDate(new Date(trip.checkin_timestamp))}<br>` +
+      `GPS: ${trip.checkin_lat ? trip.checkin_lat.toFixed(5) + ", " + trip.checkin_lng.toFixed(5) : "Indisponível"}`;
+
+    cardCO.style.opacity = "1";
+    cardCO.style.pointerEvents = "auto";
+    cardCI.style.opacity = ".5";
+    cardCI.style.pointerEvents = "none";
+  } else {
+    banner.classList.remove("visible");
+    cardCO.style.opacity = ".5";
+    cardCO.style.pointerEvents = "none";
+    cardCI.style.opacity = "1";
+    cardCI.style.pointerEvents = "auto";
+  }
+}
+
+// ═══════════ CHECK-IN FLOW ═══════════
+function startCheckin() {
+  showSection("secCheckin");
+  requestGPS("ci_gpsStatus", "ci_gpsText");
+  startClock("ci_clock");
+}
+
+function handleCaptureCI(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    const now = new Date();
+    // Refresh GPS at capture moment
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(pos => {
+        gpsCoords = { lat: pos.coords.latitude, lng: pos.coords.longitude, acc: pos.coords.accuracy };
+        document.getElementById("ci_coords").textContent =
+          `${pos.coords.latitude.toFixed(5)}, ${pos.coords.longitude.toFixed(5)}`;
+        document.getElementById("ci_gpsStatus").className = "gps-status acquired";
+        document.getElementById("ci_gpsText").textContent =
+          `${pos.coords.latitude.toFixed(5)}, ${pos.coords.longitude.toFixed(5)} (±${Math.round(pos.coords.accuracy)}m)`;
+      }, () => {}, { enableHighAccuracy: true, timeout: 5000 });
+    }
+
+    document.getElementById("ci_ts").textContent = formatDate(now);
+    document.getElementById("ci_coords").textContent =
+      gpsCoords ? `${gpsCoords.lat.toFixed(5)}, ${gpsCoords.lng.toFixed(5)}` : "Indisponível";
+    document.getElementById("ci_meta").classList.add("visible");
+
+    document.getElementById("ci_preview").src = e.target.result;
+    document.getElementById("ci_preview").style.display = "block";
+    document.getElementById("ci_placeholder").style.display = "none";
+    document.getElementById("ci_captureZone").classList.add("has-photo");
+
+    // Store temporarily
+    checkinData = {
+      ...checkinData,
+      checkin_foto: e.target.result,
+      checkin_timestamp: now.toISOString(),
+      checkin_lat: gpsCoords ? gpsCoords.lat : null,
+      checkin_lng: gpsCoords ? gpsCoords.lng : null
+    };
+  };
+  reader.readAsDataURL(file);
+}
+
+function confirmarCheckin() {
+  const fields = ["ci_nome","ci_cpf","ci_email","ci_telefone","ci_veiculo","ci_placa"];
+  for (const f of fields) {
+    const el = document.getElementById(f);
+    if (!el.value.trim()) {
+      el.focus(); el.style.borderColor = "var(--danger)";
+      setTimeout(() => el.style.borderColor = "", 2000);
+      return;
+    }
+  }
+  if (!checkinData || !checkinData.checkin_foto) {
+    alert("Tire a foto do odômetro antes de confirmar.");
+    return;
+  }
+
+  const protocolo = "RB-" + Date.now().toString(36).toUpperCase();
+  checkinData = {
+    ...checkinData,
+    protocolo,
+    nome: document.getElementById("ci_nome").value,
+    cpf: document.getElementById("ci_cpf").value,
+    email: document.getElementById("ci_email").value,
+    telefone: document.getElementById("ci_telefone").value,
+    veiculo: document.getElementById("ci_veiculo").value,
+    placa: document.getElementById("ci_placa").value.toUpperCase()
+  };
+
+  saveOpenTrip(checkinData);
+  document.getElementById("ci_protocolo").textContent = "Protocolo: " + protocolo;
+  showSection("secCheckinOk");
+}
+
+// ═══════════ CHECK-OUT FLOW ═══════════
+function startCheckout() {
+  const trip = loadOpenTrip();
+  if (!trip) { alert("Nenhum check-in em aberto encontrado."); return; }
+  checkinData = trip;
+
+  showSection("secCheckout");
+  requestGPS("co_gpsStatus", "co_gpsText");
+  startClock("co_clock");
+
+  // Show checkin info
+  document.getElementById("co_checkinInfo").innerHTML =
+    `Protocolo: ${trip.protocolo}<br>` +
+    `Check-in: ${formatDate(new Date(trip.checkin_timestamp))}<br>` +
+    `GPS: ${trip.checkin_lat ? trip.checkin_lat.toFixed(5) + ", " + trip.checkin_lng.toFixed(5) : "N/A"}<br>` +
+    `Veículo: ${trip.veiculo} — ${trip.placa}`;
+
+  document.getElementById("co_data").valueAsDate = new Date();
+  // Reset UI
+  document.getElementById("co_resumoCard").style.display = "none";
+  document.getElementById("btnEnviar").style.display = "none";
+  document.getElementById("btnCalcular").style.display = "flex";
+}
+
+function handleCaptureCO(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    const now = new Date();
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(pos => {
+        gpsCoords = { lat: pos.coords.latitude, lng: pos.coords.longitude, acc: pos.coords.accuracy };
+        checkoutCapture.lat = pos.coords.latitude;
+        checkoutCapture.lng = pos.coords.longitude;
+        document.getElementById("co_coords").textContent =
+          `${pos.coords.latitude.toFixed(5)}, ${pos.coords.longitude.toFixed(5)}`;
+        document.getElementById("co_gpsStatus").className = "gps-status acquired";
+        document.getElementById("co_gpsText").textContent =
+          `${pos.coords.latitude.toFixed(5)}, ${pos.coords.longitude.toFixed(5)} (±${Math.round(pos.coords.accuracy)}m)`;
+      }, () => {}, { enableHighAccuracy: true, timeout: 5000 });
+    }
+
+    checkoutCapture.timestamp = now.toISOString();
+    checkoutCapture.lat = gpsCoords ? gpsCoords.lat : null;
+    checkoutCapture.lng = gpsCoords ? gpsCoords.lng : null;
+    checkoutCapture.base64 = e.target.result;
+
+    document.getElementById("co_ts").textContent = formatDate(now);
+    document.getElementById("co_coords").textContent =
+      gpsCoords ? `${gpsCoords.lat.toFixed(5)}, ${gpsCoords.lng.toFixed(5)}` : "Indisponível";
+    document.getElementById("co_meta").classList.add("visible");
+
+    document.getElementById("co_preview").src = e.target.result;
+    document.getElementById("co_preview").style.display = "block";
+    document.getElementById("co_placeholder").style.display = "none";
+    document.getElementById("co_captureZone").classList.add("has-photo");
+  };
+  reader.readAsDataURL(file);
+}
+
+function handleFilePreview(input, previewId, placeholderId, zoneId) {
+  const file = input.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    document.getElementById(previewId).src = e.target.result;
+    document.getElementById(previewId).style.display = "block";
+    document.getElementById(placeholderId).style.display = "none";
+    document.getElementById(zoneId).classList.add("has-photo");
+  };
+  reader.readAsDataURL(file);
+}
+
+// ── Pedágio ──
+function togglePedagio() {
+  pedagioAtivo = !pedagioAtivo;
+  document.getElementById("co_togglePedagio").classList.toggle("on", pedagioAtivo);
+  document.getElementById("co_pedagioFields").classList.toggle("open", pedagioAtivo);
+  document.getElementById("co_cardPedagioUpload").style.display = pedagioAtivo ? "block" : "none";
+}
+
+// ── Cálculo ──
+function calcularResumo() {
+  // Validate
+  if (!checkoutCapture.base64) { alert("Tire a foto do odômetro de CHEGADA."); return; }
+  const reqFields = ["co_data","co_origem","co_destino","co_distancia","co_projeto","co_motivo"];
+  for (const f of reqFields) {
+    const el = document.getElementById(f);
+    if (!el.value.trim()) { el.focus(); el.style.borderColor = "var(--danger)"; setTimeout(() => el.style.borderColor = "", 2000); return; }
+  }
+  if (!document.getElementById("co_inputMaps").files.length) { alert("Anexe o print do Google Maps."); return; }
+  if (pedagioAtivo) {
+    if (!document.getElementById("co_valorPedagio").value.trim()) { document.getElementById("co_valorPedagio").focus(); return; }
+    if (!document.getElementById("co_inputPedagio").files.length) { alert("Anexe o comprovante de pedágio."); return; }
+  }
+
+  const veiculo = checkinData.veiculo;
+  const km = parseFloat(document.getElementById("co_distancia").value) || 0;
+  const preco = 6.99;
+  const consumo = veiculo === "Moto" ? 49 : veiculo === "Van" ? 7 : 10;
+  const valComb = (km / consumo) * preco;
+  const valPed = pedagioAtivo ? parseFloat(document.getElementById("co_valorPedagio").value) || 0 : 0;
+  const total = valComb + valPed;
+
+  // Time between checkin and checkout
+  const t1 = new Date(checkinData.checkin_timestamp);
+  const t2 = new Date(checkoutCapture.timestamp);
+  const diffMin = Math.round((t2 - t1) / 60000);
+  const diffStr = diffMin >= 60 ? `${Math.floor(diffMin/60)}h${String(diffMin%60).padStart(2,"0")}min` : `${diffMin} min`;
+
+  document.getElementById("co_resumo").innerHTML = `
+    <div style="font-weight:700;font-size:15px;color:var(--primary);margin-bottom:10px">📊 Resumo do Reembolso</div>
+    <div><strong>Pesquisador:</strong> ${checkinData.nome}</div>
+    <div><strong>Rota:</strong> ${document.getElementById("co_origem").value} → ${document.getElementById("co_destino").value}</div>
+    <div><strong>Distância:</strong> ${km} km</div>
+    <div><strong>Veículo:</strong> ${veiculo} (${consumo} km/L)</div>
+    <hr style="border:none;border-top:1px solid var(--border);margin:10px 0">
+    <div><strong>Combustível:</strong> ${km} ÷ ${consumo} × R$ ${preco} = <strong>R$ ${valComb.toFixed(2)}</strong></div>
+    ${pedagioAtivo ? `<div><strong>Pedágio:</strong> R$ ${valPed.toFixed(2)}</div>` : ""}
+    <div style="font-size:18px;font-weight:700;color:var(--primary);margin-top:8px">Total: R$ ${total.toFixed(2)}</div>
+    <hr style="border:none;border-top:1px solid var(--border);margin:10px 0">
+    <div style="font-size:12px;color:var(--text-muted)">
+      🚀 Check-in: ${formatDate(t1)} ${checkinData.checkin_lat ? "| GPS: " + checkinData.checkin_lat.toFixed(4) + ", " + checkinData.checkin_lng.toFixed(4) : ""}<br>
+      🏁 Check-out: ${formatDate(t2)} ${checkoutCapture.lat ? "| GPS: " + checkoutCapture.lat.toFixed(4) + ", " + checkoutCapture.lng.toFixed(4) : ""}<br>
+      ⏱ Tempo entre registros: <strong>${diffStr}</strong>
+    </div>
+  `;
+  document.getElementById("co_resumoCard").style.display = "block";
+  document.getElementById("btnCalcular").style.display = "none";
+  document.getElementById("btnEnviar").style.display = "flex";
+  document.getElementById("co_resumoCard").scrollIntoView({ behavior: "smooth" });
+}
+
+// ── Envio final ──
+async function enviarCheckout() {
+  document.getElementById("btnEnviar").disabled = true;
+  document.getElementById("loading").classList.add("show");
+  document.getElementById("loadingText").textContent = "Enviando solicitação…";
+
+  const km = parseFloat(document.getElementById("co_distancia").value) || 0;
+  const consumo = checkinData.veiculo === "Moto" ? 49 : checkinData.veiculo === "Van" ? 7 : 10;
+  const valComb = ((km / consumo) * 6.99).toFixed(2);
+  const valPed = pedagioAtivo ? (parseFloat(document.getElementById("co_valorPedagio").value) || 0).toFixed(2) : "0.00";
+  const total = (parseFloat(valComb) + parseFloat(valPed)).toFixed(2);
+
+  // Read maps and pedagio images as base64
+  const mapsFile = document.getElementById("co_inputMaps").files[0];
+  const mapsB64 = mapsFile ? await fileToBase64(mapsFile) : null;
+  const pedFile = document.getElementById("co_inputPedagio").files[0];
+  const pedB64 = pedFile ? await fileToBase64(pedFile) : null;
+
+  const payload = {
+    protocolo: checkinData.protocolo,
+    timestamp_envio: new Date().toISOString(),
+    // Pesquisador
+    nome: checkinData.nome,
+    cpf: checkinData.cpf,
+    email: checkinData.email,
+    telefone: checkinData.telefone,
+    veiculo: checkinData.veiculo,
+    placa: checkinData.placa,
+    // Check-in
+    checkin_timestamp: checkinData.checkin_timestamp,
+    checkin_lat: checkinData.checkin_lat,
+    checkin_lng: checkinData.checkin_lng,
+    img_odometro_saida: checkinData.checkin_foto,
+    // Check-out
+    checkout_timestamp: checkoutCapture.timestamp,
+    checkout_lat: checkoutCapture.lat,
+    checkout_lng: checkoutCapture.lng,
+    img_odometro_chegada: checkoutCapture.base64,
+    // Deslocamento
+    data_deslocamento: document.getElementById("co_data").value,
+    origem: document.getElementById("co_origem").value,
+    destino: document.getElementById("co_destino").value,
+    distancia_km: km,
+    projeto: document.getElementById("co_projeto").value,
+    motivo: document.getElementById("co_motivo").value,
+    pedagio: pedagioAtivo,
+    valor_pedagio: valPed,
+    valor_combustivel: valComb,
+    valor_total: total,
+    observacoes: document.getElementById("co_obs").value,
+    // Imagens
+    img_maps: mapsB64,
+    img_pedagio: pedB64,
+  };
+
+  try {
+    if (APPS_SCRIPT_URL !== "COLE_SUA_URL_AQUI") {
+      const resp = await fetch(APPS_SCRIPT_URL, { method: "POST", body: JSON.stringify(payload) });
+      if (!resp.ok) throw new Error("Erro HTTP " + resp.status);
+    } else {
+      console.log("📦 Payload completo:", payload);
+      await new Promise(r => setTimeout(r, 1500));
+    }
+
+    clearOpenTrip();
+    document.getElementById("finalProtocolo").textContent = "Protocolo: " + checkinData.protocolo;
+    document.getElementById("loading").classList.remove("show");
+    showSection("secDone");
+  } catch (err) {
+    document.getElementById("loading").classList.remove("show");
+    document.getElementById("btnEnviar").disabled = false;
+    alert("Erro ao enviar. Verifique sua conexão.\n\n" + err.message);
+  }
+}
+
+function fileToBase64(file) {
+  return new Promise((res, rej) => {
+    const r = new FileReader();
+    r.onload = () => res(r.result);
+    r.onerror = () => rej(new Error("Erro ao ler arquivo"));
+    r.readAsDataURL(file);
+  });
+}
+
+function novoRegistro() { clearOpenTrip(); location.reload(); }
+
+// ── Init ──
+checkOpenTrip();
+</script>
+</body>
+</html>
