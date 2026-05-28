@@ -552,7 +552,8 @@ body {
 // ══════════════════════════════════════════
 // CONFIG — Cole a URL do seu Apps Script
 // ══════════════════════════════════════════
-const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwaKl_Iglg_hVzG6_wS9GxTxZd8svu836zLxVJ45PAh7viqtxALlRfOdEAvebeisogx/exec";
+const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwaKl_Iglg_hVzG6_wS9GxTxZd8svu836zLxVJ45PAh7viqtxALlRfOdEAvebeisogx/exec
+";
 
 // ── State ──
 let gpsCoords = null;
@@ -626,7 +627,20 @@ document.addEventListener("input", function(e) {
 
 // ── LocalStorage persistence ──
 function saveOpenTrip(data) {
-  localStorage.setItem("rbcip_open_trip", JSON.stringify(data));
+  try {
+    localStorage.setItem("rbcip_open_trip", JSON.stringify(data));
+  } catch (e) {
+    // localStorage cheio — tenta salvar sem a foto (será recuperada da preview)
+    console.warn("localStorage cheio, salvando sem foto:", e);
+    var lite = Object.assign({}, data);
+    delete lite.checkin_foto;
+    lite.foto_pendente = true;
+    try {
+      localStorage.setItem("rbcip_open_trip", JSON.stringify(lite));
+    } catch (e2) {
+      alert("Erro ao salvar dados no dispositivo. Limpe o cache do navegador e tente novamente.");
+    }
+  }
 }
 function loadOpenTrip() {
   const raw = localStorage.getItem("rbcip_open_trip");
@@ -665,6 +679,59 @@ function checkOpenTrip() {
 }
 
 // ═══════════ CHECK-IN FLOW ═══════════
+// ══════════════════════════════════════
+// Compressão de imagem via Canvas
+// Reduz fotos de ~8MB para ~150-300KB
+// ══════════════════════════════════════
+function readAndCompress(file, maxWidth, quality) {
+  maxWidth = maxWidth || 1280;
+  quality = quality || 0.6;
+  return new Promise(function(resolve, reject) {
+    // Se não for imagem, lê direto
+    if (!file.type.startsWith("image/")) {
+      var reader = new FileReader();
+      reader.onload = function() { resolve(reader.result); };
+      reader.onerror = function() { reject(new Error("Erro ao ler arquivo")); };
+      reader.readAsDataURL(file);
+      return;
+    }
+
+    var reader = new FileReader();
+    reader.onerror = function() { reject(new Error("Erro ao ler arquivo")); };
+    reader.onload = function() {
+      var img = new Image();
+      img.onerror = function() { reject(new Error("Erro ao carregar imagem")); };
+      img.onload = function() {
+        var canvas = document.createElement("canvas");
+        var w = img.width;
+        var h = img.height;
+
+        // Redimensiona mantendo proporção
+        if (w > maxWidth) {
+          h = Math.round(h * (maxWidth / w));
+          w = maxWidth;
+        }
+
+        canvas.width = w;
+        canvas.height = h;
+        var ctx = canvas.getContext("2d");
+        ctx.drawImage(img, 0, 0, w, h);
+
+        // Converte para JPEG comprimido
+        var compressed = canvas.toDataURL("image/jpeg", quality);
+
+        // Limpa memória
+        canvas.width = 0;
+        canvas.height = 0;
+
+        resolve(compressed);
+      };
+      img.src = reader.result;
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
 function startCheckin() {
   showSection("secCheckin");
   requestGPS("ci_gpsStatus", "ci_gpsText");
@@ -674,8 +741,8 @@ function startCheckin() {
 function handleCaptureCI(input) {
   const file = input.files[0];
   if (!file) return;
-  const reader = new FileReader();
-  reader.onload = function(e) {
+
+  readAndCompress(file).then(function(compressed) {
     const now = new Date();
     // Refresh GPS at capture moment
     if (navigator.geolocation) {
@@ -686,6 +753,11 @@ function handleCaptureCI(input) {
         document.getElementById("ci_gpsStatus").className = "gps-status acquired";
         document.getElementById("ci_gpsText").textContent =
           `${pos.coords.latitude.toFixed(5)}, ${pos.coords.longitude.toFixed(5)} (±${Math.round(pos.coords.accuracy)}m)`;
+        // Update stored data with fresh GPS
+        if (checkinData) {
+          checkinData.checkin_lat = pos.coords.latitude;
+          checkinData.checkin_lng = pos.coords.longitude;
+        }
       }, () => {}, { enableHighAccuracy: true, timeout: 5000 });
     }
 
@@ -694,7 +766,7 @@ function handleCaptureCI(input) {
       gpsCoords ? `${gpsCoords.lat.toFixed(5)}, ${gpsCoords.lng.toFixed(5)}` : "Indisponível";
     document.getElementById("ci_meta").classList.add("visible");
 
-    document.getElementById("ci_preview").src = e.target.result;
+    document.getElementById("ci_preview").src = compressed;
     document.getElementById("ci_preview").style.display = "block";
     document.getElementById("ci_placeholder").style.display = "none";
     document.getElementById("ci_captureZone").classList.add("has-photo");
@@ -702,13 +774,12 @@ function handleCaptureCI(input) {
     // Store temporarily
     checkinData = {
       ...checkinData,
-      checkin_foto: e.target.result,
+      checkin_foto: compressed,
       checkin_timestamp: now.toISOString(),
       checkin_lat: gpsCoords ? gpsCoords.lat : null,
       checkin_lng: gpsCoords ? gpsCoords.lng : null
     };
-  };
-  reader.readAsDataURL(file);
+  });
 }
 
 function confirmarCheckin() {
@@ -770,8 +841,8 @@ function startCheckout() {
 function handleCaptureCO(input) {
   const file = input.files[0];
   if (!file) return;
-  const reader = new FileReader();
-  reader.onload = function(e) {
+
+  readAndCompress(file).then(function(compressed) {
     const now = new Date();
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(pos => {
@@ -789,32 +860,31 @@ function handleCaptureCO(input) {
     checkoutCapture.timestamp = now.toISOString();
     checkoutCapture.lat = gpsCoords ? gpsCoords.lat : null;
     checkoutCapture.lng = gpsCoords ? gpsCoords.lng : null;
-    checkoutCapture.base64 = e.target.result;
+    checkoutCapture.base64 = compressed;
 
     document.getElementById("co_ts").textContent = formatDate(now);
     document.getElementById("co_coords").textContent =
       gpsCoords ? `${gpsCoords.lat.toFixed(5)}, ${gpsCoords.lng.toFixed(5)}` : "Indisponível";
     document.getElementById("co_meta").classList.add("visible");
 
-    document.getElementById("co_preview").src = e.target.result;
+    document.getElementById("co_preview").src = compressed;
     document.getElementById("co_preview").style.display = "block";
     document.getElementById("co_placeholder").style.display = "none";
     document.getElementById("co_captureZone").classList.add("has-photo");
-  };
-  reader.readAsDataURL(file);
+  });
 }
 
 function handleFilePreview(input, previewId, placeholderId, zoneId) {
   const file = input.files[0];
   if (!file) return;
-  const reader = new FileReader();
-  reader.onload = function(e) {
-    document.getElementById(previewId).src = e.target.result;
+  readAndCompress(file).then(function(compressed) {
+    document.getElementById(previewId).src = compressed;
     document.getElementById(previewId).style.display = "block";
     document.getElementById(placeholderId).style.display = "none";
     document.getElementById(zoneId).classList.add("has-photo");
-  };
-  reader.readAsDataURL(file);
+    // Store the compressed version for later retrieval
+    input.dataset.compressed = compressed;
+  });
 }
 
 // ── Pedágio ──
@@ -889,11 +959,11 @@ async function enviarCheckout() {
   const valPed = pedagioAtivo ? (parseFloat(document.getElementById("co_valorPedagio").value) || 0).toFixed(2) : "0.00";
   const total = (parseFloat(valComb) + parseFloat(valPed)).toFixed(2);
 
-  // Read maps and pedagio images as base64
-  const mapsFile = document.getElementById("co_inputMaps").files[0];
-  const mapsB64 = mapsFile ? await fileToBase64(mapsFile) : null;
-  const pedFile = document.getElementById("co_inputPedagio").files[0];
-  const pedB64 = pedFile ? await fileToBase64(pedFile) : null;
+  // Read compressed maps and pedagio images
+  const mapsInput = document.getElementById("co_inputMaps");
+  const mapsB64 = mapsInput.dataset.compressed || null;
+  const pedInput = document.getElementById("co_inputPedagio");
+  const pedB64 = pedInput.dataset.compressed || null;
 
   const payload = {
     protocolo: checkinData.protocolo,
@@ -933,11 +1003,43 @@ async function enviarCheckout() {
   };
 
   try {
-    if (APPS_SCRIPT_URL !== "COLE_SUA_URL_AQUI") {
-      const resp = await fetch(APPS_SCRIPT_URL, { method: "POST", body: JSON.stringify(payload) });
-      if (!resp.ok) throw new Error("Erro HTTP " + resp.status);
+    if (APPS_SCRIPT_URL !== "https://script.google.com/macros/s/AKfycbwaKl_Iglg_hVzG6_wS9GxTxZd8svu836zLxVJ45PAh7viqtxALlRfOdEAvebeisogx/exec
+") {
+      // Apps Script retorna redirect 302 — precisamos seguir
+      // Tenta com redirect follow primeiro
+      try {
+        const resp = await fetch(APPS_SCRIPT_URL, {
+          method: "POST",
+          redirect: "follow",
+          headers: { "Content-Type": "text/plain" },
+          body: JSON.stringify(payload)
+        });
+        // Apps Script pode retornar HTML em vez de JSON no redirect
+        const text = await resp.text();
+        try {
+          const result = JSON.parse(text);
+          if (result.success === false) throw new Error(result.error || "Erro no servidor");
+        } catch(parseErr) {
+          // Se não é JSON mas o status é ok, provavelmente funcionou
+          if (!resp.ok) throw new Error("Erro HTTP " + resp.status);
+        }
+      } catch (fetchErr) {
+        // Fallback: tenta com no-cors (não temos resposta mas a request chega)
+        if (fetchErr.message.includes("CORS") || fetchErr.message.includes("Failed to fetch")) {
+          await fetch(APPS_SCRIPT_URL, {
+            method: "POST",
+            mode: "no-cors",
+            headers: { "Content-Type": "text/plain" },
+            body: JSON.stringify(payload)
+          });
+          // No modo no-cors não temos confirmação, mas o request é enviado
+        } else {
+          throw fetchErr;
+        }
+      }
     } else {
       console.log("📦 Payload completo:", payload);
+      console.log("📏 Tamanho estimado:", Math.round(JSON.stringify(payload).length / 1024) + " KB");
       await new Promise(r => setTimeout(r, 1500));
     }
 
@@ -950,15 +1052,6 @@ async function enviarCheckout() {
     document.getElementById("btnEnviar").disabled = false;
     alert("Erro ao enviar. Verifique sua conexão.\n\n" + err.message);
   }
-}
-
-function fileToBase64(file) {
-  return new Promise((res, rej) => {
-    const r = new FileReader();
-    r.onload = () => res(r.result);
-    r.onerror = () => rej(new Error("Erro ao ler arquivo"));
-    r.readAsDataURL(file);
-  });
 }
 
 function novoRegistro() { clearOpenTrip(); location.reload(); }
