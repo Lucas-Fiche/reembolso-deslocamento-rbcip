@@ -249,14 +249,33 @@ function capFile(inp,pvId,phId,zId){var file=inp.files[0];if(!file)return;compre
 function validarCPF(cpf){cpf=cpf.replace(/\D/g,"");if(cpf.length!==11)return false;if(/^(\d)\1{10}$/.test(cpf))return false;var s=0;for(var i=0;i<9;i++)s+=parseInt(cpf[i])*(10-i);var r=11-(s%11);var d1=r>=10?0:r;if(parseInt(cpf[9])!==d1)return false;s=0;for(var i=0;i<10;i++)s+=parseInt(cpf[i])*(11-i);r=11-(s%11);var d2=r>=10?0:r;return parseInt(cpf[10])===d2}
 function validarEmail(e){return/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e)}
 function validarTel(t){var d=t.replace(/\D/g,"");return d.length>=10&&d.length<=11}
-function focusErr(id,msg){var el=document.getElementById(id);el.focus();el.style.borderColor="var(--danger)";setTimeout(function(){el.style.borderColor=""},3000);alert(msg)}
+function markErr(id){var el=document.getElementById(id);el.style.borderColor="var(--danger)";setTimeout(function(){el.style.borderColor=""},4000);return el}
 
 function goCheckin(){show("secCI");reqGPS("ci_gs","ci_gt");clock("ci_ck");trip={}}
-function enviarCI(){var fs=["ci_nome","ci_cpf","ci_email","ci_tel","ci_veic","ci_placa"];for(var i=0;i<fs.length;i++){var el=document.getElementById(fs[i]);if(!el.value.trim()){el.focus();el.style.borderColor="var(--danger)";setTimeout(function(e){e.style.borderColor=""}.bind(null,el),2000);return}}
-  if(!validarCPF(document.getElementById("ci_cpf").value)){focusErr("ci_cpf","CPF inválido. Verifique os dígitos.");return}
-  if(!validarEmail(document.getElementById("ci_email").value)){focusErr("ci_email","E-mail inválido.");return}
-  if(!validarTel(document.getElementById("ci_tel").value)){focusErr("ci_tel","Telefone inválido. Informe DDD + número.");return}
-  if(!trip||!trip.checkin_foto){alert("Tire a foto do odômetro.");return}var proto="RB-"+Date.now().toString(36).toUpperCase();trip.protocolo=proto;trip.nome=document.getElementById("ci_nome").value;trip.cpf=document.getElementById("ci_cpf").value;trip.email=document.getElementById("ci_email").value;trip.telefone=document.getElementById("ci_tel").value;trip.veiculo=document.getElementById("ci_veic").value;trip.placa=document.getElementById("ci_placa").value.toUpperCase();trip.paradas=[];ld("Registrando check-in…");post({action:"checkin",protocolo:proto,nome:trip.nome,cpf:trip.cpf,email:trip.email,telefone:trip.telefone,veiculo:trip.veiculo,placa:trip.placa,checkin_timestamp:trip.checkin_timestamp,checkin_lat:trip.checkin_lat,checkin_lng:trip.checkin_lng,img_odometro_saida:trip.checkin_foto}).then(function(r){hd();if(r&&r.success===false){alert(r.error);return}saveTrip(trip);document.getElementById("ci_proto").textContent="Protocolo: "+proto;show("secCIOk")}).catch(function(e){hd();alert("Erro: "+e.message)})}
+function enviarCI(){
+  // Limpar erros anteriores
+  var ids=["ci_nome","ci_cpf","ci_email","ci_tel","ci_veic","ci_placa"];
+  for(var i=0;i<ids.length;i++)document.getElementById(ids[i]).style.borderColor="";
+
+  // Validar tudo e coletar erros
+  var erros=[];
+  if(!document.getElementById("ci_nome").value.trim()){markErr("ci_nome");erros.push("• Nome completo é obrigatório")}
+  var cpfVal=document.getElementById("ci_cpf").value.trim();
+  if(!cpfVal){markErr("ci_cpf");erros.push("• CPF é obrigatório")}
+  else if(!validarCPF(cpfVal)){markErr("ci_cpf");erros.push("• CPF inválido — verifique os dígitos")}
+  var emailVal=document.getElementById("ci_email").value.trim();
+  if(!emailVal){markErr("ci_email");erros.push("• E-mail é obrigatório")}
+  else if(!validarEmail(emailVal)){markErr("ci_email");erros.push("• E-mail inválido")}
+  var telVal=document.getElementById("ci_tel").value.trim();
+  if(!telVal){markErr("ci_tel");erros.push("• Telefone é obrigatório")}
+  else if(!validarTel(telVal)){markErr("ci_tel");erros.push("• Telefone inválido — informe DDD + número")}
+  if(!document.getElementById("ci_veic").value){markErr("ci_veic");erros.push("• Selecione o veículo")}
+  if(!document.getElementById("ci_placa").value.trim()){markErr("ci_placa");erros.push("• Placa é obrigatória")}
+  if(!trip||!trip.checkin_foto){erros.push("• Tire a foto do odômetro")}
+
+  if(erros.length>0){alert("Corrija os seguintes campos:\n\n"+erros.join("\n"));return}
+
+  var proto="RB-"+Date.now().toString(36).toUpperCase();trip.protocolo=proto;trip.nome=document.getElementById("ci_nome").value;trip.cpf=document.getElementById("ci_cpf").value;trip.email=document.getElementById("ci_email").value;trip.telefone=document.getElementById("ci_tel").value;trip.veiculo=document.getElementById("ci_veic").value;trip.placa=document.getElementById("ci_placa").value.toUpperCase();trip.paradas=[];ld("Registrando check-in…");post({action:"checkin",protocolo:proto,nome:trip.nome,cpf:trip.cpf,email:trip.email,telefone:trip.telefone,veiculo:trip.veiculo,placa:trip.placa,checkin_timestamp:trip.checkin_timestamp,checkin_lat:trip.checkin_lat,checkin_lng:trip.checkin_lng,img_odometro_saida:trip.checkin_foto}).then(function(r){hd();if(r&&r.success===false){alert(r.error);return}saveTrip(trip);document.getElementById("ci_proto").textContent="Protocolo: "+proto;show("secCIOk")}).catch(function(e){hd();alert("Erro: "+e.message)})}
 
 // ═══ VIAGEM ═══
 // Parsear texto de paradas do servidor para array
