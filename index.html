@@ -102,6 +102,9 @@
   <div class="card"><div class="ct"><span class="ic" style="background:#EFF6FF;color:#2563EB">📍</span> Paradas Registradas</div>
     <ul class="wl" id="wp_list"><li style="color:var(--text-muted);border-left-color:var(--border)">Nenhuma parada registrada.</li></ul>
   </div>
+  <div class="card" style="background:var(--warning-bg);border-color:#FCD34D">
+    <p style="font-size:13px;color:#92400E;line-height:1.6"><strong>⚠️ Atenção:</strong> Registre aqui apenas as paradas de <strong>ida</strong> (destinos intermediários). O trecho de <strong>retorno</strong> será informado no check-out. Se registrar o retorno como parada, os dados serão duplicados.</p>
+  </div>
   <button class="bp b" onclick="goParada()">📍 Registrar Parada</button>
   <button class="bp y" style="margin-top:10px" onclick="goCO()">🏁 Finalizar Viagem (Check-out)</button>
   <button class="bs" onclick="show('secHome')">← Início</button>
@@ -207,14 +210,12 @@ function enviarCI(){var fs=["ci_nome","ci_cpf","ci_email","ci_tel","ci_veic","ci
 // Parsear texto de paradas do servidor para array
 function parseParadas(txt){if(!txt)return[];var lines=String(txt).split("\n"),result=[];for(var i=0;i<lines.length;i++){var l=lines[i].trim();if(!l)continue;var m=l.match(/\d+\.\s*(.+?)\s*→\s*(.+?)\s*\|\s*([\d.]+)\s*km\s*\|\s*(.+?)(\s*\||$)/);if(m){result.push({orig:m[1].trim(),dest:m[2].trim(),km:m[3],time:m[4].trim()})}else{result.push({orig:"?",dest:"?",km:"0",time:l})}}return result}
 
-function goViagem(){trip=loadTrip();if(!trip){alert("Nenhuma viagem.");return}show("secViagem");document.getElementById("viagem_info").innerHTML="Protocolo: "+trip.protocolo+"<br>"+trip.nome+" — "+trip.veiculo+" ("+trip.placa+")<br><span style='color:var(--text-muted)'>Atualizando paradas…</span>";
-  // Buscar paradas atualizadas do servidor
+function goViagem(){trip=loadTrip();if(!trip){alert("Nenhuma viagem.");return}show("secViagem");ld("Atualizando paradas…");
   fetch(API+"?action=buscar_viagem&protocolo="+encodeURIComponent(trip.protocolo)).then(function(r){return r.text()}).then(function(t){
     try{var d=JSON.parse(t);if(d.success&&d.found){
-      // Se já foi completado em outro device
-      if(d.viagem.status==="COMPLETO"){clearTrip();trip=null;alert("Esta viagem já foi finalizada em outro dispositivo.");show("secHome");sync();return}
+      if(d.viagem.status==="COMPLETO"){hd();clearTrip();trip=null;alert("Esta viagem já foi finalizada em outro dispositivo.");show("secHome");sync();return}
       trip.paradas=parseParadas(d.viagem.paradas_texto);trip.paradas_count=d.viagem.paradas_count;saveTrip(trip);
-    }}catch(e){}renderViagem()}).catch(function(){renderViagem()})}
+    }}catch(e){}hd();renderViagem()}).catch(function(){hd();renderViagem()})}
 function renderViagem(){document.getElementById("viagem_info").innerHTML="Protocolo: "+trip.protocolo+"<br>"+trip.nome+" — "+trip.veiculo+" ("+trip.placa+")";var list=document.getElementById("wp_list"),wps=trip.paradas||[];if(!wps.length){list.innerHTML='<li style="color:var(--text-muted);border-left-color:var(--border)">Nenhuma parada registrada.</li>'}else{var h="";for(var i=0;i<wps.length;i++)h+='<li><strong>'+wps[i].orig+' → '+wps[i].dest+'</strong> — '+wps[i].km+' km<br><span style="font-family:JetBrains Mono,monospace;font-size:11px">'+wps[i].time+'</span></li>';list.innerHTML=h}}
 
 // ═══ PARADA ═══
