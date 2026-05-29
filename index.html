@@ -159,6 +159,41 @@
     <p style="font-size:12px;color:var(--text-muted)">Adicione apenas se houve pedágio no percurso total (ida + volta).</p>
   </div>
   <div class="card" id="co_resumoCard" style="display:none;background:var(--bg)"><div id="co_resumo" style="font-size:14px;line-height:1.8;color:var(--text-secondary)"></div></div>
+
+  <!-- Recurso de valor -->
+  <div class="card" id="co_recursoCard" style="display:none;border:2px solid var(--border)">
+    <div style="cursor:pointer" onclick="toggleRecurso()">
+      <div style="display:flex;align-items:center;justify-content:space-between">
+        <div style="display:flex;align-items:center;gap:10px">
+          <span style="font-size:22px">⛽</span>
+          <div>
+            <div style="font-size:14px;font-weight:700;color:var(--text)">Combustível acima de R$ 6,99/L?</div>
+            <div style="font-size:12px;color:var(--text-muted)">Toque para solicitar revisão do valor</div>
+          </div>
+        </div>
+        <span id="recurso_arrow" style="font-size:18px;color:var(--text-muted);transition:transform .3s">▶</span>
+      </div>
+    </div>
+    <div id="recurso_body" style="max-height:0;overflow:hidden;transition:max-height .4s ease">
+      <div style="border-top:1px solid var(--border);margin-top:14px;padding-top:14px">
+        <div class="f"><label>Preço real pago por litro (R$) <span class="rq">*</span></label><input type="number" id="rec_preco" placeholder="Ex: 7.49" inputmode="decimal" step="0.01" oninput="recalcularRecurso()"></div>
+        <div style="margin-bottom:14px">
+          <label style="display:block;font-size:13px;font-weight:600;color:var(--text);margin-bottom:6px">Cupom fiscal do abastecimento <span class="rq">*</span></label>
+          <label class="cl" for="rec_cupom"><div class="cz" id="rec_cz" style="padding:16px 10px"><div id="rec_ph"><div class="pi" style="font-size:22px">🧾</div><div class="pt" style="font-size:13px">Anexar cupom fiscal</div><div class="ps">Deve mostrar o preço por litro</div></div><img id="rec_pv" style="display:none"></div></label>
+          <input type="file" accept="image/*" id="rec_cupom" class="chi" onchange="capFile(this,'rec_pv','rec_ph','rec_cz')">
+        </div>
+        <div id="rec_diff" style="display:none;padding:12px;background:var(--accent-glow);border-radius:var(--radius-sm);margin-bottom:14px;text-align:center">
+          <div style="font-size:13px;color:var(--text-secondary)">Novo valor de combustível</div>
+          <div id="rec_novo_valor" style="font-size:20px;font-weight:700;color:var(--primary)"></div>
+          <div id="rec_diferenca" style="font-size:12px;color:var(--accent)"></div>
+        </div>
+        <div style="padding:12px;background:var(--warning-bg);border-radius:var(--radius-sm);border:1px solid #FCD34D">
+          <p style="font-size:12px;color:#92400E;line-height:1.5;margin:0"><strong>⚠️ Importante:</strong> Ao solicitar revisão, o reembolso será encaminhado para <strong>análise do setor financeiro</strong> antes do pagamento. O prazo poderá ser estendido. O cupom fiscal será verificado.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <button class="bp b" onclick="calcular()" id="btnCalc">🧮 Calcular Reembolso</button>
   <button class="bp y" id="btnEnv" onclick="enviarCO()" style="display:none;margin-top:10px">📤 Enviar Solicitação</button>
   <button class="bs" onclick="show('secViagem')">← Voltar</button>
@@ -198,7 +233,7 @@ function loadTrip(){try{var r=localStorage.getItem("rbcip_trip");return r?JSON.p
 function clearTrip(){localStorage.removeItem("rbcip_trip")}
 
 // Sync
-function sync(){trip=loadTrip();if(trip){fetch(API+"?action=verificar_status&protocolo="+encodeURIComponent(trip.protocolo)).then(function(r){return r.text()}).then(function(t){try{var d=JSON.parse(t);if(d.status==="COMPLETO"||d.status==="NAO_ENCONTRADO"){clearTrip();trip=null}}catch(e){}updateHome()}).catch(function(){updateHome()})}else{updateHome()}}
+function sync(){trip=loadTrip();if(trip){fetch(API+"?action=verificar_status&protocolo="+encodeURIComponent(trip.protocolo)).then(function(r){return r.text()}).then(function(t){try{var d=JSON.parse(t);if(d.status==="COMPLETO"||d.status==="RECURSO"||d.status==="NAO_ENCONTRADO"){clearTrip();trip=null}}catch(e){}updateHome()}).catch(function(){updateHome()})}else{updateHome()}}
 function updateHome(){var b=document.getElementById("openBanner"),ci=document.getElementById("cardCI"),cv=document.getElementById("cardV");if(trip){b.classList.add("v");document.getElementById("openDetail").innerHTML="<strong>"+trip.nome+"</strong> — "+trip.veiculo+" ("+trip.placa+")<br>Protocolo: "+trip.protocolo;ci.style.opacity=".5";ci.style.pointerEvents="none";cv.style.display="flex"}else{b.classList.remove("v");ci.style.opacity="1";ci.style.pointerEvents="auto";cv.style.display="none"}}
 
 // Buscar CPF
@@ -221,7 +256,7 @@ function parseParadas(txt){if(!txt)return[];var lines=String(txt).split("\n"),re
 function goViagem(){trip=loadTrip();if(!trip){alert("Nenhuma viagem.");return}show("secViagem");ld("Atualizando paradas…");
   fetch(API+"?action=buscar_viagem&protocolo="+encodeURIComponent(trip.protocolo)).then(function(r){return r.text()}).then(function(t){
     try{var d=JSON.parse(t);if(d.success&&d.found){
-      if(d.viagem.status==="COMPLETO"){hd();clearTrip();trip=null;alert("Esta viagem já foi finalizada em outro dispositivo.");show("secHome");sync();return}
+      if(d.viagem.status==="COMPLETO"||d.viagem.status==="RECURSO"){hd();clearTrip();trip=null;alert("Esta viagem já foi finalizada em outro dispositivo.");show("secHome");sync();return}
       trip.paradas=parseParadas(d.viagem.paradas_texto);trip.paradas_count=d.viagem.paradas_count;saveTrip(trip);
     }}catch(e){}hd();renderViagem()}).catch(function(){hd();renderViagem()})}
 function renderViagem(){document.getElementById("viagem_info").innerHTML="Protocolo: "+trip.protocolo+"<br>"+trip.nome+" — "+trip.veiculo+" ("+trip.placa+")";var list=document.getElementById("wp_list"),wps=trip.paradas||[];if(!wps.length){list.innerHTML='<li style="color:var(--text-muted);border-left-color:var(--border)">Nenhuma parada registrada.</li>'}else{var h="";for(var i=0;i<wps.length;i++)h+='<li><strong>'+wps[i].orig+' → '+wps[i].dest+'</strong> — '+wps[i].km+' km<br><span style="font-family:JetBrains Mono,monospace;font-size:11px">'+wps[i].time+'</span></li>';list.innerHTML=h}}
@@ -231,7 +266,7 @@ function goParada(){show("secParada");reqGPS("pa_gs","pa_gt");clock("pa_ck");doc
 function enviarParada(){var orig=document.getElementById("pa_orig").value.trim(),dest=document.getElementById("pa_dest").value.trim(),km=document.getElementById("pa_km").value.trim();if(!orig||!dest||!km){alert("Preencha origem, destino e distância.");return}if(!document.getElementById("pa_maps").dataset.compressed){alert("Anexe o print do Google Maps deste trecho.");return}ld("Registrando parada…");var now=new Date();post({action:"parada",protocolo:trip.protocolo,timestamp:now.toISOString(),lat:gps?gps.lat:null,lng:gps?gps.lng:null,origem:orig,destino:dest,distancia_km:km,img_maps:document.getElementById("pa_maps").dataset.compressed,foto_local:document.getElementById("pa_foto").dataset.compressed||null}).then(function(r){hd();if(r&&r.success===false){alert(r.error);return}trip.paradas=trip.paradas||[];trip.paradas.push({orig:orig,dest:dest,km:km,time:fmtD(now)});saveTrip(trip);goViagem()}).catch(function(e){hd();alert("Erro: "+e.message)})}
 
 // ═══ CHECK-OUT ═══
-function goCO(){show("secCO");reqGPS("co_gs","co_gt");clock("co_ck");coCapt={ts:null,lat:null,lng:null,b64:null};document.getElementById("co_pv").style.display="none";document.getElementById("co_ph").style.display="block";document.getElementById("co_cz").classList.remove("ok");document.getElementById("co_mpv").style.display="none";document.getElementById("co_mph").style.display="block";document.getElementById("co_mz").classList.remove("ok");document.getElementById("co_resumoCard").style.display="none";document.getElementById("btnEnv").style.display="none";document.getElementById("btnCalc").style.display="flex";document.getElementById("ped_list").innerHTML="";document.getElementById("co_rorig").value="";document.getElementById("co_rdest").value="";document.getElementById("co_rkm").value=""}
+function goCO(){show("secCO");reqGPS("co_gs","co_gt");clock("co_ck");coCapt={ts:null,lat:null,lng:null,b64:null};document.getElementById("co_pv").style.display="none";document.getElementById("co_ph").style.display="block";document.getElementById("co_cz").classList.remove("ok");document.getElementById("co_mpv").style.display="none";document.getElementById("co_mph").style.display="block";document.getElementById("co_mz").classList.remove("ok");document.getElementById("co_resumoCard").style.display="none";document.getElementById("co_recursoCard").style.display="none";document.getElementById("btnEnv").style.display="none";document.getElementById("btnCalc").style.display="flex";document.getElementById("ped_list").innerHTML="";document.getElementById("co_rorig").value="";document.getElementById("co_rdest").value="";document.getElementById("co_rkm").value=""}
 
 // Pedágios dinâmicos
 var pedN=0;
@@ -242,25 +277,46 @@ function calcular(){
   var ro=document.getElementById("co_rorig").value.trim(),rd=document.getElementById("co_rdest").value.trim(),rk=parseFloat(document.getElementById("co_rkm").value)||0;
   if(!ro||!rd||!rk){alert("Preencha o trecho de retorno.");return}
   if(!document.getElementById("co_maps").dataset.compressed){alert("Anexe o Maps do retorno.");return}
-  // Distância total
   var distParadas=0,paradas=trip.paradas||[];for(var i=0;i<paradas.length;i++)distParadas+=parseFloat(paradas[i].km)||0;
-  var distTotal=distParadas+rk;
-  var consumo=trip.veiculo==="Moto"?49:10,preco=6.99;
-  var valC=(distTotal/consumo)*preco;
-  // Pedágios
-  var pEls=document.querySelectorAll("#ped_list .dyn-item"),totalP=0;
-  for(var i=0;i<pEls.length;i++){var v=parseFloat(pEls[i].querySelector(".ped-val").value)||0;if(!v){alert("Informe o valor do pedágio "+(i+1)+".");return}totalP+=v}
-  var total=valC+totalP;
-  // Resumo
+  calcDist=distParadas+rk;
+  calcConsumo=trip.veiculo==="Moto"?49:10;
+  calcPreco=6.99;
+  calcValC=(calcDist/calcConsumo)*calcPreco;
+  var pEls=document.querySelectorAll("#ped_list .dyn-item");calcTotalP=0;
+  for(var i=0;i<pEls.length;i++){var v=parseFloat(pEls[i].querySelector(".ped-val").value)||0;if(!v){alert("Informe o valor do pedágio "+(i+1)+".");return}calcTotalP+=v}
+  calcTotal=calcValC+calcTotalP;
   var trTxt="";for(var i=0;i<paradas.length;i++)trTxt+="• "+paradas[i].orig+" → "+paradas[i].dest+": "+paradas[i].km+" km<br>";
   trTxt+="• "+ro+" → "+rd+": "+rk+" km (retorno)<br>";
-  document.getElementById("co_resumo").innerHTML='<div style="font-weight:700;font-size:15px;color:var(--primary);margin-bottom:10px">📊 Resumo</div><div><strong>'+trip.nome+'</strong> — '+trip.veiculo+' ('+consumo+' km/L)</div><hr style="border:none;border-top:1px solid var(--border);margin:10px 0"><div style="font-size:13px">'+trTxt+'</div><div><strong>Total:</strong> '+distTotal+' km</div><div><strong>Combustível:</strong> R$ '+valC.toFixed(2)+'</div>'+(totalP?'<div><strong>Pedágios ('+pEls.length+'):</strong> R$ '+totalP.toFixed(2)+'</div>':'')+'<div style="font-size:18px;font-weight:700;color:var(--primary);margin-top:8px">Total: R$ '+total.toFixed(2)+'</div>';
-  document.getElementById("co_resumoCard").style.display="block";document.getElementById("btnCalc").style.display="none";document.getElementById("btnEnv").style.display="flex";document.getElementById("co_resumoCard").scrollIntoView({behavior:"smooth"})}
+  document.getElementById("co_resumo").innerHTML='<div style="font-weight:700;font-size:15px;color:var(--primary);margin-bottom:10px">📊 Resumo</div><div><strong>'+trip.nome+'</strong> — '+trip.veiculo+' ('+calcConsumo+' km/L)</div><hr style="border:none;border-top:1px solid var(--border);margin:10px 0"><div style="font-size:13px">'+trTxt+'</div><div><strong>Total:</strong> '+calcDist+' km</div><div><strong>Combustível (R$ '+calcPreco+'/L):</strong> R$ '+calcValC.toFixed(2)+'</div>'+(calcTotalP?'<div><strong>Pedágios ('+pEls.length+'):</strong> R$ '+calcTotalP.toFixed(2)+'</div>':'')+'<div style="font-size:18px;font-weight:700;color:var(--primary);margin-top:8px">Total: R$ '+calcTotal.toFixed(2)+'</div>';
+  document.getElementById("co_resumoCard").style.display="block";
+  document.getElementById("co_recursoCard").style.display="block";
+  document.getElementById("btnCalc").style.display="none";
+  document.getElementById("btnEnv").style.display="flex";
+  // Reset recurso
+  recursoAberto=false;document.getElementById("recurso_body").style.maxHeight="0";document.getElementById("recurso_arrow").style.transform="";
+  document.getElementById("rec_preco").value="";document.getElementById("rec_diff").style.display="none";
+  document.getElementById("rec_pv").style.display="none";document.getElementById("rec_ph").style.display="block";document.getElementById("rec_cz").classList.remove("ok");
+  document.getElementById("co_resumoCard").scrollIntoView({behavior:"smooth"})}
+
+// ── Recurso ──
+var recursoAberto=false,calcDist=0,calcConsumo=10,calcPreco=6.99,calcValC=0,calcTotalP=0,calcTotal=0;
+function toggleRecurso(){recursoAberto=!recursoAberto;document.getElementById("recurso_body").style.maxHeight=recursoAberto?"600px":"0";document.getElementById("recurso_arrow").style.transform=recursoAberto?"rotate(90deg)":"";document.getElementById("co_recursoCard").style.borderColor=recursoAberto?"var(--accent)":"var(--border)"}
+function recalcularRecurso(){var p=parseFloat(document.getElementById("rec_preco").value);if(!p||p<=calcPreco){document.getElementById("rec_diff").style.display="none";return}var novoValC=(calcDist/calcConsumo)*p;var novoTotal=novoValC+calcTotalP;var diff=novoValC-calcValC;document.getElementById("rec_novo_valor").textContent="R$ "+novoTotal.toFixed(2);document.getElementById("rec_diferenca").textContent="+ R$ "+diff.toFixed(2)+" em relação ao cálculo base";document.getElementById("rec_diff").style.display="block"}
 
 function enviarCO(){document.getElementById("btnEnv").disabled=true;ld("Enviando…");
   var pEls=document.querySelectorAll("#ped_list .dyn-item"),peds=[];
   for(var i=0;i<pEls.length;i++){var fI=pEls[i].querySelector("input[type=file]");peds.push({valor:parseFloat(pEls[i].querySelector(".ped-val").value)||0,foto:fI?fI.dataset.compressed||null:null})}
-  var payload={action:"checkout",protocolo:trip.protocolo,timestamp_envio:new Date().toISOString(),veiculo:trip.veiculo,checkin_timestamp_iso:trip.checkin_timestamp,checkout_timestamp:coCapt.ts,checkout_lat:coCapt.lat,checkout_lng:coCapt.lng,img_odometro_chegada:coCapt.b64,retorno_origem:document.getElementById("co_rorig").value,retorno_destino:document.getElementById("co_rdest").value,distancia_retorno:document.getElementById("co_rkm").value,img_maps_retorno:document.getElementById("co_maps").dataset.compressed||null,pedagios:peds};
+  // Verificar recurso
+  var temRecurso=false,precoReal=calcPreco,cupomRecurso=null;
+  if(recursoAberto){
+    precoReal=parseFloat(document.getElementById("rec_preco").value)||calcPreco;
+    cupomRecurso=document.getElementById("rec_cupom").dataset.compressed||null;
+    if(precoReal>calcPreco){
+      if(!cupomRecurso){alert("Anexe o cupom fiscal para comprovar o valor do combustível.");document.getElementById("btnEnv").disabled=false;hd();return}
+      temRecurso=true;
+    }
+  }
+  var payload={action:"checkout",protocolo:trip.protocolo,timestamp_envio:new Date().toISOString(),veiculo:trip.veiculo,checkin_timestamp_iso:trip.checkin_timestamp,checkout_timestamp:coCapt.ts,checkout_lat:coCapt.lat,checkout_lng:coCapt.lng,img_odometro_chegada:coCapt.b64,retorno_origem:document.getElementById("co_rorig").value,retorno_destino:document.getElementById("co_rdest").value,distancia_retorno:document.getElementById("co_rkm").value,img_maps_retorno:document.getElementById("co_maps").dataset.compressed||null,pedagios:peds,recurso:temRecurso,preco_combustivel:precoReal,img_cupom_combustivel:cupomRecurso};
   post(payload).then(function(r){hd();clearTrip();trip=null;document.getElementById("ok_proto").textContent="Protocolo: "+payload.protocolo;document.getElementById("ok_val").textContent=r&&r.valor_total?"R$ "+r.valor_total:"";show("secOk")}).catch(function(e){fetch(API,{method:"POST",mode:"no-cors",headers:{"Content-Type":"text/plain"},body:JSON.stringify(payload)}).then(function(){hd();clearTrip();trip=null;document.getElementById("ok_proto").textContent="Protocolo: "+payload.protocolo;show("secOk")}).catch(function(e2){hd();document.getElementById("btnEnv").disabled=false;alert("Erro: "+e2.message)})})}
 
 sync();
