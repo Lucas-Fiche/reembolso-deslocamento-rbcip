@@ -102,8 +102,10 @@
   <div class="card"><div class="ct"><span class="ic" style="background:#EFF6FF;color:#2563EB">📍</span> Paradas Registradas</div>
     <ul class="wl" id="wp_list"><li style="color:var(--text-muted);border-left-color:var(--border)">Nenhuma parada registrada.</li></ul>
   </div>
-  <div class="card" style="background:var(--warning-bg);border-color:#FCD34D">
-    <p style="font-size:13px;color:#92400E;line-height:1.6"><strong>⚠️ Atenção:</strong> Registre aqui apenas as paradas de <strong>ida</strong> (destinos intermediários). O trecho de <strong>retorno</strong> será informado no check-out. Se registrar o retorno como parada, os dados serão duplicados.</p>
+  <div class="card" style="background:linear-gradient(135deg,#FEF3C7,#FDE68A);border:2px solid #F59E0B;text-align:center;padding:24px 20px">
+    <div style="font-size:32px;margin-bottom:8px">⚠️</div>
+    <div style="font-size:15px;font-weight:700;color:#92400E;margin-bottom:8px">O trecho de RETORNO não é uma parada!</div>
+    <p style="font-size:13px;color:#A16207;line-height:1.6;margin:0">Registre aqui apenas os destinos de <strong>ida</strong>. O trecho de volta será preenchido na etapa de <strong>Finalizar Viagem (Check-out)</strong>.</p>
   </div>
   <button class="bp b" onclick="goParada()">📍 Registrar Parada</button>
   <button class="bp y" style="margin-top:10px" onclick="goCO()">🏁 Finalizar Viagem (Check-out)</button>
