@@ -43,6 +43,50 @@
 <!-- HOME -->
 <div class="sec a" id="secHome">
   <div class="ob" id="openBanner"><div class="bt">⚠️ Viagem em andamento</div><div class="bd" id="openDetail"></div></div>
+
+  <!-- Instruções -->
+  <div class="card" id="instrCard" style="border:2px solid var(--accent);padding:0;overflow:hidden">
+    <div onclick="toggleInstr()" style="display:flex;align-items:center;justify-content:space-between;padding:16px 20px;cursor:pointer;background:linear-gradient(135deg,#EFF6FF,#DBEAFE)">
+      <div style="display:flex;align-items:center;gap:10px"><span style="font-size:22px">📋</span><span style="font-size:15px;font-weight:700;color:#1E40AF">Como funciona?</span></div>
+      <span id="instrArrow" style="font-size:16px;color:#1E40AF;transition:transform .3s">▼</span>
+    </div>
+    <div id="instrBody" style="max-height:2000px;overflow:hidden;transition:max-height .4s ease">
+      <div style="padding:16px 20px;font-size:13px;color:var(--text-secondary);line-height:1.8">
+        <div style="font-weight:700;color:var(--text);margin-bottom:10px;font-size:14px">O registro de deslocamento tem 4 etapas:</div>
+
+        <div style="display:flex;gap:10px;margin-bottom:14px">
+          <div style="width:28px;height:28px;border-radius:50%;background:#ECFDF5;color:#059669;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;flex-shrink:0">1</div>
+          <div><strong style="color:var(--text)">CHECK-IN (antes de sair)</strong><br>Preencha seus dados, informe quantas paradas terá na ida e na volta, e tire a foto do odômetro. O GPS e horário são registrados automaticamente.</div>
+        </div>
+
+        <div style="display:flex;gap:10px;margin-bottom:14px">
+          <div style="width:28px;height:28px;border-radius:50%;background:#DBEAFE;color:#2563EB;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;flex-shrink:0">2</div>
+          <div><strong style="color:var(--text)">PARADAS DA IDA (ao chegar em cada destino)</strong><br>Para cada parada, informe origem, destino, km e anexe o print do Google Maps do trecho. O app registra GPS e horário automaticamente.</div>
+        </div>
+
+        <div style="display:flex;gap:10px;margin-bottom:14px">
+          <div style="width:28px;height:28px;border-radius:50%;background:#E0E7FF;color:#7C3AED;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;flex-shrink:0">3</div>
+          <div><strong style="color:var(--text)">PARADAS DA VOLTA (ao chegar em cada ponto de retorno)</strong><br>Mesmo processo da ida. Registre cada trecho da volta com origem, destino, km e Maps.</div>
+        </div>
+
+        <div style="display:flex;gap:10px;margin-bottom:14px">
+          <div style="width:28px;height:28px;border-radius:50%;background:#FEF3C7;color:#D97706;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;flex-shrink:0">4</div>
+          <div><strong style="color:var(--text)">CHECK-OUT (ao finalizar a viagem)</strong><br>Tire a foto do odômetro final, informe pedágios (se houver) e o preço do combustível. O app calcula o reembolso automaticamente.</div>
+        </div>
+
+        <div style="background:var(--warning-bg);border:1px solid #FCD34D;border-radius:8px;padding:12px;margin-top:4px">
+          <div style="font-size:12px;color:#92400E;line-height:1.6">
+            <strong>⚠️ Importante:</strong><br>
+            • Cada parada = um trecho do percurso (origem → destino + km)<br>
+            • Anexe o print do Google Maps de <strong>cada trecho</strong><br>
+            • Não feche o app entre etapas — seus dados ficam salvos no servidor<br>
+            • Se tiver cupom fiscal do combustível, tenha-o em mãos no check-out
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <div class="mc" onclick="goCheckin()" id="cardCI"><div class="mi" style="background:#ECFDF5;color:#059669">🚀</div><div class="mn"><h3>CHECK-IN</h3><p>Registre o odômetro antes de sair.</p></div></div>
   <div class="mc" onclick="goViagem()" id="cardV" style="display:none"><div class="mi" style="background:#EFF6FF;color:#2563EB">🗺️</div><div class="mn"><h3>Viagem em Andamento</h3><p>Registrar paradas ou finalizar.</p></div></div>
   <div class="card"><div class="ct"><span class="ic" style="background:#EFF6FF;color:#2563EB">🔍</span> Recuperar Viagem</div>
@@ -225,7 +269,7 @@ function saveTrip(d){try{var l={};for(var k in d)if(k!=="checkin_foto")l[k]=d[k]
 function loadTrip(){try{var r=localStorage.getItem("rbcip_trip");return r?JSON.parse(r):null}catch(e){return null}}function clearTrip(){localStorage.removeItem("rbcip_trip")}
 function parseP(txt){if(!txt)return[];var lines=String(txt).split("\n"),r=[];for(var i=0;i<lines.length;i++){var l=lines[i].trim();if(!l)continue;var m=l.match(/\d+\.\s*(.+?)\s*→\s*(.+?)\s*\|\s*([\d.]+)\s*km\s*\|\s*(.+?)(\s*\||$)/);if(m)r.push({orig:m[1].trim(),dest:m[2].trim(),km:m[3],time:m[4].trim()});else r.push({orig:"?",dest:"?",km:"0",time:l})}return r}
 function sync(){trip=loadTrip();if(trip){fetch(API+"?action=verificar_status&protocolo="+encodeURIComponent(trip.protocolo)).then(function(r){return r.text()}).then(function(t){try{var d=JSON.parse(t);if(d.status==="COMPLETO"||d.status==="CORRIGIDO"||d.status==="NAO_ENCONTRADO"){clearTrip();trip=null}}catch(e){}updateHome()}).catch(function(){updateHome()})}else{updateHome()}}
-function updateHome(){var b=document.getElementById("openBanner"),ci=document.getElementById("cardCI"),cv=document.getElementById("cardV");if(trip){b.classList.add("v");document.getElementById("openDetail").innerHTML="<strong>"+trip.nome+"</strong> — "+trip.veiculo+" ("+trip.placa+")<br>Protocolo: "+trip.protocolo;ci.style.display="none";cv.style.display="flex"}else{b.classList.remove("v");ci.style.display="flex";cv.style.display="none"}}
+function updateHome(){var b=document.getElementById("openBanner"),ci=document.getElementById("cardCI"),cv=document.getElementById("cardV");if(trip){b.classList.add("v");document.getElementById("openDetail").innerHTML="<strong>"+trip.nome+"</strong> — "+trip.veiculo+" ("+trip.placa+")<br>Protocolo: "+trip.protocolo;ci.style.display="none";cv.style.display="flex";document.getElementById("instrCard").style.display="none"}else{b.classList.remove("v");ci.style.display="flex";cv.style.display="none";document.getElementById("instrCard").style.display="block"}}
 function buscarCPF(){var cpf=document.getElementById("busca_cpf").value.trim(),res=document.getElementById("busca_res");if(!cpf){alert("Digite o CPF.");return}res.style.display="block";res.innerHTML='<span style="color:var(--text-muted)">Buscando…</span>';
   fetch(API+"?action=buscar_checkin&cpf="+encodeURIComponent(cpf)).then(function(r){return r.text()}).then(function(t){var d;try{d=JSON.parse(t)}catch(e){res.innerHTML='<span style="color:var(--danger)">Erro.</span>';return}
     if(d.success&&d.found){trip=d.checkin;trip.ida_paradas=parseP(d.checkin.ida_texto);trip.volta_paradas=parseP(d.checkin.volta_texto);saveTrip(trip);res.innerHTML='<div style="color:#065F46;background:var(--success-bg);padding:10px;border-radius:8px">✅ Viagem encontrada! '+trip.protocolo+'</div>';updateHome();return}
@@ -320,6 +364,8 @@ function abrirCorr(p,d,pr){show("secCorrigir");document.getElementById("corr_inf
 document.addEventListener("change",function(e){if(e.target.id==="corr_tipo"){document.getElementById("corr_parada_field").style.display=e.target.value==="parada"?"block":"none"}});
 function enviarCorrecao(){var p=document.getElementById("corr_dist").dataset.protocolo;if(!p)return;var desc=document.getElementById("corr_desc").value.trim();if(!desc){alert("Descreva o que precisa ser corrigido.");document.getElementById("corr_desc").focus();return}var tipo=document.getElementById("corr_tipo").value;var parada=tipo==="parada"?document.getElementById("corr_parada").value.trim():"";if(tipo==="parada"&&!parada){alert("Identifique qual parada está incorreta.");return}ld("Corrigindo…");
   post({action:"corrigir",protocolo:p,tipo:tipo,parada_ref:parada,descricao:desc,distancia_total:parseFloat(document.getElementById("corr_dist").value)||null,preco_real:parseFloat(document.getElementById("corr_preco").value)||null}).then(function(r){hd();if(r&&r.success===false){alert(r.error);return}document.getElementById("ok_proto").textContent="Protocolo: "+p;document.getElementById("ok_val").textContent=r&&r.valor_total?"R$ "+r.valor_total+" (corrigido)":"";show("secOk")}).catch(function(e){hd();alert("Erro: "+e.message)})}
+var instrAberto=true;
+function toggleInstr(){instrAberto=!instrAberto;document.getElementById("instrBody").style.maxHeight=instrAberto?"2000px":"0";document.getElementById("instrArrow").style.transform=instrAberto?"":"rotate(-90deg)"}
 sync();
 </script>
 </body>
