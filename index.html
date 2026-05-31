@@ -34,6 +34,9 @@
 .add-btn{display:flex;align-items:center;justify-content:center;gap:6px;width:100%;padding:10px;border:1.5px dashed var(--border);border-radius:var(--radius-sm);background:transparent;color:var(--text-muted);font-family:'DM Sans',sans-serif;font-size:13px;font-weight:600;cursor:pointer;margin-bottom:14px}.add-btn:active{border-color:var(--accent);color:var(--accent)}
 .tog-row{display:flex;gap:0;border-radius:var(--radius-sm);overflow:hidden;border:1.5px solid var(--border);margin-bottom:14px}.tog-btn{flex:1;padding:12px 8px;text-align:center;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:600;cursor:pointer;border:none;background:var(--surface);color:var(--text-secondary);transition:all .2s}.tog-btn.on{background:var(--primary);color:#fff}
 .phase-badge{display:inline-block;padding:4px 12px;border-radius:20px;font-size:12px;font-weight:700;letter-spacing:.5px}
+.maps-item{background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-sm);padding:14px;margin-bottom:12px}.maps-item:last-child{margin-bottom:0}
+.maps-head{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 8px;margin-bottom:10px}.maps-tag{font-size:11px;font-weight:700;color:#1E40AF;background:#DBEAFE;padding:3px 8px;border-radius:6px;letter-spacing:.3px;white-space:nowrap}.maps-sub{font-size:12px;color:var(--text-secondary);font-weight:500}
+.ped-group-title{font-size:12px;font-weight:700;color:var(--text-secondary);text-transform:uppercase;letter-spacing:.5px;margin:4px 0 10px;display:flex;align-items:center;gap:6px}.ped-group-title:not(:first-child){margin-top:18px;padding-top:16px;border-top:1px solid var(--border)}
 </style>
 </head>
 <body>
@@ -198,9 +201,13 @@
     <div id="maps_list"></div>
   </div>
   <div class="card"><div class="ct"><span class="ic" style="background:#FEF2F2;color:#DC2626">🧾</span> Pedágios</div>
-    <div id="ped_list"></div>
-    <button class="add-btn" onclick="addPed()">+ Adicionar Pedágio</button>
-    <p style="font-size:12px;color:var(--text-muted)">Pedágios de todo o percurso (ida + volta).</p>
+    <div class="ped-group-title">➡️ Pedágios da IDA</div>
+    <div id="ped_list_ida"></div>
+    <button class="add-btn" onclick="addPed('ida')">+ Adicionar Pedágio (Ida)</button>
+    <div class="ped-group-title">↩️ Pedágios da VOLTA</div>
+    <div id="ped_list_volta"></div>
+    <button class="add-btn" onclick="addPed('volta')">+ Adicionar Pedágio (Volta)</button>
+    <p style="font-size:12px;color:var(--text-muted)">Adicione cada pedágio na fase correspondente. Se não houver, deixe vazio.</p>
   </div>
   <div class="card"><div class="ct"><span class="ic" style="background:#FEF3C7;color:#D97706">⛽</span> Valor do Combustível</div>
     <div class="tog-row">
@@ -215,7 +222,7 @@
     <div id="fuel_estim" style="display:none">
       <div style="padding:14px;background:var(--warning-bg);border-radius:var(--radius-sm);border:1px solid #FCD34D;text-align:center">
         <div style="font-size:13px;font-weight:600;color:#92400E;margin-bottom:4px">Valor estimado será utilizado</div>
-        <div style="font-size:20px;font-weight:700;color:#92400E">R$ 6,99/L</div>
+        <div style="font-size:20px;font-weight:700;color:#92400E">R$ 6,79/L</div>
         <p style="font-size:12px;color:#A16207;margin-top:6px">Sem cupom fiscal, o cálculo usará o valor base.</p>
       </div>
     </div>
@@ -250,7 +257,7 @@
 
 <script>
 var API="https://script.google.com/macros/s/AKfycbwaKl_Iglg_hVzG6_wS9GxTxZd8svu836zLxVJ45PAh7viqtxALlRfOdEAvebeisogx/exec";
-var PB=6.99,gps=null,trip=null,coCapt={ts:null,lat:null,lng:null,b64:null},clk=null,curFase="ida",fuelMode="cupom";
+var PB=6.79,gps=null,trip=null,coCapt={ts:null,lat:null,lng:null,b64:null},clk=null,curFase="ida",fuelMode="cupom";
 
 function pad(n){return("0"+n).slice(-2)}function fmtD(d){return pad(d.getDate())+"/"+pad(d.getMonth()+1)+"/"+d.getFullYear()+" "+pad(d.getHours())+":"+pad(d.getMinutes())+":"+pad(d.getSeconds())}
 function show(id){var s=document.querySelectorAll(".sec");for(var i=0;i<s.length;i++)s[i].classList.remove("a");document.getElementById(id).classList.add("a");window.scrollTo({top:0,behavior:"smooth"});if(clk){clearInterval(clk);clk=null}}
@@ -328,27 +335,28 @@ function enviarParada(){var o=document.getElementById("pa_orig").value.trim(),d=
     var arr=curFase==="ida"?"ida_paradas":"volta_paradas";trip[arr]=trip[arr]||[];trip[arr].push({orig:o,dest:d,km:k,time:fmtD(now)});saveTrip(trip);goViagem()}).catch(function(e){hd();alert("Erro: "+e.message)})}
 
 // ═══ FINALIZAR ═══
-function goFinalizar(){show("secFinal");reqGPS("co_gs","co_gt");clock("co_ck");coCapt={ts:null,lat:null,lng:null,b64:null};document.getElementById("co_pv").style.display="none";document.getElementById("co_ph").style.display="block";document.getElementById("co_cz").classList.remove("ok");document.getElementById("co_cupv").style.display="none";document.getElementById("co_cuph").style.display="block";document.getElementById("co_cupz").classList.remove("ok");document.getElementById("resumoCard").style.display="none";document.getElementById("btnEnv").style.display="none";document.getElementById("btnCalc").style.display="flex";document.getElementById("ped_list").innerHTML="";document.getElementById("co_cupom").dataset.compressed="";document.getElementById("co_preco").value="";fuelMode="cupom";setFuelMode("cupom");renderMapsList()}
+function goFinalizar(){show("secFinal");reqGPS("co_gs","co_gt");clock("co_ck");coCapt={ts:null,lat:null,lng:null,b64:null};document.getElementById("co_pv").style.display="none";document.getElementById("co_ph").style.display="block";document.getElementById("co_cz").classList.remove("ok");document.getElementById("co_cupv").style.display="none";document.getElementById("co_cuph").style.display="block";document.getElementById("co_cupz").classList.remove("ok");document.getElementById("resumoCard").style.display="none";document.getElementById("btnEnv").style.display="none";document.getElementById("btnCalc").style.display="flex";document.getElementById("ped_list_ida").innerHTML="";document.getElementById("ped_list_volta").innerHTML="";document.getElementById("co_cupom").dataset.compressed="";document.getElementById("co_preco").value="";fuelMode="cupom";setFuelMode("cupom");renderMapsList()}
 function renderMapsList(){var pI=trip.ida_paradas||[],pV=trip.volta_paradas||[],h="";
   for(var i=0;i<pI.length;i++)h+=mapsItem("mida_"+i,"IDA — Parada "+(i+1),pI[i]);
   for(var i=0;i<pV.length;i++)h+=mapsItem("mvolta_"+i,"VOLTA — Parada "+(i+1),pV[i]);
   if(!pI.length&&!pV.length)h='<p style="font-size:13px;color:var(--text-muted)">Nenhuma parada registrada.</p>';
   document.getElementById("maps_list").innerHTML=h}
 function mapsItem(id,label,p){var sub=(p?(p.orig+" → "+p.dest+" · "+p.km+" km"):"");
-  return '<div class="dyn-item">'+
-    '<div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:2px">'+label+'</div>'+
-    '<div style="font-size:12px;color:var(--text-secondary);margin-bottom:8px">'+sub+'</div>'+
-    '<label class="cl" for="'+id+'"><div class="cz" id="'+id+'_z" style="padding:14px 10px"><div id="'+id+'_p"><div class="ps">🗺️ Anexar print do Maps</div></div><img id="'+id+'_v" style="display:none"></div></label>'+
-    '<input type="file" accept="image/*" id="'+id+'" class="chi" onchange="capFile(this,\''+id+'_v\',\''+id+'_p\',\''+id+'_z\')">'}
+  return '<div class="maps-item">'+
+    '<div class="maps-head"><span class="maps-tag">'+label+'</span><span class="maps-sub">'+sub+'</span></div>'+
+    '<label class="cl" for="'+id+'"><div class="cz" id="'+id+'_z"><div id="'+id+'_p"><div class="pi">🗺️</div><div class="pt">Anexar print do Maps</div></div><img id="'+id+'_v" style="display:none"></div></label>'+
+    '<input type="file" accept="image/*" id="'+id+'" class="chi" onchange="capFile(this,\''+id+'_v\',\''+id+'_p\',\''+id+'_z\')">'+
+    '</div>'}
 function setFuelMode(m){fuelMode=m;document.getElementById("tog_cupom").classList.toggle("on",m==="cupom");document.getElementById("tog_estim").classList.toggle("on",m==="estim");document.getElementById("fuel_cupom").style.display=m==="cupom"?"block":"none";document.getElementById("fuel_estim").style.display=m==="estim"?"block":"none"}
-var pedN=0;function addPed(){pedN++;var d=document.createElement("div");d.className="dyn-item";d.innerHTML='<button class="rm" onclick="this.parentElement.remove()">×</button><div class="f" style="margin-bottom:8px"><label style="font-size:12px">Valor (R$)</label><input type="number" class="ped-val" placeholder="15.40" inputmode="decimal" step="0.01"></div><label class="cl" for="ped_f_'+pedN+'"><div class="cz" id="ped_z_'+pedN+'" style="padding:12px 10px"><div id="ped_p_'+pedN+'"><div class="ps">🧾 Anexar comprovante</div></div><img id="ped_v_'+pedN+'" style="display:none"></div></label><input type="file" accept="image/*" id="ped_f_'+pedN+'" class="chi" onchange="capFile(this,\'ped_v_'+pedN+'\',\'ped_p_'+pedN+'\',\'ped_z_'+pedN+'\')">';document.getElementById("ped_list").appendChild(d)}
+var pedN=0;function addPed(fase){fase=fase||"ida";pedN++;var d=document.createElement("div");d.className="dyn-item";d.innerHTML='<button class="rm" onclick="this.parentElement.remove()">×</button><div class="f" style="margin-bottom:8px"><label style="font-size:12px">Valor (R$)</label><input type="number" class="ped-val" placeholder="15.40" inputmode="decimal" step="0.01"></div><label class="cl" for="ped_f_'+pedN+'"><div class="cz" id="ped_z_'+pedN+'" style="padding:12px 10px"><div id="ped_p_'+pedN+'"><div class="ps">🧾 Anexar comprovante</div></div><img id="ped_v_'+pedN+'" style="display:none"></div></label><input type="file" accept="image/*" id="ped_f_'+pedN+'" class="chi" onchange="capFile(this,\'ped_v_'+pedN+'\',\'ped_p_'+pedN+'\',\'ped_z_'+pedN+'\')">';document.getElementById("ped_list_"+fase).appendChild(d)}
+function coletarPedagios(){var out=[];["ida","volta"].forEach(function(f){var els=document.querySelectorAll("#ped_list_"+f+" .dyn-item");for(var i=0;i<els.length;i++){var fI=els[i].querySelector("input[type=file]");out.push({fase:f,valor:parseFloat(els[i].querySelector(".ped-val").value)||0,foto:fI?fI.dataset.compressed||null:null})}});return out}
 
 function calcular(){
   if(!coCapt.b64){alert("Tire a foto do odômetro.");return}
   var usarEstim=fuelMode==="estim",precoReal=PB;
   if(!usarEstim){precoReal=parseFloat(document.getElementById("co_preco").value);if(!precoReal||precoReal<=0){alert("Informe o preço do litro.");document.getElementById("co_preco").focus();return}if(!document.getElementById("co_cupom").dataset.compressed){alert("Anexe o cupom fiscal.");return}}
-  var pEls=document.querySelectorAll("#ped_list .dyn-item"),tPed=0;
-  for(var i=0;i<pEls.length;i++){var v=parseFloat(pEls[i].querySelector(".ped-val").value)||0;if(!v){alert("Valor do pedágio "+(i+1)+".");return}tPed+=v}
+  var peds=coletarPedagios(),tPed=0;
+  for(var i=0;i<peds.length;i++){if(!peds[i].valor){alert("Informe o valor do pedágio "+(i+1)+" ("+peds[i].fase.toUpperCase()+").");return}tPed+=peds[i].valor}
   var dIda=0,pI=trip.ida_paradas||[];for(var i=0;i<pI.length;i++)dIda+=parseFloat(pI[i].km)||0;
   var dVolta=0,pV=trip.volta_paradas||[];for(var i=0;i<pV.length;i++)dVolta+=parseFloat(pV[i].km)||0;
   var dTot=dIda+dVolta,con=trip.veiculo==="Moto"?49:10;
@@ -356,7 +364,7 @@ function calcular(){
   var trTxt="<strong>IDA:</strong><br>";for(var i=0;i<pI.length;i++)trTxt+="• "+pI[i].orig+" → "+pI[i].dest+": "+pI[i].km+" km<br>";
   trTxt+="<strong>VOLTA:</strong><br>";for(var i=0;i<pV.length;i++)trTxt+="• "+pV[i].orig+" → "+pV[i].dest+": "+pV[i].km+" km<br>";
   var fuelTxt=usarEstim?'<div style="padding:12px;background:var(--warning-bg);border-radius:8px;border:1px solid #FCD34D;text-align:center;margin-bottom:10px"><div style="font-size:12px;font-weight:600;color:#92400E">ESTIMATIVA (R$ '+PB.toFixed(2)+'/L)</div><div style="font-size:18px;font-weight:700;color:#92400E">R$ '+vEst.toFixed(2)+'</div></div>':'<div style="padding:12px;background:var(--warning-bg);border-radius:8px;border:1px solid #FCD34D;text-align:center;margin-bottom:8px"><div style="font-size:11px;color:#92400E">📐 Estimativa (R$ '+PB.toFixed(2)+'/L): R$ '+vEst.toFixed(2)+'</div></div><div style="padding:12px;background:var(--success-bg);border-radius:8px;border:1px solid var(--success);text-align:center;margin-bottom:10px"><div style="font-size:12px;font-weight:600;color:#065F46">✅ VALOR REAL (R$ '+precoReal.toFixed(2)+'/L)</div><div style="font-size:20px;font-weight:700;color:#065F46">R$ '+vReal.toFixed(2)+'</div></div>';
-  document.getElementById("resumo").innerHTML='<div style="font-weight:700;font-size:15px;color:var(--primary);margin-bottom:10px">📊 Resumo</div><div><strong>'+trip.nome+'</strong> — '+trip.veiculo+' ('+con+' km/L)</div><hr style="border:none;border-top:1px solid var(--border);margin:10px 0"><div style="font-size:13px">'+trTxt+'</div><div style="margin:10px 0"><strong>Total:</strong> '+dTot+' km (ida: '+dIda+' + volta: '+dVolta+')</div><hr style="border:none;border-top:1px solid var(--border);margin:10px 0">'+fuelTxt+(tPed?'<div><strong>Pedágios ('+pEls.length+'):</strong> R$ '+tPed.toFixed(2)+'</div>':'')+'<div style="font-size:20px;font-weight:700;color:var(--primary);margin-top:12px;padding-top:12px;border-top:2px solid var(--primary)">Total: R$ '+vTot.toFixed(2)+'</div>';
+  document.getElementById("resumo").innerHTML='<div style="font-weight:700;font-size:15px;color:var(--primary);margin-bottom:10px">📊 Resumo</div><div><strong>'+trip.nome+'</strong> — '+trip.veiculo+' ('+con+' km/L)</div><hr style="border:none;border-top:1px solid var(--border);margin:10px 0"><div style="font-size:13px">'+trTxt+'</div><div style="margin:10px 0"><strong>Total:</strong> '+dTot+' km (ida: '+dIda+' + volta: '+dVolta+')</div><hr style="border:none;border-top:1px solid var(--border);margin:10px 0">'+fuelTxt+(tPed?'<div><strong>Pedágios ('+peds.length+'):</strong> R$ '+tPed.toFixed(2)+'</div>':'')+'<div style="font-size:20px;font-weight:700;color:var(--primary);margin-top:12px;padding-top:12px;border-top:2px solid var(--primary)">Total: R$ '+vTot.toFixed(2)+'</div>';
   document.getElementById("resumoCard").style.display="block";document.getElementById("btnCalc").style.display="none";document.getElementById("btnEnv").style.display="flex";document.getElementById("resumoCard").scrollIntoView({behavior:"smooth"})}
 
 // Upload individual de uma imagem ao Drive — devolve o link
@@ -369,16 +377,15 @@ function enviarFinal(){
   for(var i=0;i<pI.length;i++){var el=document.getElementById("mida_"+i);if(!el||!el.dataset.compressed){alert("Anexe o print do Maps da Parada "+(i+1)+" da IDA.");return}mIda.push(el.dataset.compressed)}
   for(var i=0;i<pV.length;i++){var el=document.getElementById("mvolta_"+i);if(!el||!el.dataset.compressed){alert("Anexe o print do Maps da Parada "+(i+1)+" da VOLTA.");return}mVolta.push(el.dataset.compressed)}
   if(!usarEstim&&!document.getElementById("co_cupom").dataset.compressed){alert("Anexe o cupom fiscal.");return}
-  // Coletar pedágios
-  var pEls=document.querySelectorAll("#ped_list .dyn-item"),pedVals=[];
-  for(var i=0;i<pEls.length;i++){var fI=pEls[i].querySelector("input[type=file]");pedVals.push({valor:parseFloat(pEls[i].querySelector(".ped-val").value)||0,foto:fI?fI.dataset.compressed||null:null})}
+  // Coletar pedágios (ida + volta)
+  var pedVals=coletarPedagios();
   document.getElementById("btnEnv").disabled=true;
   // Fila de upload fragmentado: cada imagem vai ao Drive separadamente
   var tasks=[{b64:coCapt.b64,name:"odometro_chegada",key:"odo"}];
   for(var i=0;i<mIda.length;i++)tasks.push({b64:mIda[i],name:"ida_"+(i+1)+"_maps",key:"mi"+i});
   for(var i=0;i<mVolta.length;i++)tasks.push({b64:mVolta[i],name:"volta_"+(i+1)+"_maps",key:"mv"+i});
   if(!usarEstim)tasks.push({b64:document.getElementById("co_cupom").dataset.compressed,name:"cupom_combustivel",key:"cup"});
-  for(var i=0;i<pedVals.length;i++)if(pedVals[i].foto)tasks.push({b64:pedVals[i].foto,name:"pedagio_"+(i+1),key:"ped"+i});
+  for(var i=0;i<pedVals.length;i++)if(pedVals[i].foto)tasks.push({b64:pedVals[i].foto,name:"pedagio_"+pedVals[i].fase+"_"+(i+1),key:"ped"+i});
   var links={},total=tasks.length,idx=0;
   function next(){
     if(idx>=total){enviarPayloadFinal(links,pedVals,usarEstim);return}
@@ -391,7 +398,7 @@ function enviarPayloadFinal(links,pedVals,usarEstim){
   var pI=trip.ida_paradas||[],pV=trip.volta_paradas||[];
   var maps_ida=[];for(var i=0;i<pI.length;i++)maps_ida.push(links["mi"+i]||"");
   var maps_volta=[];for(var i=0;i<pV.length;i++)maps_volta.push(links["mv"+i]||"");
-  var peds=[];for(var i=0;i<pedVals.length;i++)peds.push({valor:pedVals[i].valor,foto_link:links["ped"+i]||""});
+  var peds=[];for(var i=0;i<pedVals.length;i++)peds.push({fase:pedVals[i].fase,valor:pedVals[i].valor,foto_link:links["ped"+i]||""});
   ld("Finalizando…");
   var payload={action:"finalizar",protocolo:trip.protocolo,timestamp_envio:new Date().toISOString(),veiculo:trip.veiculo,checkin_timestamp_iso:trip.checkin_timestamp,checkout_timestamp:coCapt.ts,checkout_lat:coCapt.lat,checkout_lng:coCapt.lng,img_odometro_chegada_link:links["odo"]||"",maps_ida:maps_ida,maps_volta:maps_volta,pedagios:peds,usar_estimativa:usarEstim,preco_real:usarEstim?PB:document.getElementById("co_preco").value,img_cupom_link:links["cup"]||""};
   post(payload).then(function(r){hd();clearTrip();trip=null;document.getElementById("ok_proto").textContent="Protocolo: "+payload.protocolo;document.getElementById("ok_val").textContent=r&&r.valor_total?"R$ "+r.valor_total:"";show("secOk")}).catch(function(e){hd();document.getElementById("btnEnv").disabled=false;alert("Erro ao finalizar: "+e.message)})}
