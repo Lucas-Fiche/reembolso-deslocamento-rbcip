@@ -61,24 +61,25 @@
 
         <div style="display:flex;gap:10px;margin-bottom:14px">
           <div style="width:28px;height:28px;border-radius:50%;background:#DBEAFE;color:#2563EB;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;flex-shrink:0">2</div>
-          <div><strong style="color:var(--text)">PARADAS DA IDA (ao chegar em cada destino)</strong><br>Para cada parada, informe origem, destino, km e anexe o print do Google Maps do trecho. O app registra GPS e horário automaticamente.</div>
+          <div><strong style="color:var(--text)">PARADAS DA IDA (ao chegar em cada destino)</strong><br>Registro rápido: informe origem, destino e km. O app marca GPS e horário automaticamente. <strong>Não precisa de foto aqui</strong> — funciona mesmo com sinal fraco.</div>
         </div>
 
         <div style="display:flex;gap:10px;margin-bottom:14px">
           <div style="width:28px;height:28px;border-radius:50%;background:#E0E7FF;color:#7C3AED;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;flex-shrink:0">3</div>
-          <div><strong style="color:var(--text)">PARADAS DA VOLTA (ao chegar em cada ponto de retorno)</strong><br>Mesmo processo da ida. Registre cada trecho da volta com origem, destino, km e Maps.</div>
+          <div><strong style="color:var(--text)">PARADAS DA VOLTA (ao chegar em cada ponto de retorno)</strong><br>Mesmo processo rápido da ida: origem, destino e km de cada trecho da volta.</div>
         </div>
 
         <div style="display:flex;gap:10px;margin-bottom:14px">
           <div style="width:28px;height:28px;border-radius:50%;background:#FEF3C7;color:#D97706;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;flex-shrink:0">4</div>
-          <div><strong style="color:var(--text)">CHECK-OUT (ao finalizar a viagem)</strong><br>Tire a foto do odômetro final, informe pedágios (se houver) e o preço do combustível. O app calcula o reembolso automaticamente.</div>
+          <div><strong style="color:var(--text)">CHECK-OUT (ao finalizar a viagem)</strong><br>Aqui você anexa tudo de uma vez: foto do odômetro final, o <strong>print do Google Maps de cada trecho</strong> (ida e volta), pedágios e o preço do combustível. O app calcula o reembolso automaticamente.</div>
         </div>
 
         <div style="background:var(--warning-bg);border:1px solid #FCD34D;border-radius:8px;padding:12px;margin-top:4px">
           <div style="font-size:12px;color:#92400E;line-height:1.6">
             <strong>⚠️ Importante:</strong><br>
             • Cada parada = um trecho do percurso (origem → destino + km)<br>
-            • Anexe o print do Google Maps de <strong>cada trecho</strong><br>
+            • Durante a viagem o registro é leve, <strong>sem fotos</strong><br>
+            • No check-out, anexe o print do Maps de <strong>cada trecho</strong><br>
             • Não feche o app entre etapas — seus dados ficam salvos no servidor<br>
             • Se tiver cupom fiscal do combustível, tenha-o em mãos no check-out
           </div>
@@ -171,14 +172,7 @@
   <div class="card"><div class="ct"><span class="ic" style="background:#FEF3C7;color:#D97706">🛣️</span> Trecho</div>
     <div class="fr"><div class="f"><label>Origem <span class="rq">*</span></label><input type="text" id="pa_orig"></div><div class="f"><label>Destino <span class="rq">*</span></label><input type="text" id="pa_dest"></div></div>
     <div class="f"><label>Distância (km) <span class="rq">*</span></label><input type="number" id="pa_km" inputmode="decimal" step="0.1"></div>
-  </div>
-  <div class="card"><div class="ct"><span class="ic" style="background:#F0FDF4;color:#16A34A">🗺️</span> Print do Maps</div>
-    <label class="cl" for="pa_maps"><div class="cz" id="pa_mz"><div id="pa_mph"><div class="pi">🗺️</div><div class="pt">Anexar rota</div></div><img id="pa_mpv" style="display:none"></div></label>
-    <input type="file" accept="image/*" id="pa_maps" class="chi" onchange="capFile(this,'pa_mpv','pa_mph','pa_mz')">
-  </div>
-  <div class="card"><div class="ct"><span class="ic" style="background:#EFF6FF;color:#2563EB">📸</span> Foto do Local (opcional)</div>
-    <label class="cl" for="pa_foto"><div class="cz" id="pa_fz"><div id="pa_fph"><div class="pi">📷</div><div class="pt">Comprovar presença</div></div><img id="pa_fpv" style="display:none"></div></label>
-    <input type="file" accept="image/*" capture="environment" id="pa_foto" class="chi" onchange="capFile(this,'pa_fpv','pa_fph','pa_fz')">
+    <p style="font-size:12px;color:var(--text-muted)">📎 Registro rápido, sem foto. O print do Maps deste trecho será pedido no check-out.</p>
   </div>
   <button class="bp b" onclick="enviarParada()">📍 Confirmar Parada</button>
   <button class="bs" onclick="show('secViagem')">← Voltar</button>
@@ -198,6 +192,10 @@
     <label class="cl" for="co_foto"><div class="cz" id="co_cz"><div id="co_ph"><div class="pi">📷</div><div class="pt">Fotografar painel</div></div><img id="co_pv" style="display:none"></div></label>
     <input type="file" accept="image/*" capture="environment" id="co_foto" class="chi" onchange="capFoto(this,'co')">
     <div class="cm" id="co_cm"><div class="mr"><span class="ml">⏱</span><span id="co_ts">—</span></div><div class="mr"><span class="ml">📍</span><span id="co_co">—</span></div></div>
+  </div>
+  <div class="card"><div class="ct"><span class="ic" style="background:#F0FDF4;color:#16A34A">🗺️</span> Prints do Maps por trecho</div>
+    <p style="font-size:12px;color:var(--text-secondary);margin-bottom:12px">Anexe o print do Google Maps de <strong>cada parada registrada</strong> (ida e volta).</p>
+    <div id="maps_list"></div>
   </div>
   <div class="card"><div class="ct"><span class="ic" style="background:#FEF2F2;color:#DC2626">🧾</span> Pedágios</div>
     <div id="ped_list"></div>
@@ -324,16 +322,24 @@ function renderViagem(){
 function goParada(fase){curFase=fase;var ps=fase==="ida"?(trip.ida_paradas||[]):(trip.volta_paradas||[]);var plan=fase==="ida"?(trip.ida_plan||1):(trip.volta_plan||1);var done=ps.length;show("secParada");reqGPS("pa_gs","pa_gt");clock("pa_ck");
   document.getElementById("pa_badge").textContent=fase.toUpperCase();document.getElementById("pa_badge").style.background=fase==="ida"?"#DBEAFE":"#FEF3C7";document.getElementById("pa_badge").style.color=fase==="ida"?"#1E40AF":"#92400E";
   document.getElementById("pa_titulo").textContent="Parada "+(done+1)+" de "+plan;
-  document.getElementById("pa_orig").value="";document.getElementById("pa_dest").value="";document.getElementById("pa_km").value="";
-  document.getElementById("pa_mpv").style.display="none";document.getElementById("pa_mph").style.display="block";document.getElementById("pa_mz").classList.remove("ok");
-  document.getElementById("pa_fpv").style.display="none";document.getElementById("pa_fph").style.display="block";document.getElementById("pa_fz").classList.remove("ok");
-  document.getElementById("pa_maps").dataset.compressed="";document.getElementById("pa_foto").dataset.compressed=""}
-function enviarParada(){var o=document.getElementById("pa_orig").value.trim(),d=document.getElementById("pa_dest").value.trim(),k=document.getElementById("pa_km").value.trim();if(!o||!d||!k){alert("Preencha origem, destino e km.");return}if(!document.getElementById("pa_maps").dataset.compressed){alert("Anexe o print do Maps.");return}ld("Registrando parada…");var now=new Date();
-  post({action:"parada",protocolo:trip.protocolo,fase:curFase,timestamp:now.toISOString(),lat:gps?gps.lat:null,lng:gps?gps.lng:null,origem:o,destino:d,distancia_km:k,img_maps:document.getElementById("pa_maps").dataset.compressed,foto_local:document.getElementById("pa_foto").dataset.compressed||null}).then(function(r){hd();if(r&&r.success===false){alert(r.error);return}
+  document.getElementById("pa_orig").value="";document.getElementById("pa_dest").value="";document.getElementById("pa_km").value=""}
+function enviarParada(){var o=document.getElementById("pa_orig").value.trim(),d=document.getElementById("pa_dest").value.trim(),k=document.getElementById("pa_km").value.trim();if(!o||!d||!k){alert("Preencha origem, destino e km.");return}ld("Registrando parada…");var now=new Date();
+  post({action:"parada",protocolo:trip.protocolo,fase:curFase,timestamp:now.toISOString(),lat:gps?gps.lat:null,lng:gps?gps.lng:null,origem:o,destino:d,distancia_km:k}).then(function(r){hd();if(r&&r.success===false){alert(r.error);return}
     var arr=curFase==="ida"?"ida_paradas":"volta_paradas";trip[arr]=trip[arr]||[];trip[arr].push({orig:o,dest:d,km:k,time:fmtD(now)});saveTrip(trip);goViagem()}).catch(function(e){hd();alert("Erro: "+e.message)})}
 
 // ═══ FINALIZAR ═══
-function goFinalizar(){show("secFinal");reqGPS("co_gs","co_gt");clock("co_ck");coCapt={ts:null,lat:null,lng:null,b64:null};document.getElementById("co_pv").style.display="none";document.getElementById("co_ph").style.display="block";document.getElementById("co_cz").classList.remove("ok");document.getElementById("co_cupv").style.display="none";document.getElementById("co_cuph").style.display="block";document.getElementById("co_cupz").classList.remove("ok");document.getElementById("resumoCard").style.display="none";document.getElementById("btnEnv").style.display="none";document.getElementById("btnCalc").style.display="flex";document.getElementById("ped_list").innerHTML="";document.getElementById("co_preco").value="";fuelMode="cupom";setFuelMode("cupom")}
+function goFinalizar(){show("secFinal");reqGPS("co_gs","co_gt");clock("co_ck");coCapt={ts:null,lat:null,lng:null,b64:null};document.getElementById("co_pv").style.display="none";document.getElementById("co_ph").style.display="block";document.getElementById("co_cz").classList.remove("ok");document.getElementById("co_cupv").style.display="none";document.getElementById("co_cuph").style.display="block";document.getElementById("co_cupz").classList.remove("ok");document.getElementById("resumoCard").style.display="none";document.getElementById("btnEnv").style.display="none";document.getElementById("btnCalc").style.display="flex";document.getElementById("ped_list").innerHTML="";document.getElementById("co_cupom").dataset.compressed="";document.getElementById("co_preco").value="";fuelMode="cupom";setFuelMode("cupom");renderMapsList()}
+function renderMapsList(){var pI=trip.ida_paradas||[],pV=trip.volta_paradas||[],h="";
+  for(var i=0;i<pI.length;i++)h+=mapsItem("mida_"+i,"IDA — Parada "+(i+1),pI[i]);
+  for(var i=0;i<pV.length;i++)h+=mapsItem("mvolta_"+i,"VOLTA — Parada "+(i+1),pV[i]);
+  if(!pI.length&&!pV.length)h='<p style="font-size:13px;color:var(--text-muted)">Nenhuma parada registrada.</p>';
+  document.getElementById("maps_list").innerHTML=h}
+function mapsItem(id,label,p){var sub=(p?(p.orig+" → "+p.dest+" · "+p.km+" km"):"");
+  return '<div class="dyn-item">'+
+    '<div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:2px">'+label+'</div>'+
+    '<div style="font-size:12px;color:var(--text-secondary);margin-bottom:8px">'+sub+'</div>'+
+    '<label class="cl" for="'+id+'"><div class="cz" id="'+id+'_z" style="padding:14px 10px"><div id="'+id+'_p"><div class="ps">🗺️ Anexar print do Maps</div></div><img id="'+id+'_v" style="display:none"></div></label>'+
+    '<input type="file" accept="image/*" id="'+id+'" class="chi" onchange="capFile(this,\''+id+'_v\',\''+id+'_p\',\''+id+'_z\')">'}
 function setFuelMode(m){fuelMode=m;document.getElementById("tog_cupom").classList.toggle("on",m==="cupom");document.getElementById("tog_estim").classList.toggle("on",m==="estim");document.getElementById("fuel_cupom").style.display=m==="cupom"?"block":"none";document.getElementById("fuel_estim").style.display=m==="estim"?"block":"none"}
 var pedN=0;function addPed(){pedN++;var d=document.createElement("div");d.className="dyn-item";d.innerHTML='<button class="rm" onclick="this.parentElement.remove()">×</button><div class="f" style="margin-bottom:8px"><label style="font-size:12px">Valor (R$)</label><input type="number" class="ped-val" placeholder="15.40" inputmode="decimal" step="0.01"></div><label class="cl" for="ped_f_'+pedN+'"><div class="cz" id="ped_z_'+pedN+'" style="padding:12px 10px"><div id="ped_p_'+pedN+'"><div class="ps">🧾 Anexar comprovante</div></div><img id="ped_v_'+pedN+'" style="display:none"></div></label><input type="file" accept="image/*" id="ped_f_'+pedN+'" class="chi" onchange="capFile(this,\'ped_v_'+pedN+'\',\'ped_p_'+pedN+'\',\'ped_z_'+pedN+'\')">';document.getElementById("ped_list").appendChild(d)}
 
@@ -353,12 +359,42 @@ function calcular(){
   document.getElementById("resumo").innerHTML='<div style="font-weight:700;font-size:15px;color:var(--primary);margin-bottom:10px">📊 Resumo</div><div><strong>'+trip.nome+'</strong> — '+trip.veiculo+' ('+con+' km/L)</div><hr style="border:none;border-top:1px solid var(--border);margin:10px 0"><div style="font-size:13px">'+trTxt+'</div><div style="margin:10px 0"><strong>Total:</strong> '+dTot+' km (ida: '+dIda+' + volta: '+dVolta+')</div><hr style="border:none;border-top:1px solid var(--border);margin:10px 0">'+fuelTxt+(tPed?'<div><strong>Pedágios ('+pEls.length+'):</strong> R$ '+tPed.toFixed(2)+'</div>':'')+'<div style="font-size:20px;font-weight:700;color:var(--primary);margin-top:12px;padding-top:12px;border-top:2px solid var(--primary)">Total: R$ '+vTot.toFixed(2)+'</div>';
   document.getElementById("resumoCard").style.display="block";document.getElementById("btnCalc").style.display="none";document.getElementById("btnEnv").style.display="flex";document.getElementById("resumoCard").scrollIntoView({behavior:"smooth"})}
 
-function enviarFinal(){document.getElementById("btnEnv").disabled=true;ld("Enviando…");
-  var pEls=document.querySelectorAll("#ped_list .dyn-item"),peds=[];
-  for(var i=0;i<pEls.length;i++){var fI=pEls[i].querySelector("input[type=file]");peds.push({valor:parseFloat(pEls[i].querySelector(".ped-val").value)||0,foto:fI?fI.dataset.compressed||null:null})}
-  var usarEstim=fuelMode==="estim";
-  var payload={action:"finalizar",protocolo:trip.protocolo,timestamp_envio:new Date().toISOString(),veiculo:trip.veiculo,checkin_timestamp_iso:trip.checkin_timestamp,checkout_timestamp:coCapt.ts,checkout_lat:coCapt.lat,checkout_lng:coCapt.lng,img_odometro_chegada:coCapt.b64,pedagios:peds,usar_estimativa:usarEstim,preco_real:usarEstim?PB:document.getElementById("co_preco").value,img_cupom:usarEstim?null:(document.getElementById("co_cupom").dataset.compressed||null)};
-  post(payload).then(function(r){hd();clearTrip();trip=null;document.getElementById("ok_proto").textContent="Protocolo: "+payload.protocolo;document.getElementById("ok_val").textContent=r&&r.valor_total?"R$ "+r.valor_total:"";show("secOk")}).catch(function(e){fetch(API,{method:"POST",mode:"no-cors",headers:{"Content-Type":"text/plain"},body:JSON.stringify(payload)}).then(function(){hd();clearTrip();trip=null;document.getElementById("ok_proto").textContent="Protocolo: "+payload.protocolo;show("secOk")}).catch(function(e2){hd();document.getElementById("btnEnv").disabled=false;alert("Erro: "+e2.message)})})}
+// Upload individual de uma imagem ao Drive — devolve o link
+function uploadImg(b64,name){return post({action:"upload_imagem",protocolo:trip.protocolo,base64:b64,name:name}).then(function(r){return(r&&r.link)?r.link:""})}
+function enviarFinal(){
+  if(!coCapt.b64){alert("Tire a foto do odômetro.");return}
+  var usarEstim=fuelMode==="estim",pI=trip.ida_paradas||[],pV=trip.volta_paradas||[];
+  // Validar prints do Maps por trecho
+  var mIda=[],mVolta=[];
+  for(var i=0;i<pI.length;i++){var el=document.getElementById("mida_"+i);if(!el||!el.dataset.compressed){alert("Anexe o print do Maps da Parada "+(i+1)+" da IDA.");return}mIda.push(el.dataset.compressed)}
+  for(var i=0;i<pV.length;i++){var el=document.getElementById("mvolta_"+i);if(!el||!el.dataset.compressed){alert("Anexe o print do Maps da Parada "+(i+1)+" da VOLTA.");return}mVolta.push(el.dataset.compressed)}
+  if(!usarEstim&&!document.getElementById("co_cupom").dataset.compressed){alert("Anexe o cupom fiscal.");return}
+  // Coletar pedágios
+  var pEls=document.querySelectorAll("#ped_list .dyn-item"),pedVals=[];
+  for(var i=0;i<pEls.length;i++){var fI=pEls[i].querySelector("input[type=file]");pedVals.push({valor:parseFloat(pEls[i].querySelector(".ped-val").value)||0,foto:fI?fI.dataset.compressed||null:null})}
+  document.getElementById("btnEnv").disabled=true;
+  // Fila de upload fragmentado: cada imagem vai ao Drive separadamente
+  var tasks=[{b64:coCapt.b64,name:"odometro_chegada",key:"odo"}];
+  for(var i=0;i<mIda.length;i++)tasks.push({b64:mIda[i],name:"ida_"+(i+1)+"_maps",key:"mi"+i});
+  for(var i=0;i<mVolta.length;i++)tasks.push({b64:mVolta[i],name:"volta_"+(i+1)+"_maps",key:"mv"+i});
+  if(!usarEstim)tasks.push({b64:document.getElementById("co_cupom").dataset.compressed,name:"cupom_combustivel",key:"cup"});
+  for(var i=0;i<pedVals.length;i++)if(pedVals[i].foto)tasks.push({b64:pedVals[i].foto,name:"pedagio_"+(i+1),key:"ped"+i});
+  var links={},total=tasks.length,idx=0;
+  function next(){
+    if(idx>=total){enviarPayloadFinal(links,pedVals,usarEstim);return}
+    var t=tasks[idx];ld("Enviando imagem "+(idx+1)+" de "+total+"…");
+    uploadImg(t.b64,t.name).then(function(link){links[t.key]=link;idx++;next()}).catch(function(){hd();document.getElementById("btnEnv").disabled=false;alert("Falha ao enviar imagem "+(idx+1)+". Verifique o sinal e tente novamente.")});
+  }
+  next();
+}
+function enviarPayloadFinal(links,pedVals,usarEstim){
+  var pI=trip.ida_paradas||[],pV=trip.volta_paradas||[];
+  var maps_ida=[];for(var i=0;i<pI.length;i++)maps_ida.push(links["mi"+i]||"");
+  var maps_volta=[];for(var i=0;i<pV.length;i++)maps_volta.push(links["mv"+i]||"");
+  var peds=[];for(var i=0;i<pedVals.length;i++)peds.push({valor:pedVals[i].valor,foto_link:links["ped"+i]||""});
+  ld("Finalizando…");
+  var payload={action:"finalizar",protocolo:trip.protocolo,timestamp_envio:new Date().toISOString(),veiculo:trip.veiculo,checkin_timestamp_iso:trip.checkin_timestamp,checkout_timestamp:coCapt.ts,checkout_lat:coCapt.lat,checkout_lng:coCapt.lng,img_odometro_chegada_link:links["odo"]||"",maps_ida:maps_ida,maps_volta:maps_volta,pedagios:peds,usar_estimativa:usarEstim,preco_real:usarEstim?PB:document.getElementById("co_preco").value,img_cupom_link:links["cup"]||""};
+  post(payload).then(function(r){hd();clearTrip();trip=null;document.getElementById("ok_proto").textContent="Protocolo: "+payload.protocolo;document.getElementById("ok_val").textContent=r&&r.valor_total?"R$ "+r.valor_total:"";show("secOk")}).catch(function(e){hd();document.getElementById("btnEnv").disabled=false;alert("Erro ao finalizar: "+e.message)})}
 
 function abrirCorr(p,d,pr){show("secCorrigir");document.getElementById("corr_info").innerHTML="Protocolo: <strong>"+p+"</strong><br>Fotos e GPS mantidos.";document.getElementById("corr_dist").value=d||"";document.getElementById("corr_preco").value=pr||PB;document.getElementById("corr_dist").dataset.protocolo=p;document.getElementById("corr_desc").value="";document.getElementById("corr_tipo").value="distancia";document.getElementById("corr_parada_field").style.display="none";document.getElementById("corr_parada").value=""}
 document.addEventListener("change",function(e){if(e.target.id==="corr_tipo"){document.getElementById("corr_parada_field").style.display=e.target.value==="parada"?"block":"none"}});
