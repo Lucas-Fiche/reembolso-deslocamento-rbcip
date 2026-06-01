@@ -3,110 +3,195 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Dashboard — Reembolsos RBCIP</title>
+<title>Painel Administrativo — Reembolsos RBCIP</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,400;0,500;0,600;0,700&family=JetBrains+Mono:wght@400;0,500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <style>
-:root{--bg:#0F172A;--surface:#1E293B;--surface2:#334155;--primary:#0EA5E9;--primary-glow:rgba(14,165,233,.15);--success:#10B981;--warning:#F59E0B;--danger:#EF4444;--purple:#8B5CF6;--text:#F1F5F9;--text2:#94A3B8;--text3:#64748B;--border:#334155;--radius:12px;--radius-sm:8px}
+:root{
+  --bg:#F1F5F9;
+  --surface:#FFFFFF;
+  --surface2:#F8FAFC;
+  --primary:#2563EB;
+  --primary-light:#DBEAFE;
+  --success:#16A34A;
+  --success-light:#DCFCE7;
+  --warning:#B45309;
+  --warning-bg:#FEF3C7;
+  --danger:#DC2626;
+  --danger-light:#FEE2E2;
+  --text:#0F172A;
+  --text2:#475569;
+  --text3:#94A3B8;
+  --border:#E2E8F0;
+  --radius:8px;
+  --radius-sm:6px;
+  --shadow-sm:0 1px 2px rgba(0,0,0,.06);
+  --shadow:0 1px 3px rgba(0,0,0,.1),0 1px 2px rgba(0,0,0,.06);
+}
 *{margin:0;padding:0;box-sizing:border-box}
-body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
-.hdr{background:linear-gradient(135deg,#0F172A,#1E293B);border-bottom:1px solid var(--border);padding:16px 24px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100}
-.hdr h1{font-size:20px;font-weight:700;letter-spacing:-.5px}.hdr h1 span{color:var(--primary)}
-.hdr-right{display:flex;align-items:center;gap:12px}
-.hdr .tag{font-size:11px;background:var(--primary-glow);color:var(--primary);padding:4px 10px;border-radius:20px;font-weight:600}
-.last-update{font-size:11px;color:var(--text3)}
-.refresh-btn{background:var(--surface2);border:1px solid var(--border);color:var(--text2);padding:6px 14px;border-radius:var(--radius-sm);font-family:'DM Sans',sans-serif;font-size:12px;font-weight:600;cursor:pointer;transition:background .15s,color .15s,border-color .15s}
-.refresh-btn:hover{background:var(--primary);color:#fff;border-color:var(--primary)}
-.layout{display:grid;grid-template-columns:1fr 420px;grid-template-rows:auto 1fr;height:calc(100vh - 61px)}
-.cards{grid-column:1/-1;display:flex;gap:16px;padding:20px 24px;overflow-x:auto;border-bottom:1px solid var(--border)}
-.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:20px 24px;min-width:175px;flex-shrink:0}
-.card .label{font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.8px;margin-bottom:8px;font-weight:600}
-.card .val{font-size:28px;font-weight:700;letter-spacing:-1px}
-.card .sub{font-size:12px;color:var(--text2);margin-top:4px}
-.main{display:flex;flex-direction:column;overflow:hidden;border-right:1px solid var(--border)}
-.filters{display:flex;gap:10px;padding:12px 24px;background:var(--surface);border-bottom:1px solid var(--border);flex-wrap:wrap;align-items:center}
-.filters select,.filters input{background:var(--bg);border:1px solid var(--border);color:var(--text);padding:8px 12px;border-radius:var(--radius-sm);font-family:'DM Sans',sans-serif;font-size:13px;outline:none}
-.filters select:focus,.filters input:focus{border-color:var(--primary)}
+body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;font-size:14px}
+
+/* Header */
+.hdr{background:var(--surface);border-bottom:1px solid var(--border);padding:0 24px;height:56px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;box-shadow:var(--shadow-sm)}
+.hdr-left{display:flex;align-items:center;gap:10px}
+.hdr h1{font-size:15px;font-weight:600;color:var(--text);letter-spacing:-.2px}
+.hdr-badge{font-size:11px;font-weight:600;color:var(--primary);background:var(--primary-light);padding:2px 8px;border-radius:20px}
+.hdr-right{display:flex;align-items:center;gap:16px}
+.last-update{font-size:12px;color:var(--text3)}
+.refresh-btn{background:var(--surface);border:1px solid var(--border);color:var(--text2);padding:7px 14px;border-radius:var(--radius-sm);font-family:inherit;font-size:13px;font-weight:500;cursor:pointer;transition:background .15s,border-color .15s,color .15s;display:flex;align-items:center;gap:6px}
+.refresh-btn:hover{background:var(--bg);border-color:var(--text3);color:var(--text)}
+
+/* Layout */
+.layout{display:grid;grid-template-columns:1fr 420px;grid-template-rows:auto 1fr;height:calc(100vh - 56px)}
+
+/* Summary Cards */
+.cards{grid-column:1/-1;display:flex;gap:10px;padding:14px 24px;overflow-x:auto;background:var(--surface);border-bottom:1px solid var(--border)}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:14px 18px;min-width:148px;flex-shrink:0;box-shadow:var(--shadow-sm);position:relative;overflow:hidden}
+.card-accent{position:absolute;left:0;top:0;bottom:0;width:3px}
+.card-accent.blue{background:var(--primary)}
+.card-accent.amber{background:#D97706}
+.card-accent.green{background:var(--success)}
+.card-accent.red{background:var(--danger)}
+.card-accent.purple{background:#7C3AED}
+.card-accent.gray{background:var(--text3)}
+.card .label{font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.6px;margin-bottom:6px;font-weight:600}
+.card .val{font-size:22px;font-weight:700;color:var(--text);letter-spacing:-.5px}
+.card .sub{font-size:11px;color:var(--text3);margin-top:2px}
+
+/* Main */
+.main{display:flex;flex-direction:column;overflow:hidden;border-right:1px solid var(--border);background:var(--surface)}
+
+/* Filters */
+.filters{display:flex;gap:10px;padding:10px 16px;background:var(--surface);border-bottom:1px solid var(--border);flex-wrap:wrap;align-items:center}
+.filters select,.filters input{background:var(--bg);border:1px solid var(--border);color:var(--text);padding:7px 12px;border-radius:var(--radius-sm);font-family:inherit;font-size:13px;outline:none;transition:border-color .15s,box-shadow .15s}
+.filters select:focus,.filters input:focus{border-color:var(--primary);box-shadow:0 0 0 3px var(--primary-light)}
 .filters input{flex:1;min-width:180px}
+
+/* Table */
 .tbl-wrap{flex:1;overflow-y:auto;overflow-x:auto}
 table{width:100%;border-collapse:collapse;font-size:13px;min-width:780px}
 thead{position:sticky;top:0;z-index:2}
-th{background:var(--surface);color:var(--text3);font-size:11px;text-transform:uppercase;letter-spacing:.5px;padding:10px 14px;text-align:left;border-bottom:1px solid var(--border);font-weight:600}
-td{padding:10px 14px;border-bottom:1px solid rgba(51,65,85,.5);white-space:nowrap}
-tr{cursor:pointer;transition:background .15s}
-tr:hover{background:rgba(14,165,233,.06)}
-tr.sel{background:rgba(14,165,233,.12)}
+th{background:var(--surface2);color:var(--text3);font-size:11px;text-transform:uppercase;letter-spacing:.5px;padding:9px 14px;text-align:left;border-bottom:1px solid var(--border);font-weight:600}
+td{padding:10px 14px;border-bottom:1px solid var(--border);white-space:nowrap;color:var(--text2)}
+td:first-child{color:var(--text);font-family:'Courier New',monospace;font-size:12px;font-weight:600}
+tr{cursor:pointer;transition:background .1s}
+tr:hover td{background:var(--bg)}
+tr.sel td{background:#EFF6FF}
 tr.warn-row{box-shadow:inset 3px 0 0 var(--danger)}
-.st{display:inline-block;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700;letter-spacing:.3px}
-.st-ABERTO{background:rgba(245,158,11,.15);color:#FBBF24}
-.st-COMPLETO{background:rgba(16,185,129,.15);color:#34D399}
-.st-REVISÃO,.st-REVISAO{background:rgba(245,158,11,.15);color:#FBBF24}
-.st-CORRIGIDO{background:rgba(139,92,246,.15);color:#A78BFA}
-.st-REJEITADO{background:rgba(239,68,68,.15);color:#F87171}
-.st-APROVADO{background:rgba(14,165,233,.15);color:#38BDF8}
-.side{display:flex;flex-direction:column;overflow:hidden}
-#map{height:50%;min-height:250px;background:var(--surface)}
-.detail{flex:1;overflow-y:auto;padding:20px;border-top:1px solid var(--border);background:var(--surface)}
-.detail h3{font-size:14px;color:var(--primary);margin-bottom:14px;font-weight:700}
-.detail .row{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid rgba(51,65,85,.3);font-size:13px}
-.detail .row .k{color:var(--text3);font-weight:500}.detail .row .v{color:var(--text);font-weight:600;text-align:right;max-width:60%;word-break:break-word}
-.actions{display:flex;gap:8px;padding:14px 0 0;flex-wrap:wrap}
-.abtn{padding:8px 16px;border:none;border-radius:var(--radius-sm);font-family:'DM Sans',sans-serif;font-size:12px;font-weight:700;cursor:pointer;transition:transform .15s,opacity .15s}
-.abtn:active{transform:scale(.96)}
-.abtn.green{background:var(--success);color:#fff}.abtn.yellow{background:var(--warning);color:#1E293B}.abtn.red{background:var(--danger);color:#fff}
-.empty{padding:40px;text-align:center;color:var(--text3);font-size:14px}
-.loading{position:fixed;inset:0;background:rgba(15,23,42,.9);display:flex;align-items:center;justify-content:center;z-index:999;flex-direction:column;gap:16px}
+
+/* Status badges */
+.st{display:inline-block;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:600;letter-spacing:.2px}
+.st-ABERTO{background:#FEF3C7;color:#92400E}
+.st-COMPLETO{background:#DCFCE7;color:#166534}
+.st-REVISÃO,.st-REVISAO{background:#FEF3C7;color:#92400E}
+.st-CORRIGIDO{background:#EDE9FE;color:#5B21B6}
+.st-REJEITADO{background:#FEE2E2;color:#991B1B}
+.st-APROVADO{background:#DBEAFE;color:#1E40AF}
+
+/* Side */
+.side{display:flex;flex-direction:column;overflow:hidden;background:var(--surface)}
+#map{height:42%;min-height:220px}
+.detail-wrap{flex:1;display:flex;flex-direction:column;overflow:hidden}
+
+/* Action Bar — always visible, at the top of the detail area */
+.action-bar{flex-shrink:0;padding:12px 16px;background:var(--surface);border-top:1px solid var(--border);border-bottom:1px solid var(--border)}
+.action-bar-label{font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.6px;margin-bottom:8px}
+.action-bar-empty{font-size:13px;color:var(--text3);padding:4px 0}
+.action-btns{display:flex;gap:8px}
+.abtn{flex:1;padding:10px 8px;border:none;border-radius:var(--radius-sm);font-family:inherit;font-size:13px;font-weight:600;cursor:pointer;transition:filter .15s,transform .1s;text-align:center;letter-spacing:-.1px}
+.abtn:active{transform:scale(.97)}
+.abtn:hover{filter:brightness(.92)}
+.abtn.green{background:var(--success);color:#fff}
+.abtn.amber{background:#D97706;color:#fff}
+.abtn.red{background:var(--danger);color:#fff}
+.approved-msg{font-size:13px;font-weight:600;color:var(--success);background:var(--success-light);border:1px solid #BBF7D0;padding:8px 12px;border-radius:var(--radius-sm)}
+
+/* Detail */
+.detail{flex:1;overflow-y:auto;padding:14px;background:var(--surface2)}
+.detail-section{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);margin-bottom:10px;overflow:hidden}
+.detail-section-title{font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.6px;padding:7px 14px;background:var(--surface2);border-bottom:1px solid var(--border)}
+.drow{display:flex;justify-content:space-between;align-items:baseline;padding:8px 14px;border-bottom:1px solid var(--border);font-size:13px}
+.drow:last-child{border-bottom:none}
+.drow .k{color:var(--text3);font-weight:500}
+.drow .v{color:var(--text);font-weight:500;text-align:right;max-width:60%;word-break:break-word}
+.detail-links{padding:8px 14px;display:flex;flex-direction:column;gap:6px}
+.detail-links a{color:var(--primary);font-size:13px;text-decoration:none}
+.detail-links a:hover{text-decoration:underline}
+.segment{padding:7px 14px;border-bottom:1px solid var(--border);font-size:12px;color:var(--text2)}
+.segment:last-child{border-bottom:none}
+.segment .seg-label{font-size:11px;color:var(--text3);font-weight:600;display:block;margin-bottom:2px}
+
+.empty{padding:40px 20px;text-align:center;color:var(--text3);font-size:14px;line-height:1.6}
+
+/* Loading */
+.loading{position:fixed;inset:0;background:rgba(248,250,252,.88);display:flex;align-items:center;justify-content:center;z-index:999;flex-direction:column;gap:12px}
 .loading.h{display:none}
-.spinner{width:40px;height:40px;border:3px solid var(--border);border-top-color:var(--primary);border-radius:50%;animation:sp .7s linear infinite}
+.spinner{width:36px;height:36px;border:3px solid var(--border);border-top-color:var(--primary);border-radius:50%;animation:sp .7s linear infinite}
 @keyframes sp{to{transform:rotate(360deg)}}
 .loading p{font-size:14px;color:var(--text2)}
-.modal{position:fixed;inset:0;background:rgba(15,23,42,.85);display:none;align-items:center;justify-content:center;z-index:200}
+
+/* Modal */
+.modal{position:fixed;inset:0;background:rgba(15,23,42,.45);display:none;align-items:center;justify-content:center;z-index:200}
 .modal.show{display:flex}
-.modal-box{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:24px;max-width:420px;width:90%}
-.modal-box h3{font-size:16px;margin-bottom:16px}
-.modal-box textarea{width:100%;padding:10px;background:var(--bg);border:1px solid var(--border);color:var(--text);border-radius:var(--radius-sm);font-family:'DM Sans',sans-serif;font-size:14px;min-height:80px;outline:none;resize:vertical;margin-bottom:10px;transition:border-color .15s}
+.modal-box{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:24px;max-width:400px;width:90%;box-shadow:0 20px 40px rgba(0,0,0,.15)}
+.modal-box h3{font-size:16px;font-weight:600;margin-bottom:4px;color:var(--text)}
+.modal-desc{font-size:13px;color:var(--text2);margin-bottom:16px}
+.modal-box textarea{width:100%;padding:10px 12px;background:var(--bg);border:1px solid var(--border);color:var(--text);border-radius:var(--radius-sm);font-family:inherit;font-size:13px;min-height:80px;outline:none;resize:vertical;margin-bottom:8px;transition:border-color .15s}
+.modal-box textarea:focus{border-color:var(--primary);box-shadow:0 0 0 3px var(--primary-light)}
 .modal-box textarea.err{border-color:var(--danger)}
 .modal-err{font-size:12px;color:var(--danger);margin-bottom:12px;display:none}
 .modal-err.show{display:block}
-.modal-box .mbtn{display:flex;gap:8px;justify-content:flex-end}
-.mbtn button{padding:10px 20px;border:none;border-radius:var(--radius-sm);font-family:'DM Sans',sans-serif;font-size:13px;font-weight:600;cursor:pointer}
-.mbtn .cancel{background:var(--surface2);color:var(--text2)}.mbtn .confirm{background:var(--primary);color:#fff}
+.modal-box .mbtn{display:flex;gap:8px;justify-content:flex-end;margin-top:4px}
+.mbtn button{padding:9px 20px;border:none;border-radius:var(--radius-sm);font-family:inherit;font-size:13px;font-weight:600;cursor:pointer}
+.mbtn .cancel{background:var(--bg);border:1px solid var(--border);color:var(--text2)}
+.mbtn .confirm{background:var(--primary);color:#fff}
+
 @media(max-width:900px){
   .layout{display:flex;flex-direction:column;height:auto}
-  .cards{padding:12px 16px;gap:10px}
+  .cards{padding:12px 16px;gap:8px}
   .main{height:50vh}
-  .side{height:60vh}
-  .hdr h1{font-size:16px}
+  .side{height:65vh}
+  .hdr h1{font-size:14px}
   .last-update{display:none}
 }
 </style>
 </head>
 <body>
+
 <header class="hdr">
-  <h1>📊 <span>RBCIP</span> — Painel Administrativo</h1>
+  <div class="hdr-left">
+    <h1>Painel Administrativo de Reembolsos</h1>
+    <span class="hdr-badge">RBCIP</span>
+  </div>
   <div class="hdr-right">
     <span class="last-update" id="lastUpdate"></span>
-    <div class="tag">Dashboard v2</div>
-    <button class="refresh-btn" onclick="carregar()">↻ Atualizar</button>
+    <button class="refresh-btn" onclick="carregar()">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+      Atualizar
+    </button>
   </div>
 </header>
+
 <div class="loading" id="ld"><div class="spinner"></div><p>Carregando registros…</p></div>
+
 <div class="modal" id="modal">
   <div class="modal-box">
     <h3 id="modal_title">Alterar Status</h3>
-    <p style="font-size:13px;color:var(--text2);margin-bottom:12px" id="modal_desc"></p>
+    <p class="modal-desc" id="modal_desc"></p>
     <textarea id="modal_obs" placeholder="Observação (opcional)"></textarea>
-    <div class="modal-err" id="modal_err">⚠ Motivo é obrigatório para esta ação.</div>
+    <div class="modal-err" id="modal_err">Motivo é obrigatório para esta ação.</div>
     <div class="mbtn">
       <button class="cancel" onclick="fecharModal()">Cancelar</button>
       <button class="confirm" id="modal_confirm">Confirmar</button>
     </div>
   </div>
 </div>
+
 <div class="layout">
   <div class="cards" id="cards"></div>
+
   <div class="main">
     <div class="filters">
       <select id="fStatus" onchange="filtrar()">
@@ -127,34 +212,290 @@ tr.warn-row{box-shadow:inset 3px 0 0 var(--danger)}
       </table>
     </div>
   </div>
+
   <div class="side">
     <div id="map"></div>
-    <div class="detail" id="detail">
-      <div class="empty">Selecione um registro para ver detalhes e a rota no mapa.</div>
+    <div class="detail-wrap">
+      <div class="action-bar" id="actionBar">
+        <div class="action-bar-label">Ações</div>
+        <div class="action-bar-empty">Selecione um registro para ver as ações disponíveis.</div>
+      </div>
+      <div class="detail" id="detail">
+        <div class="empty">Selecione um registro na tabela para ver os detalhes e a rota no mapa.</div>
+      </div>
     </div>
   </div>
 </div>
+
 <script>
 var API="https://script.google.com/macros/s/AKfycbwaKl_Iglg_hVzG6_wS9GxTxZd8svu836zLxVJ45PAh7viqtxALlRfOdEAvebeisogx/exec";
 var dados=[],filtrados=[],sel=null,map,markersGroup;
-function formatDate(s){if(!s||s==="—")return"—";try{var d=new Date(s);if(isNaN(d.getTime()))return String(s);return String(d.getDate()).padStart(2,"0")+"/"+String(d.getMonth()+1).padStart(2,"0")+"/"+d.getFullYear()+" "+String(d.getHours()).padStart(2,"0")+":"+String(d.getMinutes()).padStart(2,"0")}catch(e){return String(s)}}
-function initMap(){map=L.map("map",{zoomControl:true}).setView([-15.79,-47.88],5);L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{attribution:"© OpenStreetMap"}).addTo(map);markersGroup=L.layerGroup().addTo(map)}
-function carregar(){document.getElementById("ld").classList.remove("h");document.querySelector(".loading p").textContent="Carregando registros…";fetch(API+"?action=listar").then(function(r){return r.text()}).then(function(t){try{var d=JSON.parse(t);if(d.success)dados=d.registros||[]}catch(e){alert("Erro ao parsear dados.")}document.getElementById("ld").classList.add("h");var now=new Date();document.getElementById("lastUpdate").textContent="Atualizado às "+String(now.getHours()).padStart(2,"0")+":"+String(now.getMinutes()).padStart(2,"0");renderCards();filtrar()}).catch(function(e){document.getElementById("ld").classList.add("h");alert("Erro ao carregar: "+e.message)})}
-setInterval(function(){if(!document.getElementById("modal").classList.contains("show"))carregar()},60000);
-function renderCards(){var total=dados.length,abertos=0,completos=0,aprovados=0,revisao=0,rejeitados=0,valTotal=0;for(var i=0;i<dados.length;i++){var s=dados[i].status;if(s==="ABERTO")abertos++;else if(s==="COMPLETO")completos++;else if(s==="APROVADO")aprovados++;else if(s==="REVISÃO")revisao++;else if(s==="REJEITADO")rejeitados++;valTotal+=parseFloat(dados[i].val_total)||0}document.getElementById("cards").innerHTML=card("📋","Total",total,"")+card("🟡","Abertos",abertos,"Em andamento")+card("✅","Completos",completos,"Aguardando análise")+card("🔵","Aprovados",aprovados,"")+card("🟠","Revisão",revisao,"")+card("🔴","Rejeitados",rejeitados,"")+card("💰","Valor Total","R$ "+valTotal.toFixed(2).replace(".",","),"Todos os pedidos")}
-function card(icon,label,val,sub){return'<div class="card"><div class="label">'+icon+" "+label+'</div><div class="val">'+val+"</div>"+(sub?'<div class="sub">'+sub+"</div>":"")+"</div>"}
-function filtrar(){var st=document.getElementById("fStatus").value;var q=document.getElementById("fBusca").value.toLowerCase().trim();filtrados=[];for(var i=0;i<dados.length;i++){var d=dados[i];if(st&&d.status!==st)continue;if(q){var txt=(d.protocolo+" "+d.nome+" "+d.cpf).toLowerCase();if(txt.indexOf(q)===-1)continue}filtrados.push(d)}renderTable()}
-function renderTable(){var tb=document.getElementById("tbody");if(!filtrados.length){tb.innerHTML='<tr><td colspan="9" style="text-align:center;color:var(--text3);padding:30px">Nenhum registro encontrado.</td></tr>';return}var h="";for(var i=0;i<filtrados.length;i++){var d=filtrados[i];var stClass="st st-"+(d.status||"").replace("Ã","A");var hasWarn=d.validacao&&d.validacao.indexOf("⚠")!==-1;var trClass=(sel&&sel.protocolo===d.protocolo?"sel":"")+(hasWarn?" warn-row":"");h+='<tr onclick="selecionar('+i+')" class="'+trClass.trim()+'">'+'<td style="font-family:JetBrains Mono,monospace;font-size:12px">'+esc(d.protocolo)+"</td>"+'<td><span class="'+stClass+'">'+esc(d.status)+"</span></td>"+"<td>"+esc(d.nome)+"</td>"+"<td>"+esc(d.veiculo)+"</td>"+'<td style="font-family:JetBrains Mono,monospace;font-size:11px;color:var(--text2)">'+esc(formatDate(d.checkin_dh))+"</td>"+'<td style="font-family:JetBrains Mono,monospace;font-size:11px;color:var(--text2)">'+esc(formatDate(d.checkout_dh))+"</td>"+"<td>"+(d.dist_total||0)+" km</td>"+'<td style="font-weight:700">R$ '+(parseFloat(d.val_total)||0).toFixed(2).replace(".",",")+  "</td>"+'<td style="font-size:11px;max-width:120px;overflow:hidden;text-overflow:ellipsis">'+esc(d.validacao||"—")+"</td>"+"</tr>"}tb.innerHTML=h}
+
+function formatDate(s){
+  if(!s||s==="—")return"—";
+  try{
+    var d=new Date(s);
+    if(isNaN(d.getTime()))return String(s);
+    var dd=String(d.getDate()).padStart(2,"0");
+    var mm=String(d.getMonth()+1).padStart(2,"0");
+    var yyyy=d.getFullYear();
+    var hh=String(d.getHours()).padStart(2,"0");
+    var mi=String(d.getMinutes()).padStart(2,"0");
+    return dd+"/"+mm+"/"+yyyy+" "+hh+":"+mi;
+  }catch(e){return String(s)}
+}
+
+function initMap(){
+  map=L.map("map",{zoomControl:true}).setView([-15.79,-47.88],5);
+  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{attribution:"© OpenStreetMap"}).addTo(map);
+  markersGroup=L.layerGroup().addTo(map);
+}
+
+function carregar(){
+  document.getElementById("ld").classList.remove("h");
+  document.querySelector(".loading p").textContent="Carregando registros…";
+  fetch(API+"?action=listar").then(function(r){return r.text()}).then(function(t){
+    try{var d=JSON.parse(t);if(d.success)dados=d.registros||[];}catch(e){alert("Erro ao parsear dados.")}
+    document.getElementById("ld").classList.add("h");
+    var now=new Date();
+    var hh=String(now.getHours()).padStart(2,"0"),mi=String(now.getMinutes()).padStart(2,"0");
+    document.getElementById("lastUpdate").textContent="Atualizado às "+hh+":"+mi;
+    renderCards();filtrar();
+  }).catch(function(e){
+    document.getElementById("ld").classList.add("h");
+    alert("Erro ao carregar: "+e.message);
+  });
+}
+
+setInterval(function(){
+  if(!document.getElementById("modal").classList.contains("show")){carregar();}
+},60000);
+
+function renderCards(){
+  var total=dados.length,abertos=0,completos=0,aprovados=0,revisao=0,rejeitados=0,valTotal=0;
+  for(var i=0;i<dados.length;i++){
+    var s=dados[i].status;
+    if(s==="ABERTO")abertos++;
+    else if(s==="COMPLETO")completos++;
+    else if(s==="APROVADO")aprovados++;
+    else if(s==="REVISÃO")revisao++;
+    else if(s==="REJEITADO")rejeitados++;
+    valTotal+=parseFloat(dados[i].val_total)||0;
+  }
+  document.getElementById("cards").innerHTML=
+    card("gray","Total",total,"")+
+    card("amber","Abertos",abertos,"Em andamento")+
+    card("green","Completos",completos,"Aguardando análise")+
+    card("blue","Aprovados",aprovados,"")+
+    card("amber","Em Revisão",revisao,"")+
+    card("red","Rejeitados",rejeitados,"")+
+    card("green","Valor Total","R$ "+valTotal.toFixed(2).replace(".",","),"Todos os pedidos");
+}
+
+function card(accent,label,val,sub){
+  return'<div class="card"><div class="card-accent '+accent+'"></div><div class="label">'+label+'</div><div class="val">'+val+"</div>"+(sub?'<div class="sub">'+sub+"</div>":"")+"</div>";
+}
+
+function filtrar(){
+  var st=document.getElementById("fStatus").value;
+  var q=document.getElementById("fBusca").value.toLowerCase().trim();
+  filtrados=[];
+  for(var i=0;i<dados.length;i++){
+    var d=dados[i];
+    if(st&&d.status!==st)continue;
+    if(q){var txt=(d.protocolo+" "+d.nome+" "+d.cpf).toLowerCase();if(txt.indexOf(q)===-1)continue;}
+    filtrados.push(d);
+  }
+  renderTable();
+}
+
+function renderTable(){
+  var tb=document.getElementById("tbody");
+  if(!filtrados.length){tb.innerHTML='<tr><td colspan="9" style="text-align:center;color:var(--text3);padding:30px">Nenhum registro encontrado.</td></tr>';return}
+  var h="";
+  for(var i=0;i<filtrados.length;i++){
+    var d=filtrados[i];
+    var stClass="st st-"+(d.status||"").replace("Ã","A");
+    var hasWarn=d.validacao&&d.validacao.indexOf("⚠")!==-1;
+    var trClass=(sel&&sel.protocolo===d.protocolo?"sel":"")+(hasWarn?" warn-row":"");
+    h+='<tr onclick="selecionar('+i+')" class="'+trClass.trim()+'">'+
+      '<td>'+esc(d.protocolo)+'</td>'+
+      '<td><span class="'+stClass+'">'+esc(d.status)+'</span></td>'+
+      '<td>'+esc(d.nome)+'</td>'+
+      '<td>'+esc(d.veiculo)+'</td>'+
+      '<td style="font-size:12px;color:var(--text3)">'+esc(formatDate(d.checkin_dh))+'</td>'+
+      '<td style="font-size:12px;color:var(--text3)">'+esc(formatDate(d.checkout_dh))+'</td>'+
+      '<td>'+(d.dist_total||0)+' km</td>'+
+      '<td style="font-weight:600;color:var(--text)">R$ '+(parseFloat(d.val_total)||0).toFixed(2).replace(".",",")+'</td>'+
+      '<td style="font-size:11px;max-width:120px;overflow:hidden;text-overflow:ellipsis;color:var(--text3)">'+esc(d.validacao||"—")+'</td>'+
+    '</tr>';
+  }
+  tb.innerHTML=h;
+}
+
 function esc(s){return String(s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;")}
-function selecionar(idx){sel=filtrados[idx];renderTable();renderDetail();renderMap()}
-function renderDetail(){if(!sel){document.getElementById("detail").innerHTML='<div class="empty">Selecione um registro.</div>';return}var d=sel;var h='<h3>'+esc(d.protocolo)+" — "+esc(d.nome)+"</h3>";h+=row("Status",'<span class="st st-'+esc(d.status)+'">'+esc(d.status)+"</span>");h+=row("Veículo",esc(d.veiculo)+" — "+esc(d.placa));h+=row("CPF",esc(d.cpf));h+=row("Check-in",esc(formatDate(d.checkin_dh)));h+=row("Check-out",esc(formatDate(d.checkout_dh)));h+=row("Tempo",esc(d.tempo||"—"));h+=row("Dist. Total",(d.dist_total||0)+" km");h+=row("Pedágios","R$ "+(parseFloat(d.val_pedagios)||0).toFixed(2)+" ("+(d.qtd_pedagios||0)+")");h+=row("Combustível",esc(d.usou_estimativa==="Sim"?"Estimativa R$ "+d.preco_base+"/L":"Real R$ "+(d.preco_real||d.preco_base)+"/L"));h+=row("Val. Estimado","R$ "+(parseFloat(d.val_estimado)||0).toFixed(2));h+=row("Val. Real","R$ "+(parseFloat(d.val_real)||0).toFixed(2));h+=row("Val. Total",'<span style="font-size:16px;color:var(--primary)">R$ '+(parseFloat(d.val_total)||0).toFixed(2)+"</span>");h+=row("Validação",esc(d.validacao||"—"));if(d.ida_gps&&d.ida_gps.length){h+='<div style="margin-top:14px;font-size:12px;color:var(--text3);font-weight:600;padding-bottom:4px">IDA ('+d.ida_qtd+" paradas):</div>";for(var i=0;i<d.ida_gps.length;i++){var p=d.ida_gps[i];h+='<div style="font-size:12px;color:var(--text2);padding:5px 0;border-bottom:1px solid rgba(51,65,85,.2)">'+esc(p.origem)+" → "+esc(p.destino)+" ("+p.km+" km)</div>"}}if(d.volta_gps&&d.volta_gps.length){h+='<div style="margin-top:10px;font-size:12px;color:var(--text3);font-weight:600;padding-bottom:4px">VOLTA ('+d.volta_qtd+" paradas):</div>";for(var i=0;i<d.volta_gps.length;i++){var p=d.volta_gps[i];h+='<div style="font-size:12px;color:var(--text2);padding:5px 0;border-bottom:1px solid rgba(51,65,85,.2)">'+esc(p.origem)+" → "+esc(p.destino)+" ("+p.km+" km)</div>"}}if(d.checkin_foto)h+='<div style="margin-top:10px"><a href="'+esc(d.checkin_foto)+'" target="_blank" style="color:var(--primary);font-size:12px">📸 Foto odômetro saída</a></div>';if(d.checkout_foto)h+='<div><a href="'+esc(d.checkout_foto)+'" target="_blank" style="color:var(--primary);font-size:12px">📸 Foto odômetro chegada</a></div>';if(d.cupom)h+='<div><a href="'+esc(d.cupom)+'" target="_blank" style="color:var(--primary);font-size:12px">🧾 Cupom combustível</a></div>';h+='<div class="actions">';if(d.status==="COMPLETO"||d.status==="CORRIGIDO"){h+='<button class="abtn green" onclick="acao(\'APROVADO\')">✅ Aprovar</button>';h+='<button class="abtn yellow" onclick="acao(\'REVISÃO\')">🔄 Revisão</button>';h+='<button class="abtn red" onclick="acao(\'REJEITADO\')">❌ Rejeitar</button>'}else if(d.status==="REVISÃO"){h+='<button class="abtn green" onclick="acao(\'APROVADO\')">✅ Aprovar</button>';h+='<button class="abtn red" onclick="acao(\'REJEITADO\')">❌ Rejeitar</button>'}else if(d.status==="REJEITADO"){h+='<button class="abtn yellow" onclick="acao(\'REVISÃO\')">🔄 Reabrir p/ Revisão</button>'}else if(d.status==="APROVADO"){h+='<span style="font-size:12px;color:var(--success)">✅ Pedido aprovado</span>'}h+="</div>";document.getElementById("detail").innerHTML=h}
-function row(k,v){return'<div class="row"><span class="k">'+k+'</span><span class="v">'+v+"</span></div>"}
-function renderMap(){markersGroup.clearLayers();if(!sel)return;var d=sel,pts=[];if(d.checkin_lat&&d.checkin_lng){var lat=parseFloat(d.checkin_lat),lng=parseFloat(d.checkin_lng);if(!isNaN(lat)&&!isNaN(lng)){pts.push([lat,lng]);L.marker([lat,lng],{icon:makeIcon("🚀","#059669")}).bindPopup("<strong>CHECK-IN</strong><br>"+formatDate(d.checkin_dh)).addTo(markersGroup)}}if(d.ida_gps){for(var i=0;i<d.ida_gps.length;i++){var p=d.ida_gps[i];if(p.lat&&p.lng){pts.push([p.lat,p.lng]);L.marker([p.lat,p.lng],{icon:makeIcon("➡️","#2563EB")}).bindPopup("<strong>IDA "+(i+1)+"</strong><br>"+esc(p.origem)+" → "+esc(p.destino)+"<br>📍 "+p.km+" km").addTo(markersGroup)}}}if(d.volta_gps){for(var i=0;i<d.volta_gps.length;i++){var p=d.volta_gps[i];if(p.lat&&p.lng){pts.push([p.lat,p.lng]);L.marker([p.lat,p.lng],{icon:makeIcon("↩️","#7C3AED")}).bindPopup("<strong>VOLTA "+(i+1)+"</strong><br>"+esc(p.origem)+" → "+esc(p.destino)+"<br>📍 "+p.km+" km").addTo(markersGroup)}}}if(d.checkout_lat&&d.checkout_lng){var lat=parseFloat(d.checkout_lat),lng=parseFloat(d.checkout_lng);if(!isNaN(lat)&&!isNaN(lng)){pts.push([lat,lng]);L.marker([lat,lng],{icon:makeIcon("🏁","#D97706")}).bindPopup("<strong>CHECK-OUT</strong><br>"+formatDate(d.checkout_dh)).addTo(markersGroup)}}if(pts.length>1)L.polyline(pts,{color:"#0EA5E9",weight:3,opacity:.7,dashArray:"8 6"}).addTo(markersGroup);if(pts.length)map.fitBounds(pts,{padding:[40,40],maxZoom:14})}
-function makeIcon(emoji,color){return L.divIcon({className:"",html:'<div style="background:'+color+';width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:16px;box-shadow:0 2px 8px rgba(0,0,0,.3);border:2px solid #fff">'+emoji+"</div>",iconSize:[32,32],iconAnchor:[16,16],popupAnchor:[0,-20]})}
-function acao(novoStatus){if(!sel)return;var isAprov=novoStatus==="APROVADO";document.getElementById("modal_title").textContent=isAprov?"Aprovar Pedido":novoStatus==="REVISÃO"?"Enviar para Revisão":"Rejeitar Pedido";document.getElementById("modal_desc").textContent="Protocolo: "+sel.protocolo+" — "+sel.nome;document.getElementById("modal_obs").value="";document.getElementById("modal_obs").placeholder=isAprov?"Observação (opcional)":"Motivo obrigatório…";document.getElementById("modal_obs").classList.remove("err");document.getElementById("modal_err").classList.remove("show");document.getElementById("modal").classList.add("show");document.getElementById("modal_confirm").onclick=function(){executarAcao(novoStatus)};document.getElementById("modal_confirm").style.background=isAprov?"var(--success)":novoStatus==="REVISÃO"?"var(--warning)":"var(--danger)";document.getElementById("modal_confirm").style.color=novoStatus==="REVISÃO"?"#1E293B":"#fff"}
+
+function selecionar(idx){
+  sel=filtrados[idx];
+  renderTable();
+  renderActions();
+  renderDetail();
+  renderMap();
+}
+
+function renderActions(){
+  var bar=document.getElementById("actionBar");
+  if(!sel){
+    bar.innerHTML='<div class="action-bar-label">Ações</div><div class="action-bar-empty">Selecione um registro para ver as ações disponíveis.</div>';
+    return;
+  }
+  var d=sel;
+  var h='<div class="action-bar-label">Ações — '+esc(d.protocolo)+'</div>';
+  h+='<div class="action-btns">';
+  if(d.status==="COMPLETO"||d.status==="CORRIGIDO"){
+    h+='<button class="abtn green" onclick="acao(\'APROVADO\')">Aprovar</button>';
+    h+='<button class="abtn amber" onclick="acao(\'REVISÃO\')">Solicitar Revisão</button>';
+    h+='<button class="abtn red" onclick="acao(\'REJEITADO\')">Rejeitar</button>';
+  }else if(d.status==="REVISÃO"){
+    h+='<button class="abtn green" onclick="acao(\'APROVADO\')">Aprovar</button>';
+    h+='<button class="abtn red" onclick="acao(\'REJEITADO\')">Rejeitar</button>';
+  }else if(d.status==="REJEITADO"){
+    h+='<button class="abtn amber" onclick="acao(\'REVISÃO\')">Reabrir para Revisão</button>';
+  }else if(d.status==="APROVADO"){
+    h+='<div class="approved-msg">Pedido aprovado — nenhuma ação necessária.</div>';
+  }else{
+    h+='<div class="action-bar-empty">Nenhuma ação disponível para este status.</div>';
+  }
+  h+='</div>';
+  bar.innerHTML=h;
+}
+
+function renderDetail(){
+  if(!sel){document.getElementById("detail").innerHTML='<div class="empty">Selecione um registro na tabela para ver os detalhes e a rota no mapa.</div>';return}
+  var d=sel;
+  var h='';
+
+  h+='<div class="detail-section">';
+  h+='<div class="detail-section-title">Identificação</div>';
+  h+=drow("Protocolo",'<span style="font-family:\'Courier New\',monospace;font-size:12px;font-weight:600">'+esc(d.protocolo)+'</span>');
+  h+=drow("Status",'<span class="st st-'+esc(d.status)+'">'+esc(d.status)+'</span>');
+  h+=drow("Nome",esc(d.nome));
+  h+=drow("CPF",esc(d.cpf));
+  h+=drow("Veículo",esc(d.veiculo)+" — "+esc(d.placa));
+  h+='</div>';
+
+  h+='<div class="detail-section">';
+  h+='<div class="detail-section-title">Período</div>';
+  h+=drow("Check-in",esc(formatDate(d.checkin_dh)));
+  h+=drow("Check-out",esc(formatDate(d.checkout_dh)));
+  h+=drow("Duração",esc(d.tempo||"—"));
+  h+='</div>';
+
+  h+='<div class="detail-section">';
+  h+='<div class="detail-section-title">Valores</div>';
+  h+=drow("Distância Total",(d.dist_total||0)+" km");
+  h+=drow("Pedágios","R$ "+(parseFloat(d.val_pedagios)||0).toFixed(2)+" ("+(d.qtd_pedagios||0)+" cobranças)");
+  h+=drow("Combustível",esc(d.usou_estimativa==="Sim"?"Estimativa — R$ "+d.preco_base+"/L":"Real — R$ "+(d.preco_real||d.preco_base)+"/L"));
+  h+=drow("Val. Estimado","R$ "+(parseFloat(d.val_estimado)||0).toFixed(2));
+  h+=drow("Val. Real","R$ "+(parseFloat(d.val_real)||0).toFixed(2));
+  h+=drow("Total a Reembolsar",'<strong style="font-size:15px">R$ '+(parseFloat(d.val_total)||0).toFixed(2)+'</strong>');
+  h+=drow("Validação automática",esc(d.validacao||"—"));
+  h+='</div>';
+
+  if(d.ida_gps&&d.ida_gps.length){
+    h+='<div class="detail-section">';
+    h+='<div class="detail-section-title">Rota de Ida ('+d.ida_qtd+' paradas)</div>';
+    for(var i=0;i<d.ida_gps.length;i++){var p=d.ida_gps[i];h+='<div class="segment"><span class="seg-label">Trecho '+(i+1)+'</span>'+esc(p.origem)+" → "+esc(p.destino)+" ("+p.km+" km)</div>";}
+    h+='</div>';
+  }
+  if(d.volta_gps&&d.volta_gps.length){
+    h+='<div class="detail-section">';
+    h+='<div class="detail-section-title">Rota de Volta ('+d.volta_qtd+' paradas)</div>';
+    for(var i=0;i<d.volta_gps.length;i++){var p=d.volta_gps[i];h+='<div class="segment"><span class="seg-label">Trecho '+(i+1)+'</span>'+esc(p.origem)+" → "+esc(p.destino)+" ("+p.km+" km)</div>";}
+    h+='</div>';
+  }
+
+  if(d.checkin_foto||d.checkout_foto||d.cupom){
+    h+='<div class="detail-section">';
+    h+='<div class="detail-section-title">Anexos</div>';
+    h+='<div class="detail-links">';
+    if(d.checkin_foto)h+='<a href="'+esc(d.checkin_foto)+'" target="_blank">Odômetro — saída</a>';
+    if(d.checkout_foto)h+='<a href="'+esc(d.checkout_foto)+'" target="_blank">Odômetro — chegada</a>';
+    if(d.cupom)h+='<a href="'+esc(d.cupom)+'" target="_blank">Cupom fiscal — combustível</a>';
+    h+='</div></div>';
+  }
+
+  document.getElementById("detail").innerHTML=h;
+}
+
+function drow(k,v){return'<div class="drow"><span class="k">'+k+'</span><span class="v">'+v+'</span></div>'}
+
+function renderMap(){
+  markersGroup.clearLayers();
+  if(!sel)return;
+  var d=sel,pts=[];
+  if(d.checkin_lat&&d.checkin_lng){
+    var lat=parseFloat(d.checkin_lat),lng=parseFloat(d.checkin_lng);
+    if(!isNaN(lat)&&!isNaN(lng)){pts.push([lat,lng]);L.marker([lat,lng],{icon:makeIcon("S","#059669")}).bindPopup("<strong>CHECK-IN</strong><br>"+formatDate(d.checkin_dh)).addTo(markersGroup);}
+  }
+  if(d.ida_gps){for(var i=0;i<d.ida_gps.length;i++){var p=d.ida_gps[i];if(p.lat&&p.lng){pts.push([p.lat,p.lng]);L.marker([p.lat,p.lng],{icon:makeIcon((i+1).toString(),"#2563EB")}).bindPopup("<strong>IDA "+(i+1)+"</strong><br>"+esc(p.origem)+" → "+esc(p.destino)+"<br>"+p.km+" km").addTo(markersGroup);}}}
+  if(d.volta_gps){for(var i=0;i<d.volta_gps.length;i++){var p=d.volta_gps[i];if(p.lat&&p.lng){pts.push([p.lat,p.lng]);L.marker([p.lat,p.lng],{icon:makeIcon((i+1).toString(),"#7C3AED")}).bindPopup("<strong>VOLTA "+(i+1)+"</strong><br>"+esc(p.origem)+" → "+esc(p.destino)+"<br>"+p.km+" km").addTo(markersGroup);}}}
+  if(d.checkout_lat&&d.checkout_lng){
+    var lat=parseFloat(d.checkout_lat),lng=parseFloat(d.checkout_lng);
+    if(!isNaN(lat)&&!isNaN(lng)){pts.push([lat,lng]);L.marker([lat,lng],{icon:makeIcon("E","#D97706")}).bindPopup("<strong>CHECK-OUT</strong><br>"+formatDate(d.checkout_dh)).addTo(markersGroup);}
+  }
+  if(pts.length>1){L.polyline(pts,{color:"#2563EB",weight:2.5,opacity:.65,dashArray:"8 6"}).addTo(markersGroup)}
+  if(pts.length){map.fitBounds(pts,{padding:[40,40],maxZoom:14})}
+}
+
+function makeIcon(label,color){
+  return L.divIcon({className:"",html:'<div style="background:'+color+';width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#fff;box-shadow:0 2px 6px rgba(0,0,0,.25);border:2px solid #fff;font-family:Inter,sans-serif">'+label+"</div>",iconSize:[28,28],iconAnchor:[14,14],popupAnchor:[0,-18]});
+}
+
+function acao(novoStatus){
+  if(!sel)return;
+  var isAprov=novoStatus==="APROVADO";
+  document.getElementById("modal_title").textContent=
+    isAprov?"Aprovar Pedido":novoStatus==="REVISÃO"?"Solicitar Revisão":"Rejeitar Pedido";
+  document.getElementById("modal_desc").textContent="Protocolo: "+sel.protocolo+" — "+sel.nome;
+  document.getElementById("modal_obs").value="";
+  document.getElementById("modal_obs").placeholder=isAprov?"Observação (opcional)":"Motivo obrigatório…";
+  document.getElementById("modal_obs").classList.remove("err");
+  document.getElementById("modal_err").classList.remove("show");
+  document.getElementById("modal").classList.add("show");
+  document.getElementById("modal_confirm").onclick=function(){executarAcao(novoStatus)};
+  document.getElementById("modal_confirm").style.background=
+    isAprov?"var(--success)":novoStatus==="REVISÃO"?"#D97706":"var(--danger)";
+  document.getElementById("modal_confirm").style.color="#fff";
+}
+
 function fecharModal(){document.getElementById("modal").classList.remove("show")}
-function executarAcao(novoStatus){var obs=document.getElementById("modal_obs").value.trim();if(!obs&&novoStatus!=="APROVADO"){document.getElementById("modal_obs").classList.add("err");document.getElementById("modal_err").classList.add("show");document.getElementById("modal_obs").focus();return}fecharModal();document.getElementById("ld").classList.remove("h");document.querySelector(".loading p").textContent="Atualizando status…";fetch(API,{method:"POST",redirect:"follow",headers:{"Content-Type":"text/plain"},body:JSON.stringify({action:"atualizar_status",protocolo:sel.protocolo,novo_status:novoStatus,observacao:obs})}).then(function(r){return r.text()}).then(function(t){try{var d=JSON.parse(t);if(d.success===false){alert(d.error);document.getElementById("ld").classList.add("h");return}}catch(e){}document.querySelector(".loading p").textContent="Carregando registros…";carregar()}).catch(function(e){document.getElementById("ld").classList.add("h");alert("Erro: "+e.message)})}
-initMap();carregar();
+
+function executarAcao(novoStatus){
+  var obs=document.getElementById("modal_obs").value.trim();
+  if(!obs&&novoStatus!=="APROVADO"){
+    document.getElementById("modal_obs").classList.add("err");
+    document.getElementById("modal_err").classList.add("show");
+    document.getElementById("modal_obs").focus();
+    return;
+  }
+  fecharModal();
+  document.getElementById("ld").classList.remove("h");
+  document.querySelector(".loading p").textContent="Atualizando status…";
+  fetch(API,{method:"POST",redirect:"follow",headers:{"Content-Type":"text/plain"},body:JSON.stringify({action:"atualizar_status",protocolo:sel.protocolo,novo_status:novoStatus,observacao:obs})})
+  .then(function(r){return r.text()})
+  .then(function(t){
+    try{var d=JSON.parse(t);if(d.success===false){alert(d.error);document.getElementById("ld").classList.add("h");return}}catch(e){}
+    document.querySelector(".loading p").textContent="Carregando registros…";
+    carregar();
+  }).catch(function(e){
+    document.getElementById("ld").classList.add("h");
+    alert("Erro: "+e.message);
+  });
+}
+
+initMap();
+carregar();
 </script>
 </body>
 </html>
