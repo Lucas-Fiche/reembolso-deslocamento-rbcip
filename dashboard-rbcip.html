@@ -148,6 +148,20 @@ tr.warn-row{box-shadow:inset 3px 0 0 var(--danger)}
 .mbtn .cancel{background:var(--bg);border:1px solid var(--border);color:var(--text2)}
 .mbtn .confirm{background:var(--primary);color:#fff}
 
+/* Gate (login) */
+.gate{position:fixed;inset:0;background:var(--bg);display:flex;align-items:center;justify-content:center;z-index:1000;padding:20px}
+.gate.h{display:none}
+.gate-box{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);box-shadow:0 10px 40px rgba(0,0,0,.12);padding:32px 28px;width:100%;max-width:360px;display:flex;flex-direction:column}
+.gate-box h2{font-size:18px;font-weight:700;color:var(--text);margin-bottom:6px}
+.gate-box p{font-size:13px;color:var(--text2);margin-bottom:18px;line-height:1.5}
+.gate-box input{padding:11px 13px;background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-sm);font-family:inherit;font-size:14px;color:var(--text);outline:none;transition:border-color .15s,box-shadow .15s}
+.gate-box input:focus{border-color:var(--primary);box-shadow:0 0 0 3px var(--primary-light)}
+.gate-err{font-size:12px;color:var(--danger);margin-top:8px;display:none}
+.gate-err.show{display:block}
+.gate-box button{margin-top:16px;padding:11px;background:var(--primary);color:#fff;border:none;border-radius:var(--radius-sm);font-family:inherit;font-size:14px;font-weight:600;cursor:pointer;transition:filter .15s}
+.gate-box button:hover{filter:brightness(.94)}
+.gate-box button:disabled{opacity:.6;cursor:default}
+
 @media(max-width:900px){
   .layout{display:flex;flex-direction:column;height:auto}
   .cards{padding:12px 16px;gap:8px}
@@ -160,6 +174,16 @@ tr.warn-row{box-shadow:inset 3px 0 0 var(--danger)}
 </head>
 <body>
 
+<div class="gate" id="gate">
+  <form class="gate-box" onsubmit="return fazerLogin(event)">
+    <h2>Painel Administrativo</h2>
+    <p>Acesso restrito a usuários autorizados. Informe a senha de administrador para continuar.</p>
+    <input type="password" id="gate_pwd" placeholder="Senha de administrador" autocomplete="current-password">
+    <div class="gate-err" id="gate_err">Senha incorreta.</div>
+    <button type="submit" id="gate_btn">Entrar</button>
+  </form>
+</div>
+
 <header class="hdr">
   <div class="hdr-left">
     <h1>Painel Administrativo de Reembolsos</h1>
@@ -171,6 +195,7 @@ tr.warn-row{box-shadow:inset 3px 0 0 var(--danger)}
       <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
       Atualizar
     </button>
+    <button class="refresh-btn" onclick="logout()" title="Encerrar sessão">Sair</button>
   </div>
 </header>
 
@@ -230,6 +255,53 @@ tr.warn-row{box-shadow:inset 3px 0 0 var(--danger)}
 <script>
 var API="https://script.google.com/macros/s/AKfycbwaKl_Iglg_hVzG6_wS9GxTxZd8svu836zLxVJ45PAh7viqtxALlRfOdEAvebeisogx/exec";
 var dados=[],filtrados=[],sel=null,map,markersGroup;
+// Token (senha) do admin — guardado só na sessão do navegador, nunca no código.
+var ADMIN_TOKEN=sessionStorage.getItem("rbcip_admin_token")||"";
+
+// POST autenticado para a API (text/plain evita preflight CORS)
+function apiPost(payload){
+  return fetch(API,{method:"POST",redirect:"follow",headers:{"Content-Type":"text/plain"},body:JSON.stringify(payload)})
+    .then(function(r){return r.text()}).then(function(t){try{return JSON.parse(t)}catch(e){return null}});
+}
+
+// ── Login / Logout ──
+function iniciar(){
+  if(ADMIN_TOKEN){document.getElementById("gate").classList.add("h");carregar();}
+  else{document.getElementById("gate").classList.remove("h");document.getElementById("gate_pwd").focus();}
+}
+function fazerLogin(ev){
+  ev.preventDefault();
+  var pwd=document.getElementById("gate_pwd").value;
+  if(!pwd)return false;
+  var btn=document.getElementById("gate_btn"),err=document.getElementById("gate_err");
+  btn.disabled=true;btn.textContent="Entrando…";err.classList.remove("show");
+  apiPost({action:"login_admin",token:pwd}).then(function(d){
+    btn.disabled=false;btn.textContent="Entrar";
+    if(d&&d.auth){
+      ADMIN_TOKEN=pwd;sessionStorage.setItem("rbcip_admin_token",pwd);
+      document.getElementById("gate_pwd").value="";
+      document.getElementById("gate").classList.add("h");
+      carregar();
+    }else{
+      err.textContent="Senha incorreta.";err.classList.add("show");
+      document.getElementById("gate_pwd").select();
+    }
+  }).catch(function(){
+    btn.disabled=false;btn.textContent="Entrar";
+    err.textContent="Erro de conexão. Tente novamente.";err.classList.add("show");
+  });
+  return false;
+}
+function logout(expirou){
+  ADMIN_TOKEN="";sessionStorage.removeItem("rbcip_admin_token");
+  dados=[];filtrados=[];sel=null;
+  document.getElementById("ld").classList.add("h");
+  var err=document.getElementById("gate_err");
+  if(expirou===true){err.textContent="Sessão expirada ou senha alterada. Entre novamente.";err.classList.add("show");}
+  else{err.classList.remove("show");}
+  document.getElementById("gate").classList.remove("h");
+  var p=document.getElementById("gate_pwd");if(p){p.value="";p.focus();}
+}
 
 function formatDate(s){
   if(!s||s==="—")return"—";
@@ -252,11 +324,13 @@ function initMap(){
 }
 
 function carregar(){
+  if(!ADMIN_TOKEN){logout();return;}
   document.getElementById("ld").classList.remove("h");
   document.querySelector(".loading p").textContent="Carregando registros…";
-  fetch(API+"?action=listar").then(function(r){return r.text()}).then(function(t){
-    try{var d=JSON.parse(t);if(d.success)dados=d.registros||[];}catch(e){alert("Erro ao parsear dados.")}
+  apiPost({action:"listar",token:ADMIN_TOKEN}).then(function(d){
     document.getElementById("ld").classList.add("h");
+    if(d&&d.auth===false){logout(true);return;}
+    if(d&&d.success)dados=d.registros||[]; else if(!d){alert("Erro ao parsear dados.")}
     var now=new Date();
     var hh=String(now.getHours()).padStart(2,"0"),mi=String(now.getMinutes()).padStart(2,"0");
     document.getElementById("lastUpdate").textContent="Atualizado às "+hh+":"+mi;
@@ -268,7 +342,7 @@ function carregar(){
 }
 
 setInterval(function(){
-  if(!document.getElementById("modal").classList.contains("show")){carregar();}
+  if(ADMIN_TOKEN&&!document.getElementById("modal").classList.contains("show")){carregar();}
 },60000);
 
 function renderCards(){
@@ -482,10 +556,10 @@ function executarAcao(novoStatus){
   fecharModal();
   document.getElementById("ld").classList.remove("h");
   document.querySelector(".loading p").textContent="Atualizando status…";
-  fetch(API,{method:"POST",redirect:"follow",headers:{"Content-Type":"text/plain"},body:JSON.stringify({action:"atualizar_status",protocolo:sel.protocolo,novo_status:novoStatus,observacao:obs})})
-  .then(function(r){return r.text()})
-  .then(function(t){
-    try{var d=JSON.parse(t);if(d.success===false){alert(d.error);document.getElementById("ld").classList.add("h");return}}catch(e){}
+  apiPost({action:"atualizar_status",protocolo:sel.protocolo,novo_status:novoStatus,observacao:obs,token:ADMIN_TOKEN})
+  .then(function(d){
+    if(d&&d.auth===false){logout(true);return}
+    if(d&&d.success===false){alert(d.error);document.getElementById("ld").classList.add("h");return}
     document.querySelector(".loading p").textContent="Carregando registros…";
     carregar();
   }).catch(function(e){
@@ -495,7 +569,7 @@ function executarAcao(novoStatus){
 }
 
 initMap();
-carregar();
+iniciar();
 </script>
 </body>
 </html>

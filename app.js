@@ -40,6 +40,8 @@ var propriedades = PropertiesService.getScriptProperties();
 // Usando os nomes exatos que você criou na imagem:
 var SPREADSHEET_ID = propriedades.getProperty('PLANILHA_ID');
 var DRIVE_FOLDER_ID = propriedades.getProperty('PASTA_DRIVE_ID');
+// Senha do Painel Administrativo (defina em Configurações do projeto > Propriedades do script)
+var PAINEL_SENHA = propriedades.getProperty('PAINEL_SENHA');
 
 // 3. As demais variáveis continuam iguais, pois não são informações sensíveis
 var ABA = "Registros";
@@ -90,6 +92,16 @@ function withLock(fn) {
 }
 
 // ══════════════════════════════════════════════════════════════
+// AUTENTICAÇÃO DO PAINEL ADMIN
+// A senha NÃO fica no código do dashboard: o painel a recebe no login e
+// a envia em cada requisição administrativa. Aqui validamos contra a
+// PAINEL_SENHA guardada nas Propriedades do script (lado servidor).
+// ══════════════════════════════════════════════════════════════
+function authAdmin(token) {
+  return !!PAINEL_SENHA && String(token || "") === String(PAINEL_SENHA);
+}
+
+// ══════════════════════════════════════════════════════════════
 // ROUTERS
 // ══════════════════════════════════════════════════════════════
 function doPost(e) {
@@ -104,7 +116,16 @@ function doPost(e) {
     if (d.action === "lancamento_posterior") return withLock(function(){ return doLancamentoPosterior(d); });
     if (d.action === "corrigir") return withLock(function(){ return doCorrigir(d); });
     if (d.action === "set_volta") return withLock(function(){ return doSetVolta(d); });
-    if (d.action === "atualizar_status") return withLock(function(){ return doAtualizarStatus(d); });
+    // ── Ações ADMINISTRATIVAS: exigem a senha do painel (PAINEL_SENHA) ──
+    if (d.action === "login_admin") return jr({success: authAdmin(d.token), auth: authAdmin(d.token)});
+    if (d.action === "listar") {
+      if (!authAdmin(d.token)) return jr({success: false, auth: false, error: "Não autorizado."});
+      return listarRegistros(d.status || "");
+    }
+    if (d.action === "atualizar_status") {
+      if (!authAdmin(d.token)) return jr({success: false, auth: false, error: "Não autorizado."});
+      return withLock(function(){ return doAtualizarStatus(d); });
+    }
     return jr({success: false, error: "Ação desconhecida"});
   } catch(err) { return jr({success: false, error: err.message}); }
 }
@@ -117,7 +138,11 @@ function doGet(e) {
     if (a === "verificar_status") return verificarStatus(e.parameter.protocolo || "");
     if (a === "buscar_viagem") return buscarViagem(e.parameter.protocolo || "");
     if (a === "buscar_revisao") return buscarRevisao(e.parameter.cpf || "");
-    if (a === "listar") return listarRegistros(e.parameter.status || "");
+    if (a === "listar") {
+      // Endpoint sensível (retorna todos os dados): exige a senha do painel.
+      if (!authAdmin(e.parameter.token)) return jr({success: false, auth: false, error: "Não autorizado."});
+      return listarRegistros(e.parameter.status || "");
+    }
     return jr({status: "ok", v: "5.1"});
   } catch(err) { return jr({success: false, error: err.message}); }
 }
