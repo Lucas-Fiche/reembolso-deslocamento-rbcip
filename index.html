@@ -93,8 +93,8 @@
 
   <div class="mc" onclick="goCheckin()" id="cardCI"><div class="mi" style="background:#ECFDF5;color:#059669">🚀</div><div class="mn"><h3>CHECK-IN</h3><p>Registre o odômetro antes de sair.</p></div></div>
   <div class="mc" onclick="goViagem()" id="cardV" style="display:none"><div class="mi" style="background:#EFF6FF;color:#2563EB">🗺️</div><div class="mn"><h3>Viagem em Andamento</h3><p>Registrar paradas ou finalizar.</p></div></div>
-  <div class="card"><div class="ct"><span class="ic" style="background:#EFF6FF;color:#2563EB">🔍</span> Recuperar Viagem</div>
-    <p style="font-size:13px;color:var(--text-secondary);margin-bottom:12px">Fez check-in mas não aparece? Pedido rejeitado? Digite seu CPF.</p>
+  <div class="card"><div class="ct"><span class="ic" style="background:#EFF6FF;color:#2563EB">🔍</span> Recuperar / Acompanhar</div>
+    <p style="font-size:13px;color:var(--text-secondary);margin-bottom:12px">Acompanhe o andamento do seu pedido, continue uma viagem em andamento ou corrija um pedido em revisão. Digite seu CPF.</p>
     <div class="f"><input type="text" id="busca_cpf" placeholder="000.000.000-00" inputmode="numeric" maxlength="14"></div>
     <button class="bp b" style="padding:12px" onclick="buscarCPF()">🔍 Buscar</button>
     <div id="busca_res" style="margin-top:10px;font-size:13px;display:none"></div>
@@ -349,12 +349,33 @@ function loadTrip(){try{var r=localStorage.getItem("rbcip_trip");return r?JSON.p
 function parseP(txt){if(!txt)return[];var lines=String(txt).split("\n"),r=[];for(var i=0;i<lines.length;i++){var l=lines[i].trim();if(!l)continue;var m=l.match(/\d+\.\s*(.+?)\s*→\s*(.+?)\s*\|\s*([\d.]+)\s*km\s*\|\s*(.+?)(\s*\||$)/);if(m)r.push({orig:m[1].trim(),dest:m[2].trim(),km:m[3],time:m[4].trim()});else r.push({orig:"?",dest:"?",km:"0",time:l})}return r}
 function sync(){trip=loadTrip();if(trip){fetch(API+"?action=verificar_status&protocolo="+encodeURIComponent(trip.protocolo)).then(function(r){return r.text()}).then(function(t){try{var d=JSON.parse(t);if(d.status==="COMPLETO"||d.status==="CORRIGIDO"||d.status==="NAO_ENCONTRADO"){clearTrip();trip=null}}catch(e){}updateHome()}).catch(function(){updateHome()})}else{updateHome()}}
 function updateHome(){var b=document.getElementById("openBanner"),ci=document.getElementById("cardCI"),cv=document.getElementById("cardV");if(trip){b.classList.add("v");document.getElementById("openDetail").innerHTML="<strong>"+trip.nome+"</strong> — "+trip.veiculo+" ("+trip.placa+")<br>Protocolo: "+trip.protocolo;ci.style.display="none";cv.style.display="flex";document.getElementById("instrCard").style.display="none"}else{b.classList.remove("v");ci.style.display="flex";cv.style.display="none";document.getElementById("instrCard").style.display="block"}}
+function escTxt(s){return String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;")}
+function renderSituacao(s){
+  var st=s.status||"",val=parseFloat(s.valor_total)||0;
+  var map={
+    "ABERTO":{bg:"var(--success-bg)",bd:"#86EFAC",fg:"#065F46",ic:"🚀",t:"Viagem em andamento",m:"Há uma viagem em andamento. Continue o registro pela tela inicial."},
+    "COMPLETO":{bg:"var(--warning-bg)",bd:"#FCD34D",fg:"#92400E",ic:"🕐",t:"Em análise",m:"Pedido enviado. Aguardando avaliação do gestor (até 5 dias úteis)."},
+    "CORRIGIDO":{bg:"#EDE9FE",bd:"#C4B5FD",fg:"#5B21B6",ic:"🔄",t:"Correção enviada",m:"Sua correção foi recebida e está em reanálise pelo gestor."},
+    "REVISÃO":{bg:"#E0E7FF",bd:"#A5B4FC",fg:"#3730A3",ic:"🔄",t:"Em revisão",m:"O gestor solicitou ajustes. Busque novamente para corrigir os dados."},
+    "APROVADO":{bg:"#DBEAFE",bd:"#93C5FD",fg:"#1E40AF",ic:"✅",t:"Aprovado",m:"Pedido aprovado! O pagamento será processado em até 5 dias úteis."},
+    "PAGO":{bg:"#CCFBF1",bd:"#99F6E4",fg:"#0F766E",ic:"💰",t:"Pago",m:"Reembolso pago. Processo concluído — obrigado!"},
+    "REPROVADO":{bg:"var(--danger-bg)",bd:"#FECACA",fg:"#991B1B",ic:"❌",t:"Reprovado",m:"Pedido reprovado. Em caso de dúvida, contate o setor administrativo."},
+    "REJEITADO":{bg:"var(--danger-bg)",bd:"#FECACA",fg:"#991B1B",ic:"❌",t:"Reprovado",m:"Pedido reprovado. Em caso de dúvida, contate o setor administrativo."}
+  };
+  var c=map[st]||{bg:"var(--bg)",bd:"var(--border)",fg:"var(--text)",ic:"ℹ️",t:st,m:""};
+  var valHtml=(st==="APROVADO"||st==="PAGO"||st==="COMPLETO")&&val>0?'<div style="margin-top:6px;font-size:13px;color:'+c.fg+'">Valor: <strong>R$ '+val.toFixed(2)+'</strong></div>':'';
+  var obs=s.observacao?'<div style="margin-top:8px;font-size:12px;color:'+c.fg+';line-height:1.5"><strong>Observação do gestor:</strong> '+escTxt(s.observacao)+'</div>':'';
+  return '<div style="background:'+c.bg+';border:1px solid '+c.bd+';border-radius:10px;padding:14px">'
+    +'<div style="font-size:15px;font-weight:700;color:'+c.fg+'">'+c.ic+' '+c.t+'</div>'
+    +'<div style="font-size:12px;color:'+c.fg+';opacity:.85;margin-top:2px;font-family:\'JetBrains Mono\',monospace">'+escTxt(s.protocolo)+'</div>'
+    +'<div style="font-size:13px;color:'+c.fg+';margin-top:8px;line-height:1.5">'+c.m+'</div>'+valHtml+obs+'</div>';
+}
 function buscarCPF(){var cpf=document.getElementById("busca_cpf").value.trim(),res=document.getElementById("busca_res");if(!cpf){alert("Digite o CPF.");return}res.style.display="block";res.innerHTML='<span style="color:var(--text-muted)">Buscando…</span>';
   fetch(API+"?action=buscar_checkin&cpf="+encodeURIComponent(cpf)).then(function(r){return r.text()}).then(function(t){var d;try{d=JSON.parse(t)}catch(e){res.innerHTML='<span style="color:var(--danger)">Erro.</span>';return}
     if(d.success&&d.found){trip=d.checkin;trip.ida_paradas=parseP(d.checkin.ida_texto);trip.volta_paradas=parseP(d.checkin.volta_texto);saveTrip(trip);res.innerHTML='<div style="color:#065F46;background:var(--success-bg);padding:10px;border-radius:8px">✅ Viagem encontrada! '+trip.protocolo+'</div>';updateHome();return}
     fetch(API+"?action=buscar_revisao&cpf="+encodeURIComponent(cpf)).then(function(r2){return r2.text()}).then(function(t2){var d2;try{d2=JSON.parse(t2)}catch(e){res.innerHTML='<span style="color:var(--text-muted)">Nenhuma viagem encontrada.</span>';return}
       if(d2.success&&d2.found){res.innerHTML='<div style="color:#3730A3;background:#E0E7FF;padding:10px;border-radius:8px"><strong>🔄 Pedido em revisão!</strong><br>'+d2.pedido.protocolo+'<br><button class="bp b" style="padding:8px;margin-top:8px;font-size:13px" onclick="abrirCorr(\''+d2.pedido.protocolo+'\','+(d2.pedido.distancia_total||0)+','+(d2.pedido.preco_real||PB)+')">Corrigir</button></div>';}
-      else{res.innerHTML='<div style="color:#92400E;background:var(--warning-bg);padding:10px;border-radius:8px">Nenhuma viagem ou revisão encontrada.</div>';}
+      else{fetch(API+"?action=buscar_situacao&cpf="+encodeURIComponent(cpf)).then(function(r3){return r3.text()}).then(function(t3){var d3;try{d3=JSON.parse(t3)}catch(e){res.innerHTML='<span style="color:var(--text-muted)">Nenhuma viagem encontrada.</span>';return}if(d3.success&&d3.found){res.innerHTML=renderSituacao(d3.situacao);}else{res.innerHTML='<div style="color:#92400E;background:var(--warning-bg);padding:10px;border-radius:8px">Nenhuma viagem encontrada para este CPF.</div>';}}).catch(function(){res.innerHTML='<span style="color:var(--text-muted)">Nenhuma viagem encontrada.</span>'});}
     }).catch(function(){res.innerHTML='<span style="color:var(--text-muted)">Nenhuma viagem.</span>'});
   }).catch(function(e){res.innerHTML='<span style="color:var(--danger)">Erro: '+e.message+'</span>'})}
 function capFoto(inp,prefix){var file=inp.files[0];if(!file)return;compress(file).then(function(c){var now=new Date();if(navigator.geolocation)navigator.geolocation.getCurrentPosition(function(p){gps={lat:p.coords.latitude,lng:p.coords.longitude};document.getElementById(prefix+"_co").textContent=p.coords.latitude.toFixed(5)+", "+p.coords.longitude.toFixed(5);document.getElementById(prefix+"_gs").className="gs a"},function(){},{enableHighAccuracy:true,timeout:5000});document.getElementById(prefix+"_ts").textContent=fmtD(now);document.getElementById(prefix+"_co").textContent=gps?gps.lat.toFixed(5)+", "+gps.lng.toFixed(5):"—";document.getElementById(prefix+"_cm").classList.add("v");document.getElementById(prefix+"_pv").src=c;document.getElementById(prefix+"_pv").style.display="block";document.getElementById(prefix+"_ph").style.display="none";document.getElementById(prefix+"_cz").classList.add("ok");if(prefix==="ci"){trip=trip||{};trip.checkin_foto=c;trip.checkin_timestamp=now.toISOString();trip.checkin_lat=gps?gps.lat:null;trip.checkin_lng=gps?gps.lng:null}else{coCapt={ts:now.toISOString(),lat:gps?gps.lat:null,lng:gps?gps.lng:null,b64:c}}}).catch(function(e){alert("Erro: "+e.message)})}

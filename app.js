@@ -42,6 +42,8 @@ var SPREADSHEET_ID = propriedades.getProperty('PLANILHA_ID');
 var DRIVE_FOLDER_ID = propriedades.getProperty('PASTA_DRIVE_ID');
 // Senha do Painel Administrativo (defina em Configurações do projeto > Propriedades do script)
 var PAINEL_SENHA = propriedades.getProperty('PAINEL_SENHA');
+// E-mail do gestor para avisos automáticos (ex.: correção recebida). Opcional.
+var ADMIN_EMAIL = propriedades.getProperty('ADMIN_EMAIL');
 
 // 3. As demais variáveis continuam iguais, pois não são informações sensíveis
 var ABA = "Registros";
@@ -138,6 +140,7 @@ function doGet(e) {
     if (a === "verificar_status") return verificarStatus(e.parameter.protocolo || "");
     if (a === "buscar_viagem") return buscarViagem(e.parameter.protocolo || "");
     if (a === "buscar_revisao") return buscarRevisao(e.parameter.cpf || "");
+    if (a === "buscar_situacao") return buscarSituacao(e.parameter.cpf || "");
     if (a === "listar") {
       // Endpoint sensível (retorna todos os dados): exige a senha do painel.
       if (!authAdmin(e.parameter.token)) return jr({success: false, auth: false, error: "Não autorizado."});
@@ -463,7 +466,52 @@ function doCorrigir(d) {
 
   s.getRange(row, 1, 1, updated.length).setValues([updated]);
   s.getRange(row, 2).setBackground("#E0E7FF").setFontColor("#3730A3").setFontWeight("bold");
+
+  // ── Notificar o gestor: a correção chegou e o pedido aguarda reanálise ──
+  if (ADMIN_EMAIL) {
+    try {
+      MailApp.sendEmail({
+        to: ADMIN_EMAIL,
+        subject: "🔄 Correção recebida — " + d.protocolo + " (aguarda reanálise)",
+        htmlBody: '<div style="font-family:Arial,sans-serif;max-width:500px;margin:0 auto">'
+          + '<div style="background:#1A3A5C;color:#fff;padding:16px 20px;border-radius:10px 10px 0 0">'
+          + '<h2 style="margin:0;font-size:18px">Correção de Reembolso Recebida</h2></div>'
+          + '<div style="background:#fff;padding:20px;border-radius:0 0 10px 10px;border:1px solid #E2E8F0;border-top:none">'
+          + '<p style="font-size:14px;color:#333;margin:0 0 12px">O pesquisador <strong>'+(rowData[11]||"")+'</strong> enviou a correção solicitada. O pedido voltou para <strong>reanálise</strong> no painel.</p>'
+          + '<table style="width:100%;font-size:13px;color:#555;border-collapse:collapse">'
+          + '<tr><td style="padding:6px 0;font-weight:600">Protocolo</td><td style="padding:6px 0">'+d.protocolo+'</td></tr>'
+          + '<tr><td style="padding:6px 0;font-weight:600">Novo total</td><td style="padding:6px 0;font-weight:700;color:#1A3A5C">R$ '+vT.toFixed(2)+'</td></tr>'
+          + '<tr><td style="padding:6px 0;font-weight:600">O que foi corrigido</td><td style="padding:6px 0">'+descTxt+'</td></tr></table>'
+          + '<div style="background:#EDE9FE;padding:12px;border-radius:8px;margin-top:12px;border:1px solid #C4B5FD">'
+          + '<p style="font-size:13px;color:#5B21B6;margin:0">📋 Acesse o painel administrativo e reanalise o pedido (status <strong>CORRIGIDO</strong>).</p></div>'
+          + '</div></div>'
+      });
+    } catch(e2) { Logger.log("Erro email correção: " + e2.message); }
+  }
+
   return jr({success: true, protocolo: d.protocolo, valor_total: vT.toFixed(2)});
+}
+
+// Situação mais recente de um CPF — usada no app do motorista (Recuperar Viagem)
+// para acompanhar o andamento do protocolo após o envio.
+function buscarSituacao(cpf) {
+  if (!cpf) return jr({success: false, error: "CPF vazio"});
+  var allData = getSheet().getDataRange().getValues();
+  for (var i = allData.length-1; i >= 1; i--) {
+    if (String(allData[i][12]).trim() === cpf.trim()) {
+      var d = allData[i];
+      var val = String(d[35] || "");
+      var obs = "";
+      var m = val.match(/ADMIN:\s*(.+)$/);   // observação do gestor, se houver
+      if (m) obs = m[1].trim();
+      return jr({success: true, found: true, situacao: {
+        protocolo: d[0], status: String(d[1]).trim(), nome: d[11],
+        valor_total: d[34] || "", checkin_dh: d[2] || "", checkout_dh: d[6] || "",
+        observacao: obs
+      }});
+    }
+  }
+  return jr({success: true, found: false});
 }
 
 // ══════════════════════════════════════════════════════════════
@@ -755,7 +803,7 @@ function doAtualizarStatus(d) {
   var info = findByProtoData(allData, d.protocolo);
   if (!info) return jr({success: false, error: "Protocolo não encontrado."});
 
-  var novosStatus = ["COMPLETO", "REVISÃO", "REJEITADO", "APROVADO"];
+  var novosStatus = ["COMPLETO", "REVISÃO", "REJEITADO", "REPROVADO", "APROVADO", "PAGO"];
   if (novosStatus.indexOf(d.novo_status) === -1) {
     return jr({success: false, error: "Status inválido: " + d.novo_status});
   }
@@ -776,7 +824,9 @@ function doAtualizarStatus(d) {
     "COMPLETO": {bg: "#ECFDF5", fg: "#065F46"},
     "REVISÃO": {bg: "#FEF3C7", fg: "#92400E"},
     "REJEITADO": {bg: "#FEF2F2", fg: "#991B1B"},
-    "APROVADO": {bg: "#DBEAFE", fg: "#1E40AF"}
+    "REPROVADO": {bg: "#FEF2F2", fg: "#991B1B"},
+    "APROVADO": {bg: "#DBEAFE", fg: "#1E40AF"},
+    "PAGO": {bg: "#CCFBF1", fg: "#0F766E"}
   };
   var cor = cores[d.novo_status] || {bg: "#F4F6FA", fg: "#333"};
   s.getRange(row, 2).setBackground(cor.bg).setFontColor(cor.fg).setFontWeight("bold");
@@ -790,13 +840,17 @@ function doAtualizarStatus(d) {
   if (email && d.novo_status !== "COMPLETO") {
     var assuntos = {
       "APROVADO": "✅ Reembolso aprovado — " + protocolo,
+      "PAGO": "💰 Reembolso pago — " + protocolo,
       "REVISÃO": "🔄 Reembolso em revisão — " + protocolo,
-      "REJEITADO": "❌ Reembolso recusado — " + protocolo
+      "REJEITADO": "❌ Reembolso reprovado — " + protocolo,
+      "REPROVADO": "❌ Reembolso reprovado — " + protocolo
     };
     var ceMap = {
       "APROVADO": {bg:"#ECFDF5", border:"#10B981", color:"#065F46", icon:"✅", titulo:"Pedido Aprovado"},
+      "PAGO": {bg:"#CCFBF1", border:"#14B8A6", color:"#0F766E", icon:"💰", titulo:"Reembolso Pago"},
       "REVISÃO": {bg:"#FFFBEB", border:"#F59E0B", color:"#92400E", icon:"🔄", titulo:"Pedido em Revisão"},
-      "REJEITADO": {bg:"#FEF2F2", border:"#EF4444", color:"#991B1B", icon:"❌", titulo:"Pedido Recusado"}
+      "REJEITADO": {bg:"#FEF2F2", border:"#EF4444", color:"#991B1B", icon:"❌", titulo:"Pedido Reprovado"},
+      "REPROVADO": {bg:"#FEF2F2", border:"#EF4444", color:"#991B1B", icon:"❌", titulo:"Pedido Reprovado"}
     };
     var ce = ceMap[d.novo_status];
 
@@ -810,12 +864,15 @@ function doAtualizarStatus(d) {
     if (d.novo_status === "REVISÃO") {
       instrucao = '<div style="background:#DBEAFE;padding:12px;border-radius:8px;margin-top:12px;border:1px solid #93C5FD">'
         + '<p style="font-size:13px;color:#1E40AF;margin:0">📋 <strong>O que fazer:</strong> Acesse o app de registro, busque seu CPF na seção "Recuperar Viagem" e corrija os dados solicitados.</p></div>';
-    } else if (d.novo_status === "REJEITADO") {
+    } else if (d.novo_status === "REJEITADO" || d.novo_status === "REPROVADO") {
       instrucao = '<div style="background:#FEF2F2;padding:12px;border-radius:8px;margin-top:12px;border:1px solid #FECACA">'
         + '<p style="font-size:13px;color:#991B1B;margin:0">Se discordar da decisão, entre em contato com o setor administrativo.</p></div>';
     } else if (d.novo_status === "APROVADO") {
       instrucao = '<div style="background:#DBEAFE;padding:12px;border-radius:8px;margin-top:12px;border:1px solid #93C5FD">'
         + '<p style="font-size:13px;color:#1E40AF;margin:0">🕐 O pagamento será processado em até <strong>5 dias úteis</strong>.</p></div>';
+    } else if (d.novo_status === "PAGO") {
+      instrucao = '<div style="background:#CCFBF1;padding:12px;border-radius:8px;margin-top:12px;border:1px solid #99F6E4">'
+        + '<p style="font-size:13px;color:#0F766E;margin:0">💰 O reembolso foi <strong>pago</strong>. Processo concluído — obrigado!</p></div>';
     }
 
     try {
