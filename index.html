@@ -117,9 +117,9 @@
   <div class="card"><div class="ct"><span class="ic" style="background:#FEF3C7;color:#D97706">📍</span> Paradas do Percurso</div>
     <div class="fr">
       <div class="f"><label>Paradas na IDA</label><select id="ci_ida"><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option></select></div>
-      <div class="f"><label>Paradas na VOLTA</label><select id="ci_volta"><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option></select></div>
+      <div class="f"><label>Paradas na VOLTA</label><select id="ci_volta"><option value="0">Sem volta (só ida)</option><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option></select></div>
     </div>
-    <p style="font-size:12px;color:var(--text-muted)">Cada parada = um trecho com origem, destino e km.</p>
+    <p style="font-size:12px;color:var(--text-muted)">Cada parada = um trecho com origem, destino e km. Selecione <strong>"Sem volta"</strong> se a viagem for somente de ida.</p>
   </div>
   <div class="card"><div class="ct"><span class="ic" style="background:#ECFDF5;color:#059669">📡</span> Localização</div>
     <div class="gs p" id="ci_gs"><div class="gd"></div><span id="ci_gt">Obtendo…</span></div><div class="lc" id="ci_ck">--:--:--</div>
@@ -372,7 +372,7 @@ function enviarCI(){var erros=[];["ci_nome","ci_cpf","ci_email","ci_tel","ci_vei
   if(!trip||!trip.checkin_foto)erros.push("• Foto do odômetro");
   if(erros.length){alert("Corrija:\n\n"+erros.join("\n"));return}
   var proto="RB-"+Date.now().toString(36).toUpperCase();
-  trip.protocolo=proto;trip.nome=document.getElementById("ci_nome").value;trip.cpf=document.getElementById("ci_cpf").value;trip.email=document.getElementById("ci_email").value;trip.telefone=document.getElementById("ci_tel").value;trip.veiculo=document.getElementById("ci_veic").value;trip.placa=document.getElementById("ci_placa").value.toUpperCase();trip.ida_plan=parseInt(document.getElementById("ci_ida").value)||1;trip.volta_plan=parseInt(document.getElementById("ci_volta").value)||1;trip.ida_paradas=[];trip.volta_paradas=[];trip.ida_count=0;trip.volta_count=0;
+  trip.protocolo=proto;trip.nome=document.getElementById("ci_nome").value;trip.cpf=document.getElementById("ci_cpf").value;trip.email=document.getElementById("ci_email").value;trip.telefone=document.getElementById("ci_tel").value;trip.veiculo=document.getElementById("ci_veic").value;trip.placa=document.getElementById("ci_placa").value.toUpperCase();trip.ida_plan=parseInt(document.getElementById("ci_ida").value)||1;var _vp=parseInt(document.getElementById("ci_volta").value,10);trip.volta_plan=isNaN(_vp)?1:_vp;trip.ida_paradas=[];trip.volta_paradas=[];trip.ida_count=0;trip.volta_count=0;
   ld("Registrando check-in…");
   post({action:"checkin",protocolo:proto,nome:trip.nome,cpf:trip.cpf,email:trip.email,telefone:trip.telefone,veiculo:trip.veiculo,placa:trip.placa,checkin_timestamp:trip.checkin_timestamp,checkin_lat:trip.checkin_lat,checkin_lng:trip.checkin_lng,img_odometro_saida:trip.checkin_foto,ida_paradas:trip.ida_plan,volta_paradas:trip.volta_plan}).then(function(r){hd();if(r&&r.success===false){alert(r.error);return}saveTrip(trip);document.getElementById("ci_proto").textContent="Protocolo: "+proto;show("secCIOk")}).catch(function(e){hd();alert("Erro: "+e.message)})}
 
@@ -381,21 +381,26 @@ function goViagem(){trip=loadTrip();if(!trip)return;show("secViagem");ld("Atuali
   fetch(API+"?action=buscar_viagem&protocolo="+encodeURIComponent(trip.protocolo)).then(function(r){return r.text()}).then(function(t){
     try{var d=JSON.parse(t);if(d.success&&d.found){if(d.viagem.status==="COMPLETO"||d.viagem.status==="CORRIGIDO"){hd();clearTrip();trip=null;alert("Viagem já finalizada.");show("secHome");sync();return}
       trip.ida_plan=d.viagem.ida_plan||1;trip.ida_paradas=parseP(d.viagem.ida_texto);trip.ida_count=d.viagem.ida_count||0;
-      trip.volta_plan=d.viagem.volta_plan||1;trip.volta_paradas=parseP(d.viagem.volta_texto);trip.volta_count=d.viagem.volta_count||0;saveTrip(trip);}}catch(e){}hd();renderViagem()}).catch(function(){hd();renderViagem()})}
+      var _vp2=parseInt(d.viagem.volta_plan,10);trip.volta_plan=isNaN(_vp2)?1:_vp2;trip.volta_paradas=parseP(d.viagem.volta_texto);trip.volta_count=d.viagem.volta_count||0;saveTrip(trip);}}catch(e){}hd();renderViagem()}).catch(function(){hd();renderViagem()})}
 function renderViagem(){
   document.getElementById("viagem_info").innerHTML="Protocolo: "+trip.protocolo+"<br>"+trip.nome+" — "+trip.veiculo+" ("+trip.placa+")";
   var idaD=trip.ida_paradas||[],idaP=trip.ida_plan||1,idaN=idaD.length;
-  var volD=trip.volta_paradas||[],volP=trip.volta_plan||1,volN=volD.length;
+  var volD=trip.volta_paradas||[],volP=parseInt(trip.volta_plan,10),volN=volD.length;if(isNaN(volP))volP=1;
   var idaOk=idaN>=idaP;
   // IDA
   document.getElementById("ida_title").textContent="IDA ("+idaN+" de "+idaP+")";
   var il=document.getElementById("ida_list");if(!idaN)il.innerHTML='<li style="color:var(--text-muted);border-left-color:var(--border)">Nenhuma parada.</li>';else{var h="";for(var i=0;i<idaN;i++)h+='<li><strong>'+idaD[i].orig+' → '+idaD[i].dest+'</strong> — '+idaD[i].km+' km</li>';il.innerHTML=h}
   if(!idaOk){document.getElementById("btnIda").style.display="flex";document.getElementById("btnIda").textContent="📍 Parada IDA ("+(idaN+1)+" de "+idaP+")";document.getElementById("ida_done").style.display="none"}else{document.getElementById("btnIda").style.display="none";document.getElementById("ida_done").style.display="block"}
-  // VOLTA
-  document.getElementById("volta_title").textContent="VOLTA ("+volN+" de "+volP+")";
-  var vl=document.getElementById("volta_list");if(!volN)vl.innerHTML='<li style="color:var(--text-muted);border-left-color:var(--border)">Nenhuma parada.</li>';else{var h="";for(var i=0;i<volN;i++)h+='<li><strong>'+volD[i].orig+' → '+volD[i].dest+'</strong> — '+volD[i].km+' km</li>';vl.innerHTML=h}
-  if(!idaOk){document.getElementById("btnVolta").style.display="none";document.getElementById("volta_done").style.display="none";document.getElementById("volta_card").style.display="none"}
-  else{document.getElementById("volta_card").style.display="block";if(volN<volP){document.getElementById("btnVolta").style.display="flex";document.getElementById("btnVolta").textContent="📍 Parada VOLTA ("+(volN+1)+" de "+volP+")";document.getElementById("volta_done").style.display="none"}else{document.getElementById("btnVolta").style.display="none";document.getElementById("volta_done").style.display="block"}}
+  // VOLTA — pulada quando a viagem é somente de ida (volP===0)
+  if(volP===0){document.getElementById("volta_card").style.display="none"}
+  else{
+    document.getElementById("volta_card").style.display=idaOk?"block":"none";
+    document.getElementById("volta_title").textContent="VOLTA ("+volN+" de "+volP+")";
+    var vl=document.getElementById("volta_list");if(!volN)vl.innerHTML='<li style="color:var(--text-muted);border-left-color:var(--border)">Nenhuma parada.</li>';else{var h="";for(var i=0;i<volN;i++)h+='<li><strong>'+volD[i].orig+' → '+volD[i].dest+'</strong> — '+volD[i].km+' km</li>';vl.innerHTML=h}
+    if(!idaOk){document.getElementById("btnVolta").style.display="none";document.getElementById("volta_done").style.display="none"}
+    else if(volN<volP){document.getElementById("btnVolta").style.display="flex";document.getElementById("btnVolta").textContent="📍 Parada VOLTA ("+(volN+1)+" de "+volP+")";document.getElementById("volta_done").style.display="none"}
+    else{document.getElementById("btnVolta").style.display="none";document.getElementById("volta_done").style.display="block"}
+  }
   // Finalizar
   document.getElementById("finalizar_area").style.display=(idaOk&&volN>=volP)?"block":"none"}
 
