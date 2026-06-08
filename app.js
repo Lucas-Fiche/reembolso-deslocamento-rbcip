@@ -101,6 +101,7 @@ function doPost(e) {
     if (d.action === "checkin") return withLock(function(){ return doCheckin(d); });
     if (d.action === "parada") return withLock(function(){ return doParada(d); });
     if (d.action === "finalizar") return withLock(function(){ return doFinalizar(d); });
+    if (d.action === "lancamento_posterior") return withLock(function(){ return doLancamentoPosterior(d); });
     if (d.action === "corrigir") return withLock(function(){ return doCorrigir(d); });
     if (d.action === "set_volta") return withLock(function(){ return doSetVolta(d); });
     if (d.action === "atualizar_status") return withLock(function(){ return doAtualizarStatus(d); });
@@ -309,6 +310,101 @@ function doFinalizar(d) {
       });
     } catch(ee) {}
   }
+  return jr({success: true, protocolo: d.protocolo, valor_total: vTot.toFixed(2)});
+}
+
+// ══════════════════════════════════════════════════════════════
+// LANÇAMENTO POSTERIOR — EXCEÇÃO
+// Cria o registro COMPLETO de uma vez (check-in + paradas + check-out).
+// Usado quando o motorista não pôde registrar durante o percurso, então
+// GPS e horário são INFORMADOS MANUALMENTE (sem garantia). O pedido é
+// sinalizado na coluna de Validação para conferência do gestor.
+// As imagens já foram enviadas ao Drive via "upload_imagem" → recebemos só LINKS.
+// ══════════════════════════════════════════════════════════════
+function doLancamentoPosterior(d) {
+  var s = getSheet();
+  if (!s) return jr({success: false, error: "Rode setupPlanilha."});
+  if (!d.protocolo) return jr({success: false, error: "Protocolo ausente."});
+
+  var ida = d.ida || [], volta = d.volta || [];
+
+  // Monta o texto dos trechos no MESMO formato das paradas (para o dashboard)
+  function buildTexto(arr) {
+    var out = [];
+    for (var i = 0; i < arr.length; i++) {
+      var t = arr[i];
+      var gps = (t.lat || t.lat === 0) && t.lng !== null && t.lng !== undefined
+        ? Number(t.lat).toFixed(5) + "," + Number(t.lng).toFixed(5) + " (aprox)"
+        : "N/A";
+      var line = (i+1) + ". " + (t.origem||"?") + " → " + (t.destino||"?") +
+        " | " + (parseFloat(t.km)||0) + " km | " + fts(t.timestamp) + " | GPS: " + gps;
+      if (t.maps_link) line += " | Maps: " + t.maps_link;
+      out.push(line);
+    }
+    return out.join("\n");
+  }
+  var idaTxt = buildTexto(ida), voltaTxt = buildTexto(volta);
+
+  var dIda = 0; for (var i = 0; i < ida.length; i++) dIda += parseFloat(ida[i].km) || 0;
+  var dVolta = 0; for (var i = 0; i < volta.length; i++) dVolta += parseFloat(volta[i].km) || 0;
+  var dTot = dIda + dVolta;
+
+  var con = d.veiculo === "Moto" ? 49 : 10;
+  var usouEstim = d.usar_estimativa === true;
+  var pReal = usouEstim ? PRECO_BASE : (parseFloat(d.preco_real) || PRECO_BASE);
+  var vEst = (dTot/con) * PRECO_BASE, vReal = (dTot/con) * pReal;
+
+  var peds = d.pedagios || [], tPed = 0, pTxt = "", pLnk = [];
+  for (var i = 0; i < peds.length; i++) {
+    var v = parseFloat(peds[i].valor) || 0; tPed += v;
+    var pl = peds[i].foto_link || "";
+    var faseLbl = peds[i].fase ? "["+String(peds[i].fase).toUpperCase()+"] " : "";
+    pLnk.push(pl);
+    pTxt += (i+1)+". "+faseLbl+"R$ "+v.toFixed(2)+(pl?" | "+pl:"")+"\n";
+  }
+  var vTot = vReal + tPed;
+
+  var tempo = "";
+  if (d.checkin_timestamp && d.checkout_timestamp) {
+    var dm = Math.round((new Date(d.checkout_timestamp) - new Date(d.checkin_timestamp)) / 60000);
+    if (dm >= 0) tempo = dm >= 60 ? Math.floor(dm/60)+"h"+("0"+(dm%60)).slice(-2)+"min" : dm+" min";
+  }
+
+  // Validação — SEMPRE sinaliza que é lançamento posterior (exceção)
+  var fl = ["🕓 LANÇAMENTO POSTERIOR (GPS/horário informados manualmente)"];
+  if (vTot > 500) fl.push("Valor>R$500");
+  if (!usouEstim && pReal > PRECO_BASE*1.3) fl.push("Preço/L 30%+ acima");
+  var val = fl.join(" | ");
+
+  var sub = getOrCreate(DriveApp.getFolderById(DRIVE_FOLDER_ID), d.protocolo);
+
+  var row = [
+    d.protocolo, "COMPLETO",
+    fts(d.checkin_timestamp), d.checkin_lat||"", d.checkin_lng||"", d.img_odometro_saida_link||"",
+    fts(d.checkout_timestamp), d.checkout_lat||"", d.checkout_lng||"", d.img_odometro_chegada_link||"", tempo,
+    d.nome, d.cpf, d.email, d.telefone, d.veiculo, d.placa,
+    ida.length || 1, idaTxt, ida.length,
+    volta.length || 0, voltaTxt, volta.length,
+    dTot, pTxt.trim(), peds.length, tPed.toFixed(2), pLnk.join("\n"),
+    usouEstim ? "Sim" : "Não", PRECO_BASE, pReal, d.img_cupom_link||"",
+    vEst.toFixed(2), vReal.toFixed(2), vTot.toFixed(2), val
+  ];
+  s.appendRow(row);
+  var lastRow = s.getLastRow();
+
+  // Status verde (COMPLETO) e Validação em âmbar para destacar a exceção
+  s.getRange(lastRow, 2).setBackground("#ECFDF5").setFontColor("#065F46").setFontWeight("bold");
+  s.getRange(lastRow, 36).setBackground("#FFFBEB").setFontColor("#92400E").setFontWeight("bold");
+
+  // E-mail de confirmação (não bloqueia)
+  if (d.email) {
+    try {
+      MailApp.sendEmail({to: d.email, subject: "Reembolso "+d.protocolo+" — R$ "+vTot.toFixed(2)+" (lançamento posterior)",
+        htmlBody: '<div style="font-family:Arial;max-width:500px;margin:0 auto"><div style="background:#1A3A5C;color:#fff;padding:16px 20px;border-radius:10px 10px 0 0"><h2 style="margin:0;font-size:18px">Reembolso Registrado</h2></div><div style="background:#F4F6FA;padding:20px;border-radius:0 0 10px 10px"><div style="background:#FFFBEB;border:1px solid #FCD34D;border-radius:8px;padding:12px;margin-bottom:14px"><p style="font-size:13px;color:#92400E;margin:0">🕓 Registrado como <strong>lançamento posterior</strong> (GPS e horário informados manualmente). Passará por conferência do gestor.</p></div><p>Protocolo: <strong>'+d.protocolo+'</strong></p><p>Distância: '+dTot+' km</p><p>Combustível (R$ '+pReal.toFixed(2)+'/L'+(usouEstim?' — estimativa':'')+'): R$ '+vReal.toFixed(2)+'</p>'+(tPed?'<p>Pedágios: R$ '+tPed.toFixed(2)+'</p>':'')+'<p style="font-size:20px;color:#1A3A5C;font-weight:700">Total: R$ '+vTot.toFixed(2)+'</p><hr style="border:none;border-top:1px solid #ddd;margin:16px 0"><div style="background:#DBEAFE;padding:12px;border-radius:8px;border:1px solid #93C5FD"><p style="font-size:13px;color:#1E40AF;margin:0">🕐 Prazo: até <strong>5 dias úteis</strong> para processamento.</p></div></div></div>'
+      });
+    } catch(ee) {}
+  }
+
   return jr({success: true, protocolo: d.protocolo, valor_total: vTot.toFixed(2)});
 }
 
