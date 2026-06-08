@@ -80,6 +80,13 @@ tr{cursor:pointer;transition:background .1s}
 tr:hover td{background:var(--bg)}
 tr.sel td{background:#EFF6FF}
 tr.warn-row{box-shadow:inset 3px 0 0 var(--danger)}
+tr.corr-row{box-shadow:inset 3px 0 0 #7C3AED}
+tr.corr-row td:first-child::after{content:"REANALISAR";display:inline-block;margin-left:6px;font-family:'Inter',sans-serif;font-size:9px;font-weight:700;letter-spacing:.4px;color:#5B21B6;background:#EDE9FE;padding:1px 5px;border-radius:4px;vertical-align:middle}
+
+/* Toast de notificação */
+.toast{position:fixed;right:20px;bottom:20px;z-index:1100;display:flex;flex-direction:column;gap:8px;max-width:320px}
+.toast-item{background:#5B21B6;color:#fff;padding:12px 16px;border-radius:var(--radius);box-shadow:0 8px 24px rgba(0,0,0,.2);font-size:13px;font-weight:500;line-height:1.4;animation:toastIn .25s ease both;cursor:pointer}
+@keyframes toastIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
 
 /* Status badges */
 .st{display:inline-block;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:600;letter-spacing:.2px}
@@ -87,8 +94,9 @@ tr.warn-row{box-shadow:inset 3px 0 0 var(--danger)}
 .st-COMPLETO{background:#DCFCE7;color:#166534}
 .st-REVISÃO,.st-REVISAO{background:#FEF3C7;color:#92400E}
 .st-CORRIGIDO{background:#EDE9FE;color:#5B21B6}
-.st-REJEITADO{background:#FEE2E2;color:#991B1B}
+.st-REJEITADO,.st-REPROVADO{background:#FEE2E2;color:#991B1B}
 .st-APROVADO{background:#DBEAFE;color:#1E40AF}
+.st-PAGO{background:#CCFBF1;color:#0F766E}
 
 /* Side */
 .side{display:flex;flex-direction:column;overflow:hidden;background:var(--surface)}
@@ -106,7 +114,9 @@ tr.warn-row{box-shadow:inset 3px 0 0 var(--danger)}
 .abtn.green{background:var(--success);color:#fff}
 .abtn.amber{background:#D97706;color:#fff}
 .abtn.red{background:var(--danger);color:#fff}
+.abtn.teal{background:#0D9488;color:#fff}
 .approved-msg{font-size:13px;font-weight:600;color:var(--success);background:var(--success-light);border:1px solid #BBF7D0;padding:8px 12px;border-radius:var(--radius-sm)}
+.corr-note{font-size:12px;font-weight:600;color:#5B21B6;background:#EDE9FE;border:1px solid #C4B5FD;padding:7px 10px;border-radius:var(--radius-sm);margin-bottom:8px}
 
 /* Detail */
 .detail{flex:1;overflow-y:auto;padding:14px;background:var(--surface2)}
@@ -200,6 +210,7 @@ tr.warn-row{box-shadow:inset 3px 0 0 var(--danger)}
 </header>
 
 <div class="loading" id="ld"><div class="spinner"></div><p>Carregando registros…</p></div>
+<div class="toast" id="toast"></div>
 
 <div class="modal" id="modal">
   <div class="modal-box">
@@ -223,10 +234,11 @@ tr.warn-row{box-shadow:inset 3px 0 0 var(--danger)}
         <option value="">Todos os status</option>
         <option value="ABERTO">Aberto</option>
         <option value="COMPLETO">Completo</option>
+        <option value="CORRIGIDO">Corrigido (reanalisar)</option>
         <option value="APROVADO">Aprovado</option>
+        <option value="PAGO">Pago</option>
         <option value="REVISÃO">Em Revisão</option>
-        <option value="CORRIGIDO">Corrigido</option>
-        <option value="REJEITADO">Rejeitado</option>
+        <option value="REPROVADO">Reprovado</option>
       </select>
       <input type="text" id="fBusca" placeholder="Buscar por nome, CPF ou protocolo…" oninput="filtrar()">
     </div>
@@ -255,6 +267,7 @@ tr.warn-row{box-shadow:inset 3px 0 0 var(--danger)}
 <script>
 var API="https://script.google.com/macros/s/AKfycbwaKl_Iglg_hVzG6_wS9GxTxZd8svu836zLxVJ45PAh7viqtxALlRfOdEAvebeisogx/exec";
 var dados=[],filtrados=[],sel=null,map,markersGroup;
+var corrVistos={},primeiraCarga=true; // controle de notificação de correções
 // Token (senha) do admin — guardado só na sessão do navegador, nunca no código.
 var ADMIN_TOKEN=sessionStorage.getItem("rbcip_admin_token")||"";
 
@@ -334,7 +347,7 @@ function carregar(){
     var now=new Date();
     var hh=String(now.getHours()).padStart(2,"0"),mi=String(now.getMinutes()).padStart(2,"0");
     document.getElementById("lastUpdate").textContent="Atualizado às "+hh+":"+mi;
-    renderCards();filtrar();
+    renderCards();filtrar();checarCorrecoes();
   }).catch(function(e){
     document.getElementById("ld").classList.add("h");
     alert("Erro ao carregar: "+e.message);
@@ -346,23 +359,27 @@ setInterval(function(){
 },60000);
 
 function renderCards(){
-  var total=dados.length,abertos=0,completos=0,aprovados=0,revisao=0,rejeitados=0,valTotal=0;
+  var total=dados.length,abertos=0,completos=0,corrigidos=0,aprovados=0,pagos=0,revisao=0,reprovados=0,valTotal=0,valPago=0;
   for(var i=0;i<dados.length;i++){
     var s=dados[i].status;
     if(s==="ABERTO")abertos++;
     else if(s==="COMPLETO")completos++;
+    else if(s==="CORRIGIDO")corrigidos++;
     else if(s==="APROVADO")aprovados++;
+    else if(s==="PAGO"){pagos++;valPago+=parseFloat(dados[i].val_total)||0;}
     else if(s==="REVISÃO")revisao++;
-    else if(s==="REJEITADO")rejeitados++;
+    else if(s==="REJEITADO"||s==="REPROVADO")reprovados++;
     valTotal+=parseFloat(dados[i].val_total)||0;
   }
   document.getElementById("cards").innerHTML=
     card("gray","Total",total,"")+
     card("amber","Abertos",abertos,"Em andamento")+
     card("green","Completos",completos,"Aguardando análise")+
-    card("blue","Aprovados",aprovados,"")+
+    card("purple","Corrigidos",corrigidos,"Reanalisar")+
+    card("blue","Aprovados",aprovados,"Aguardando pagamento")+
+    card("green","Pagos",pagos,"R$ "+valPago.toFixed(2).replace(".",","))+
     card("amber","Em Revisão",revisao,"")+
-    card("red","Rejeitados",rejeitados,"")+
+    card("red","Reprovados",reprovados,"")+
     card("green","Valor Total","R$ "+valTotal.toFixed(2).replace(".",","),"Todos os pedidos");
 }
 
@@ -391,7 +408,8 @@ function renderTable(){
     var d=filtrados[i];
     var stClass="st st-"+(d.status||"").replace("Ã","A");
     var hasWarn=d.validacao&&d.validacao.indexOf("⚠")!==-1;
-    var trClass=(sel&&sel.protocolo===d.protocolo?"sel":"")+(hasWarn?" warn-row":"");
+    var isCorr=d.status==="CORRIGIDO";
+    var trClass=(sel&&sel.protocolo===d.protocolo?"sel":"")+(isCorr?" corr-row":(hasWarn?" warn-row":""));
     h+='<tr onclick="selecionar('+i+')" class="'+trClass.trim()+'">'+
       '<td>'+esc(d.protocolo)+'</td>'+
       '<td><span class="'+stClass+'">'+esc(d.status)+'</span></td>'+
@@ -409,6 +427,28 @@ function renderTable(){
 
 function esc(s){return String(s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;")}
 
+// ── Notificação de correções recebidas (status CORRIGIDO) ──
+function showToast(msg){
+  var c=document.getElementById("toast");
+  var el=document.createElement("div");el.className="toast-item";el.innerHTML=msg;
+  el.onclick=function(){el.remove()};
+  c.appendChild(el);
+  setTimeout(function(){if(el.parentNode)el.remove()},12000);
+}
+function checarCorrecoes(){
+  var novos=[],aindaCorr={};
+  for(var i=0;i<dados.length;i++){
+    if(dados[i].status==="CORRIGIDO"){
+      var p=dados[i].protocolo;aindaCorr[p]=true;
+      if(!corrVistos[p]){if(!primeiraCarga)novos.push(dados[i]);corrVistos[p]=true;}
+    }
+  }
+  // esquece os que já saíram de CORRIGIDO (foram reanalisados) para avisar de novo se voltarem
+  for(var k in corrVistos)if(!aindaCorr[k])delete corrVistos[k];
+  for(var j=0;j<novos.length;j++)showToast("🔄 <strong>"+esc(novos[j].nome)+"</strong> enviou a correção do protocolo <strong>"+esc(novos[j].protocolo)+"</strong>. Reanalise no painel.");
+  primeiraCarga=false;
+}
+
 function selecionar(idx){
   sel=filtrados[idx];
   renderTable();
@@ -423,22 +463,28 @@ function renderActions(){
     bar.innerHTML='<div class="action-bar-label">Ações</div><div class="action-bar-empty">Selecione um registro para ver as ações disponíveis.</div>';
     return;
   }
-  var d=sel;
+  var d=sel,st=d.status;
+  var bAprovar='<button class="abtn green" onclick="acao(\'APROVADO\')">Aprovar</button>';
+  var bPago='<button class="abtn teal" onclick="acao(\'PAGO\')">Marcar como Pago</button>';
+  var bRevisao='<button class="abtn amber" onclick="acao(\'REVISÃO\')">Solicitar Revisão</button>';
+  var bReprovar='<button class="abtn red" onclick="acao(\'REPROVADO\')">Reprovar</button>';
   var h='<div class="action-bar-label">Ações — '+esc(d.protocolo)+'</div>';
+  if(st==="CORRIGIDO")h+='<div class="corr-note">🔄 Voltou da correção — reanalise antes de decidir.</div>';
+  if(st==="PAGO"){
+    h+='<div class="approved-msg" style="background:#CCFBF1;border-color:#99F6E4;color:#0F766E">💰 Reembolso pago — processo concluído.</div>';
+    bar.innerHTML=h;return;
+  }
   h+='<div class="action-btns">';
-  if(d.status==="COMPLETO"||d.status==="CORRIGIDO"){
-    h+='<button class="abtn green" onclick="acao(\'APROVADO\')">Aprovar</button>';
-    h+='<button class="abtn amber" onclick="acao(\'REVISÃO\')">Solicitar Revisão</button>';
-    h+='<button class="abtn red" onclick="acao(\'REJEITADO\')">Rejeitar</button>';
-  }else if(d.status==="REVISÃO"){
-    h+='<button class="abtn green" onclick="acao(\'APROVADO\')">Aprovar</button>';
-    h+='<button class="abtn red" onclick="acao(\'REJEITADO\')">Rejeitar</button>';
-  }else if(d.status==="REJEITADO"){
-    h+='<button class="abtn amber" onclick="acao(\'REVISÃO\')">Reabrir para Revisão</button>';
-  }else if(d.status==="APROVADO"){
-    h+='<div class="approved-msg">Pedido aprovado — nenhuma ação necessária.</div>';
+  if(st==="COMPLETO"||st==="CORRIGIDO"){
+    h+=bAprovar+bRevisao+bReprovar;
+  }else if(st==="APROVADO"){
+    h+=bPago+bRevisao+bReprovar;
+  }else if(st==="REVISÃO"){
+    h+='</div><div class="action-bar-empty" style="margin-bottom:8px">Aguardando o pesquisador enviar a correção.</div><div class="action-btns">'+bAprovar+bReprovar;
+  }else if(st==="REJEITADO"||st==="REPROVADO"){
+    h+=bAprovar+bRevisao;
   }else{
-    h+='<div class="action-bar-empty">Nenhuma ação disponível para este status.</div>';
+    h+='</div><div class="action-bar-empty">Nenhuma ação disponível para este status.</div><div class="action-btns" style="display:none">';
   }
   h+='</div>';
   bar.innerHTML=h;
@@ -526,20 +572,21 @@ function makeIcon(label,color){
   return L.divIcon({className:"",html:'<div style="background:'+color+';width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#fff;box-shadow:0 2px 6px rgba(0,0,0,.25);border:2px solid #fff;font-family:Inter,sans-serif">'+label+"</div>",iconSize:[28,28],iconAnchor:[14,14],popupAnchor:[0,-18]});
 }
 
+var TITULOS_ACAO={APROVADO:"Aprovar Pedido",PAGO:"Marcar como Pago",REVISÃO:"Solicitar Revisão",REPROVADO:"Reprovar Pedido",REJEITADO:"Reprovar Pedido"};
+var CORES_ACAO={APROVADO:"var(--success)",PAGO:"#0D9488",REVISÃO:"#D97706",REPROVADO:"var(--danger)",REJEITADO:"var(--danger)"};
+function obsOpcional(novoStatus){return novoStatus==="APROVADO"||novoStatus==="PAGO"}
 function acao(novoStatus){
   if(!sel)return;
-  var isAprov=novoStatus==="APROVADO";
-  document.getElementById("modal_title").textContent=
-    isAprov?"Aprovar Pedido":novoStatus==="REVISÃO"?"Solicitar Revisão":"Rejeitar Pedido";
+  var opcional=obsOpcional(novoStatus);
+  document.getElementById("modal_title").textContent=TITULOS_ACAO[novoStatus]||"Alterar Status";
   document.getElementById("modal_desc").textContent="Protocolo: "+sel.protocolo+" — "+sel.nome;
   document.getElementById("modal_obs").value="";
-  document.getElementById("modal_obs").placeholder=isAprov?"Observação (opcional)":"Motivo obrigatório…";
+  document.getElementById("modal_obs").placeholder=opcional?"Observação (opcional)":"Motivo obrigatório…";
   document.getElementById("modal_obs").classList.remove("err");
   document.getElementById("modal_err").classList.remove("show");
   document.getElementById("modal").classList.add("show");
   document.getElementById("modal_confirm").onclick=function(){executarAcao(novoStatus)};
-  document.getElementById("modal_confirm").style.background=
-    isAprov?"var(--success)":novoStatus==="REVISÃO"?"#D97706":"var(--danger)";
+  document.getElementById("modal_confirm").style.background=CORES_ACAO[novoStatus]||"var(--primary)";
   document.getElementById("modal_confirm").style.color="#fff";
 }
 
@@ -547,7 +594,7 @@ function fecharModal(){document.getElementById("modal").classList.remove("show")
 
 function executarAcao(novoStatus){
   var obs=document.getElementById("modal_obs").value.trim();
-  if(!obs&&novoStatus!=="APROVADO"){
+  if(!obs&&!obsOpcional(novoStatus)){
     document.getElementById("modal_obs").classList.add("err");
     document.getElementById("modal_err").classList.add("show");
     document.getElementById("modal_obs").focus();
