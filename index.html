@@ -328,15 +328,60 @@
 
 <!-- CORRIGIR -->
 <div class="sec" id="secCorrigir">
-  <div class="card" style="background:#E0E7FF;border-color:#818CF8"><div style="font-size:13px;font-weight:700;color:#3730A3;margin-bottom:6px">🔄 Correção de Pedido</div><div id="corr_info" style="font-size:12px;color:#4338CA;line-height:1.6"></div></div>
-  <div class="card"><div class="ct"><span class="ic" style="background:#EFF6FF;color:#2563EB">📝</span> Correção</div>
-    <p style="font-size:13px;color:var(--text-secondary);margin-bottom:14px">Fotos e GPS originais mantidos. Descreva o que precisa ser corrigido.</p>
-    <div class="f"><label>O que está incorreto? <span class="rq">*</span></label><select id="corr_tipo"><option value="distancia">Distância total</option><option value="combustivel">Preço do combustível</option><option value="parada">Uma parada específica</option><option value="outro">Outro</option></select></div>
-    <div class="f" id="corr_parada_field" style="display:none"><label>Qual parada?</label><input type="text" id="corr_parada" placeholder="Ex: Parada 2 da IDA — Brasília → Formosa"></div>
-    <div class="f"><label>Descrição da correção <span class="rq">*</span></label><textarea id="corr_desc" style="min-height:100px;resize:vertical;width:100%;padding:12px 14px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-family:'DM Sans',sans-serif;font-size:15px;color:var(--text);outline:none" placeholder="Descreva o erro e qual o valor correto. Ex: A distância da Parada 2 (IDA) era 45km, não 80km."></textarea></div>
-    <div class="f"><label>Distância total corrigida (km)</label><input type="number" id="corr_dist" inputmode="decimal" step="0.1" placeholder="Opcional — preencha se a distância mudou"></div>
-    <div class="f"><label>Preço real do litro (R$)</label><input type="number" id="corr_preco" inputmode="decimal" step="0.01" placeholder="Opcional — preencha se o preço mudou"></div>
+  <div class="card" style="background:#FEF3C7;border:2px solid #F59E0B">
+    <div style="font-size:14px;font-weight:700;color:#92400E;margin-bottom:6px">🔄 Revisão solicitada</div>
+    <div id="corr_motivo" style="font-size:13px;color:#A16207;line-height:1.5"></div>
+    <div id="corr_info" style="font-size:11px;color:#A16207;margin-top:8px;font-family:'JetBrains Mono',monospace"></div>
+    <div style="font-size:12px;color:#A16207;margin-top:8px;line-height:1.5">Ajuste o que for necessário abaixo (dados, trechos, prints, pedágios ou combustível) e reenvie. O que você não alterar permanece como está.</div>
   </div>
+
+  <div class="card"><div class="ct"><span class="ic" style="background:#EFF6FF;color:#2563EB">👤</span> Dados pessoais</div>
+    <div class="f"><label>Nome completo</label><input type="text" id="corr_nome"></div>
+    <div class="fr"><div class="f"><label>E-mail</label><input type="email" id="corr_email"></div><div class="f"><label>Telefone</label><input type="tel" id="corr_tel" maxlength="15"></div></div>
+    <div class="fr"><div class="f"><label>Veículo</label><select id="corr_veic"><option>Carro</option><option>Moto</option></select></div><div class="f"><label>Placa</label><input type="text" id="corr_placa" maxlength="8" style="text-transform:uppercase"></div></div>
+  </div>
+
+  <div class="card"><div class="ct"><span class="ic" style="background:#DBEAFE;color:#2563EB">➡️</span> Trechos da IDA</div>
+    <div id="corr_trecho_ida"></div>
+  </div>
+  <div class="card" id="corr_volta_card"><div class="ct"><span class="ic" style="background:#FEF3C7;color:#D97706">↩️</span> Trechos da VOLTA</div>
+    <div id="corr_trecho_volta"></div>
+  </div>
+
+  <div class="card"><div class="ct"><span class="ic" style="background:#EFF6FF;color:#2563EB">📸</span> Odômetro</div>
+    <div id="corr_odo_saida"></div>
+    <div id="corr_odo_chegada" style="margin-top:14px"></div>
+  </div>
+
+  <div class="card"><div class="ct"><span class="ic" style="background:#FEF2F2;color:#DC2626">🧾</span> Pedágios</div>
+    <div class="ped-group-title">➡️ Pedágios da IDA</div>
+    <div id="corr_ped_list_ida"></div>
+    <button class="add-btn" onclick="corrAddPed('ida')">+ Adicionar Pedágio (Ida)</button>
+    <div class="ped-group-title">↩️ Pedágios da VOLTA</div>
+    <div id="corr_ped_list_volta"></div>
+    <button class="add-btn" onclick="corrAddPed('volta')">+ Adicionar Pedágio (Volta)</button>
+  </div>
+
+  <div class="card"><div class="ct"><span class="ic" style="background:#FEF3C7;color:#D97706">⛽</span> Combustível</div>
+    <div class="tog-row">
+      <button class="tog-btn on" id="corr_tog_cupom" onclick="corrSetFuelMode('cupom')">Tenho cupom fiscal</button>
+      <button class="tog-btn" id="corr_tog_estim" onclick="corrSetFuelMode('estim')">Usar estimativa</button>
+    </div>
+    <div id="corr_fuel_cupom">
+      <div class="f"><label>Preço real do litro (R$)</label><input type="number" id="corr_preco" placeholder="Ex: 7.49" inputmode="decimal" step="0.01"></div>
+      <div id="corr_cupom_atual" style="font-size:12px;margin-bottom:6px"></div>
+      <label class="cl" for="corr_cupom"><div class="cz" id="corr_cupz"><div id="corr_cuph"><div class="pi">🧾</div><div class="pt">Substituir cupom (opcional)</div></div><img id="corr_cupv" style="display:none"></div></label>
+      <input type="file" accept="image/*" id="corr_cupom" class="chi" onchange="capFile(this,'corr_cupv','corr_cuph','corr_cupz')">
+    </div>
+    <div id="corr_fuel_estim" style="display:none">
+      <div style="padding:14px;background:var(--warning-bg);border-radius:var(--radius-sm);border:1px solid #FCD34D;text-align:center;font-size:13px;color:#92400E">Será usada a estimativa (R$ 6,79/L).</div>
+    </div>
+  </div>
+
+  <div class="card"><div class="ct"><span class="ic" style="background:#EFF6FF;color:#2563EB">📝</span> Descrição da correção</div>
+    <textarea id="corr_desc" style="min-height:80px;resize:vertical;width:100%;padding:12px 14px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-family:'DM Sans',sans-serif;font-size:15px;color:var(--text);outline:none" placeholder="Opcional: explique brevemente o que você ajustou."></textarea>
+  </div>
+
   <button class="bp b" onclick="enviarCorrecao()">🔄 Enviar Correção</button>
   <button class="bs" onclick="show('secHome')">← Voltar</button>
 </div>
@@ -359,7 +404,7 @@ function reqGPS(s,t){var e=document.getElementById(s);e.className="gs p";documen
 function clock(id){var u=function(){document.getElementById(id).textContent=fmtD(new Date())};u();clk=setInterval(u,1000)}
 function compress(file){return new Promise(function(ok,no){if(!file||!file.type.startsWith("image/")){var r=new FileReader();r.onload=function(){ok(r.result)};r.onerror=function(){no(new Error("Erro"))};r.readAsDataURL(file);return}var r=new FileReader();r.onerror=function(){no(new Error("Erro"))};r.onload=function(){var img=new Image();img.onerror=function(){no(new Error("Erro"))};img.onload=function(){var c=document.createElement("canvas"),w=img.width,h=img.height;if(w>1280){h=Math.round(h*(1280/w));w=1280}c.width=w;c.height=h;c.getContext("2d").drawImage(img,0,0,w,h);ok(c.toDataURL("image/jpeg",.6));c.width=0;c.height=0};img.src=r.result};r.readAsDataURL(file)})}
 function post(p){return fetch(API,{method:"POST",redirect:"follow",headers:{"Content-Type":"text/plain"},body:JSON.stringify(p)}).then(function(r){return r.text()}).then(function(t){try{return JSON.parse(t)}catch(e){return{success:true}}})}
-document.addEventListener("input",function(e){if(e.target.id==="ci_cpf"||e.target.id==="busca_cpf"||e.target.id==="lp_cpf"){var v=e.target.value.replace(/\D/g,"").slice(0,11);if(v.length>9)v=v.replace(/(\d{3})(\d{3})(\d{3})(\d{1,2})/,"$1.$2.$3-$4");else if(v.length>6)v=v.replace(/(\d{3})(\d{3})(\d{1,3})/,"$1.$2.$3");else if(v.length>3)v=v.replace(/(\d{3})(\d{1,3})/,"$1.$2");e.target.value=v}if(e.target.id==="ci_tel"||e.target.id==="lp_tel"){var v=e.target.value.replace(/\D/g,"").slice(0,11);if(v.length>6)v=v.replace(/(\d{2})(\d{5})(\d{1,4})/,"($1) $2-$3");else if(v.length>2)v=v.replace(/(\d{2})(\d{1,5})/,"($1) $2");e.target.value=v}});
+document.addEventListener("input",function(e){if(e.target.id==="ci_cpf"||e.target.id==="busca_cpf"||e.target.id==="lp_cpf"){var v=e.target.value.replace(/\D/g,"").slice(0,11);if(v.length>9)v=v.replace(/(\d{3})(\d{3})(\d{3})(\d{1,2})/,"$1.$2.$3-$4");else if(v.length>6)v=v.replace(/(\d{3})(\d{3})(\d{1,3})/,"$1.$2.$3");else if(v.length>3)v=v.replace(/(\d{3})(\d{1,3})/,"$1.$2");e.target.value=v}if(e.target.id==="ci_tel"||e.target.id==="lp_tel"||e.target.id==="corr_tel"){var v=e.target.value.replace(/\D/g,"").slice(0,11);if(v.length>6)v=v.replace(/(\d{2})(\d{5})(\d{1,4})/,"($1) $2-$3");else if(v.length>2)v=v.replace(/(\d{2})(\d{1,5})/,"($1) $2");e.target.value=v}});
 function validarCPF(c){c=c.replace(/\D/g,"");if(c==="00000000000")return true;/* CPF fictício liberado para testes/tutorial */if(c.length!==11||/^(\d)\1{10}$/.test(c))return false;var s=0;for(var i=0;i<9;i++)s+=parseInt(c[i])*(10-i);var r=11-(s%11),d1=r>=10?0:r;if(parseInt(c[9])!==d1)return false;s=0;for(var i=0;i<10;i++)s+=parseInt(c[i])*(11-i);r=11-(s%11);return parseInt(c[10])===(r>=10?0:r)}
 function validarEmail(e){return/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e)}function validarTel(t){return t.replace(/\D/g,"").length>=10}
 function markErr(id){document.getElementById(id).style.borderColor="var(--danger)";setTimeout(function(){document.getElementById(id).style.borderColor=""},4000)}
@@ -393,7 +438,7 @@ function buscarCPF(){var cpf=document.getElementById("busca_cpf").value.trim(),r
   fetch(API+"?action=buscar_checkin&cpf="+encodeURIComponent(cpf)).then(function(r){return r.text()}).then(function(t){var d;try{d=JSON.parse(t)}catch(e){res.innerHTML='<span style="color:var(--danger)">Erro.</span>';return}
     if(d.success&&d.found){trip=d.checkin;trip.ida_paradas=parseP(d.checkin.ida_texto);trip.volta_paradas=parseP(d.checkin.volta_texto);saveTrip(trip);res.innerHTML='<div style="color:#065F46;background:var(--success-bg);padding:10px;border-radius:8px">✅ Viagem encontrada! '+trip.protocolo+'</div>';updateHome();return}
     fetch(API+"?action=buscar_revisao&cpf="+encodeURIComponent(cpf)).then(function(r2){return r2.text()}).then(function(t2){var d2;try{d2=JSON.parse(t2)}catch(e){res.innerHTML='<span style="color:var(--text-muted)">Nenhuma viagem encontrada.</span>';return}
-      if(d2.success&&d2.found){res.innerHTML='<div style="color:#3730A3;background:#E0E7FF;padding:10px;border-radius:8px"><strong>🔄 Pedido em revisão!</strong><br>'+d2.pedido.protocolo+'<br><button class="bp b" style="padding:8px;margin-top:8px;font-size:13px" onclick="abrirCorr(\''+d2.pedido.protocolo+'\','+(d2.pedido.distancia_total||0)+','+(d2.pedido.preco_real||PB)+')">Corrigir</button></div>';}
+      if(d2.success&&d2.found){res.innerHTML='<div style="color:#3730A3;background:#E0E7FF;padding:10px;border-radius:8px"><strong>🔄 Pedido em revisão!</strong><br>'+d2.pedido.protocolo+'<br><button class="bp b" style="padding:8px;margin-top:8px;font-size:13px" onclick="abrirCorr(\''+d2.pedido.protocolo+'\')">Corrigir</button></div>';}
       else{fetch(API+"?action=buscar_situacao&cpf="+encodeURIComponent(cpf)).then(function(r3){return r3.text()}).then(function(t3){var d3;try{d3=JSON.parse(t3)}catch(e){res.innerHTML='<span style="color:var(--text-muted)">Nenhuma viagem encontrada.</span>';return}if(d3.success&&d3.found){res.innerHTML=renderSituacao(d3.situacao);}else{res.innerHTML='<div style="color:#92400E;background:var(--warning-bg);padding:10px;border-radius:8px">Nenhuma viagem encontrada para este CPF.</div>';}}).catch(function(){res.innerHTML='<span style="color:var(--text-muted)">Nenhuma viagem encontrada.</span>'});}
     }).catch(function(){res.innerHTML='<span style="color:var(--text-muted)">Nenhuma viagem.</span>'});
   }).catch(function(e){res.innerHTML='<span style="color:var(--danger)">Erro: '+e.message+'</span>'})}
@@ -522,10 +567,58 @@ function enviarPayloadFinal(links,pedVals,usarEstim){
   var payload={action:"finalizar",protocolo:trip.protocolo,timestamp_envio:new Date().toISOString(),veiculo:trip.veiculo,checkin_timestamp_iso:trip.checkin_timestamp,checkout_timestamp:coCapt.ts,checkout_lat:coCapt.lat,checkout_lng:coCapt.lng,img_odometro_chegada_link:links["odo"]||"",maps_ida:maps_ida,maps_volta:maps_volta,pedagios:peds,usar_estimativa:usarEstim,preco_real:usarEstim?PB:document.getElementById("co_preco").value,img_cupom_link:links["cup"]||""};
   post(payload).then(function(r){hd();clearTrip();trip=null;document.getElementById("ok_proto").textContent="Protocolo: "+payload.protocolo;document.getElementById("ok_val").textContent=r&&r.valor_total?"R$ "+r.valor_total:"";show("secOk")}).catch(function(e){hd();document.getElementById("btnEnv").disabled=false;alert("Erro ao finalizar: "+e.message)})}
 
-function abrirCorr(p,d,pr){show("secCorrigir");document.getElementById("corr_info").innerHTML="Protocolo: <strong>"+p+"</strong><br>Fotos e GPS mantidos.";document.getElementById("corr_dist").value=d||"";document.getElementById("corr_preco").value=pr||PB;document.getElementById("corr_dist").dataset.protocolo=p;document.getElementById("corr_desc").value="";document.getElementById("corr_tipo").value="distancia";document.getElementById("corr_parada_field").style.display="none";document.getElementById("corr_parada").value=""}
-document.addEventListener("change",function(e){if(e.target.id==="corr_tipo"){document.getElementById("corr_parada_field").style.display=e.target.value==="parada"?"block":"none"}});
-function enviarCorrecao(){var p=document.getElementById("corr_dist").dataset.protocolo;if(!p)return;var desc=document.getElementById("corr_desc").value.trim();if(!desc){alert("Descreva o que precisa ser corrigido.");document.getElementById("corr_desc").focus();return}var tipo=document.getElementById("corr_tipo").value;var parada=tipo==="parada"?document.getElementById("corr_parada").value.trim():"";if(tipo==="parada"&&!parada){alert("Identifique qual parada está incorreta.");return}ld("Corrigindo…");
-  post({action:"corrigir",protocolo:p,tipo:tipo,parada_ref:parada,descricao:desc,distancia_total:parseFloat(document.getElementById("corr_dist").value)||null,preco_real:parseFloat(document.getElementById("corr_preco").value)||null}).then(function(r){hd();if(r&&r.success===false){alert(r.error);return}document.getElementById("ok_proto").textContent="Protocolo: "+p;document.getElementById("ok_val").textContent=r&&r.valor_total?"R$ "+r.valor_total+" (corrigido)":"";show("secOk")}).catch(function(e){hd();alert("Erro: "+e.message)})}
+// ═══ CORREÇÃO (editor completo do pedido em revisão) ═══
+var corrPedido=null,corrFuelMode="cupom",corrPedN=0;
+function escAttr(s){return String(s==null?"":s).replace(/&/g,"&amp;").replace(/"/g,"&quot;").replace(/</g,"&lt;").replace(/>/g,"&gt;")}
+function corrSetFuelMode(m){corrFuelMode=m;document.getElementById("corr_tog_cupom").classList.toggle("on",m==="cupom");document.getElementById("corr_tog_estim").classList.toggle("on",m==="estim");document.getElementById("corr_fuel_cupom").style.display=m==="cupom"?"block":"none";document.getElementById("corr_fuel_estim").style.display=m==="estim"?"block":"none"}
+function corrTrechoItem(fase,i,t){var id="corr_tm_"+fase+"_"+i;var atual=t.maps?'<a href="'+escAttr(t.maps)+'" target="_blank" style="font-size:12px;color:var(--accent)">🗺️ Ver print atual</a>':'<span style="font-size:12px;color:var(--text-muted)">Sem print anexado</span>';return '<div class="dyn-item"><div style="font-size:11px;font-weight:700;color:var(--text-secondary);margin-bottom:8px">'+fase.toUpperCase()+' — Trecho '+(i+1)+'</div><div class="fr"><div class="f" style="margin-bottom:8px"><label style="font-size:12px">Origem</label><input type="text" class="corr-orig" value="'+escAttr(t.origem)+'"></div><div class="f" style="margin-bottom:8px"><label style="font-size:12px">Destino</label><input type="text" class="corr-dest" value="'+escAttr(t.destino)+'"></div></div><div class="f" style="margin-bottom:8px"><label style="font-size:12px">Distância (km)</label><input type="number" class="corr-km" inputmode="decimal" step="0.1" value="'+escAttr(t.km)+'"></div><div style="margin-bottom:6px">'+atual+'</div><label class="cl" for="'+id+'"><div class="cz" id="'+id+'_z" style="padding:12px 10px"><div id="'+id+'_p"><div class="ps">🗺️ Substituir print do Maps (opcional)</div></div><img id="'+id+'_v" style="display:none"></div></label><input type="file" accept="image/*" id="'+id+'" class="chi" onchange="capFile(this,\''+id+'_v\',\''+id+'_p\',\''+id+'_z\')"></div>'}
+function corrRenderTrechos(fase,arr){var h="";for(var i=0;i<arr.length;i++)h+=corrTrechoItem(fase,i,arr[i]);document.getElementById("corr_trecho_"+fase).innerHTML=h||'<p style="font-size:12px;color:var(--text-muted)">Nenhum trecho.</p>'}
+function corrColetarTrechos(fase){var out=[],els=document.querySelectorAll("#corr_trecho_"+fase+" .dyn-item");for(var i=0;i<els.length;i++){var fI=els[i].querySelector("input[type=file]");out.push({origem:(els[i].querySelector(".corr-orig").value||"").trim(),destino:(els[i].querySelector(".corr-dest").value||"").trim(),km:els[i].querySelector(".corr-km").value,maps:fI?fI.dataset.compressed||null:null})}return out}
+function corrOdoItem(id,label,link){var atual=link?'<a href="'+escAttr(link)+'" target="_blank" style="font-size:12px;color:var(--accent)">📸 Ver foto atual</a>':'<span style="font-size:12px;color:var(--text-muted)">Sem foto</span>';return '<div style="font-size:13px;font-weight:600;color:var(--text);margin-bottom:6px">'+label+'</div><div style="margin-bottom:6px">'+atual+'</div><label class="cl" for="'+id+'"><div class="cz" id="'+id+'_z" style="padding:12px 10px"><div id="'+id+'_p"><div class="ps">📷 Substituir foto (opcional)</div></div><img id="'+id+'_v" style="display:none"></div></label><input type="file" accept="image/*" capture="environment" id="'+id+'" class="chi" onchange="capFile(this,\''+id+'_v\',\''+id+'_p\',\''+id+'_z\')">'}
+function corrParsePedagios(txt){var out=[];if(!txt)return out;var lines=String(txt).split("\n");for(var i=0;i<lines.length;i++){var l=lines[i].trim();if(!l)continue;var fase=/\[VOLTA\]/i.test(l)?"volta":"ida";var val=l.match(/R\$\s*([\d.]+)/);var lnk=l.match(/\|\s*(https?:\/\/\S+)/);out.push({fase:fase,valor:val?parseFloat(val[1])||0:0,foto_link:lnk?lnk[1]:""})}return out}
+function corrAddPed(fase,valor,fotoLink){fase=fase||"ida";corrPedN++;var n=corrPedN;var verLink=fotoLink?'<div style="font-size:11px;margin-bottom:6px"><a href="'+escAttr(fotoLink)+'" target="_blank" style="color:var(--accent)">🧾 Ver comprovante atual</a></div>':'';var d=document.createElement("div");d.className="dyn-item";d.dataset.fotoLink=fotoLink||"";d.innerHTML='<button class="rm" onclick="this.parentElement.remove()">×</button><div class="f" style="margin-bottom:8px"><label style="font-size:12px">Valor (R$)</label><input type="number" class="corr-ped-val" placeholder="15.40" inputmode="decimal" step="0.01" value="'+(valor!=null&&valor!==""?escAttr(valor):"")+'"></div>'+verLink+'<label class="cl" for="corr_pedf_'+n+'"><div class="cz" id="corr_pedz_'+n+'" style="padding:12px 10px"><div id="corr_pedp_'+n+'"><div class="ps">🧾 '+(fotoLink?"Substituir":"Anexar")+' comprovante</div></div><img id="corr_pedv_'+n+'" style="display:none"></div></label><input type="file" accept="image/*" id="corr_pedf_'+n+'" class="chi" onchange="capFile(this,\'corr_pedv_'+n+'\',\'corr_pedp_'+n+'\',\'corr_pedz_'+n+'\')">';document.getElementById("corr_ped_list_"+fase).appendChild(d)}
+function corrColetarPedagios(){var out=[];["ida","volta"].forEach(function(f){var els=document.querySelectorAll("#corr_ped_list_"+f+" .dyn-item");for(var i=0;i<els.length;i++){var fI=els[i].querySelector("input[type=file]");out.push({fase:f,valor:parseFloat(els[i].querySelector(".corr-ped-val").value)||0,foto:fI?fI.dataset.compressed||null:null,foto_link:els[i].dataset.fotoLink||""})}});return out}
+function abrirCorr(protocolo){show("secCorrigir");document.getElementById("corr_motivo").innerHTML='<span style="color:#A16207">Carregando pedido…</span>';document.getElementById("corr_info").textContent="";ld("Carregando pedido…");
+  fetch(API+"?action=carregar_pedido&protocolo="+encodeURIComponent(protocolo)).then(function(r){return r.text()}).then(function(t){hd();var d;try{d=JSON.parse(t)}catch(e){alert("Erro ao carregar o pedido.");show("secHome");return}if(!d.success||!d.found){alert("Pedido não encontrado.");show("secHome");return}corrPreencher(d.pedido)}).catch(function(e){hd();alert("Erro: "+e.message);show("secHome")})}
+function corrPreencher(p){corrPedido=p;corrPedN=0;
+  document.getElementById("corr_motivo").innerHTML=p.observacao?('📋 <strong>Motivo da revisão:</strong> '+escTxt(p.observacao)):'O gestor solicitou ajustes. Revise os dados abaixo e reenvie.';
+  document.getElementById("corr_info").textContent="Protocolo: "+p.protocolo;
+  document.getElementById("corr_nome").value=p.nome||"";document.getElementById("corr_email").value=p.email||"";document.getElementById("corr_tel").value=p.telefone||"";
+  document.getElementById("corr_veic").value=(p.veiculo==="Moto")?"Moto":"Carro";document.getElementById("corr_placa").value=p.placa||"";
+  corrRenderTrechos("ida",p.ida||[]);corrRenderTrechos("volta",p.volta||[]);
+  document.getElementById("corr_volta_card").style.display=(p.volta&&p.volta.length)?"block":"none";
+  document.getElementById("corr_odo_saida").innerHTML=corrOdoItem("corr_odoS","Saída",p.checkin_foto);
+  document.getElementById("corr_odo_chegada").innerHTML=corrOdoItem("corr_odoC","Chegada",p.checkout_foto);
+  document.getElementById("corr_ped_list_ida").innerHTML="";document.getElementById("corr_ped_list_volta").innerHTML="";
+  var peds=corrParsePedagios(p.pedagios_texto);for(var i=0;i<peds.length;i++)corrAddPed(peds[i].fase,peds[i].valor,peds[i].foto_link);
+  var estim=(p.usou_estimativa==="Sim");corrFuelMode=estim?"estim":"cupom";corrSetFuelMode(corrFuelMode);
+  document.getElementById("corr_preco").value=(p.preco_real&&!estim)?p.preco_real:"";
+  document.getElementById("corr_cupom").dataset.compressed="";lpResetCz("corr_cupv","corr_cuph","corr_cupz");
+  document.getElementById("corr_cupom_atual").innerHTML=p.cupom?'<a href="'+escAttr(p.cupom)+'" target="_blank" style="color:var(--accent)">🧾 Ver cupom atual</a>':'';
+  document.getElementById("corr_desc").value="";window.scrollTo({top:0,behavior:"smooth"})}
+function enviarCorrecao(){if(!corrPedido)return;var proto=corrPedido.protocolo;
+  var ida=corrColetarTrechos("ida"),volta=corrColetarTrechos("volta");
+  for(var i=0;i<ida.length;i++)if(!ida[i].origem||!ida[i].destino||!ida[i].km){alert("Preencha origem, destino e km do Trecho IDA "+(i+1)+".");return}
+  for(var i=0;i<volta.length;i++)if(!volta[i].origem||!volta[i].destino||!volta[i].km){alert("Preencha origem, destino e km do Trecho VOLTA "+(i+1)+".");return}
+  var usarEstim=corrFuelMode==="estim";var preco=usarEstim?PB:parseFloat(document.getElementById("corr_preco").value);
+  if(!usarEstim&&(!preco||preco<=0)){alert("Informe o preço do litro ou use a estimativa.");return}
+  var peds=corrColetarPedagios();for(var i=0;i<peds.length;i++)if(!peds[i].valor){alert("Informe o valor do pedágio "+(i+1)+".");return}
+  var odoS=document.getElementById("corr_odoS").dataset.compressed||"",odoC=document.getElementById("corr_odoC").dataset.compressed||"",cup=document.getElementById("corr_cupom").dataset.compressed||"";
+  var tasks=[];if(odoS)tasks.push({b64:odoS,name:"odometro_saida_corr",key:"odoS"});if(odoC)tasks.push({b64:odoC,name:"odometro_chegada_corr",key:"odoC"});
+  for(var i=0;i<ida.length;i++)if(ida[i].maps)tasks.push({b64:ida[i].maps,name:"ida_"+(i+1)+"_maps_corr",key:"mi"+i});
+  for(var i=0;i<volta.length;i++)if(volta[i].maps)tasks.push({b64:volta[i].maps,name:"volta_"+(i+1)+"_maps_corr",key:"mv"+i});
+  if(!usarEstim&&cup)tasks.push({b64:cup,name:"cupom_corr",key:"cup"});
+  for(var i=0;i<peds.length;i++)if(peds[i].foto)tasks.push({b64:peds[i].foto,name:"pedagio_corr_"+(i+1),key:"ped"+i});
+  var links={},total=tasks.length,idx=0;
+  function done(){
+    var idaArr=ida.map(function(t,i){return {origem:t.origem,destino:t.destino,km:t.km,maps_link:links["mi"+i]||""}});
+    var voltaArr=volta.map(function(t,i){return {origem:t.origem,destino:t.destino,km:t.km,maps_link:links["mv"+i]||""}});
+    var pedArr=peds.map(function(pp,i){return {fase:pp.fase,valor:pp.valor,foto_link:links["ped"+i]||pp.foto_link||""}});
+    ld("Enviando correção…");
+    post({action:"corrigir",protocolo:proto,descricao:document.getElementById("corr_desc").value.trim(),nome:document.getElementById("corr_nome").value,email:document.getElementById("corr_email").value,telefone:document.getElementById("corr_tel").value,veiculo:document.getElementById("corr_veic").value,placa:document.getElementById("corr_placa").value.toUpperCase(),ida:idaArr,volta:voltaArr,odo_saida_link:links["odoS"]||"",odo_chegada_link:links["odoC"]||"",usar_estimativa:usarEstim,preco_real:usarEstim?PB:preco,cupom_link:links["cup"]||"",pedagios:pedArr}).then(function(r){hd();if(r&&r.success===false){alert(r.error);return}document.getElementById("ok_proto").textContent="Protocolo: "+proto;document.getElementById("ok_val").textContent=r&&r.valor_total?"R$ "+r.valor_total+" (corrigido)":"";show("secOk")}).catch(function(e){hd();alert("Erro: "+e.message)})
+  }
+  function next(){if(idx>=total){done();return}var tk=tasks[idx];ld("Enviando imagem "+(idx+1)+" de "+total+"…");uploadImgP(proto,tk.b64,tk.name).then(function(link){links[tk.key]=link;idx++;next()}).catch(function(){hd();alert("Falha ao enviar imagem "+(idx+1)+". Verifique o sinal e tente novamente.")})}
+  if(total){ld("Enviando imagens…");next()}else{done()}}
 // ═══ LANÇAMENTO POSTERIOR (exceção) ═══
 var lpGps=null,lpTrechoN=0,lpFuelMode="cupom";
 function lpResetCz(vId,pId,zId){var v=document.getElementById(vId);if(v){v.style.display="none";v.src=""}var p=document.getElementById(pId);if(p)p.style.display="block";var z=document.getElementById(zId);if(z)z.classList.remove("ok")}

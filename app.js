@@ -141,6 +141,7 @@ function doGet(e) {
     if (a === "buscar_viagem") return buscarViagem(e.parameter.protocolo || "");
     if (a === "buscar_revisao") return buscarRevisao(e.parameter.cpf || "");
     if (a === "buscar_situacao") return buscarSituacao(e.parameter.cpf || "");
+    if (a === "carregar_pedido") return carregarPedido(e.parameter.protocolo || "");
     if (a === "listar") {
       // Endpoint sensível (retorna todos os dados): exige a senha do painel.
       if (!authAdmin(e.parameter.token)) return jr({success: false, auth: false, error: "Não autorizado."});
@@ -437,8 +438,26 @@ function doLancamentoPosterior(d) {
 }
 
 // ══════════════════════════════════════════════════════════════
-// CORRIGIR — batch escrita
+// CORRIGIR — editor completo do pedido em revisão
 // ══════════════════════════════════════════════════════════════
+
+// Reconstrói o texto dos trechos preservando data/hora e GPS originais,
+// trocando origem/destino/km e o print do Maps (se um novo link veio).
+function montarTrechosCorr(arr, origLines) {
+  var out = [];
+  for (var i = 0; i < arr.length; i++) {
+    var t = arr[i], orig = origLines[i] || "";
+    var dh = "", gps = "N/A", origMaps = "";
+    var mm = orig.match(/\|\s*([^|]+?)\s*\|\s*GPS:\s*([^|]+?)(?:\s*\|\s*Maps:\s*(.+))?$/);
+    if (mm) { dh = mm[1].trim(); gps = mm[2].trim(); origMaps = mm[3] ? mm[3].trim() : ""; }
+    var maps = t.maps_link || origMaps;
+    var line = (i+1)+". "+(t.origem||"?")+" → "+(t.destino||"?")+" | "+(parseFloat(t.km)||0)+" km | "+dh+" | GPS: "+gps;
+    if (maps) line += " | Maps: " + maps;
+    out.push(line);
+  }
+  return out.join("\n");
+}
+
 function doCorrigir(d) {
   var s = getSheet();
   var allData = s.getDataRange().getValues();
@@ -447,21 +466,55 @@ function doCorrigir(d) {
   var row = info.row, rowData = info.data;
   if (String(rowData[1]).trim() !== "REVISÃO") return jr({success: false, error: "Não está em revisão."});
 
-  var descTxt = (d.tipo||"") + (d.parada_ref ? " — "+d.parada_ref : "") + ": " + (d.descricao||"");
-  var dist = parseFloat(d.distancia_total) || parseFloat(rowData[23]) || 0;
-  var pR = parseFloat(d.preco_real) || parseFloat(rowData[30]) || PRECO_BASE;
-  var con = rowData[15] === "Moto" ? 49 : 10;
-  var tP = parseFloat(rowData[26]) || 0;
-  var vE = (dist/con)*PRECO_BASE, vR = (dist/con)*pR, vT = vR + tP;
-
-  // Batch: atualizar campos específicos via cópia da linha
   var updated = rowData.slice();
   updated[1] = "CORRIGIDO";
-  if (d.distancia_total) updated[23] = dist;
+
+  // ── Dados pessoais: sobrescreve apenas o que veio preenchido ──
+  if (d.nome) updated[11] = d.nome;
+  if (d.email) updated[13] = d.email;
+  if (d.telefone) updated[14] = d.telefone;
+  if (d.veiculo) updated[15] = d.veiculo;
+  if (d.placa) updated[16] = d.placa;
+
+  // ── Trechos: reconstrói preservando data/hora e GPS originais ──
+  var origIda = String(rowData[18]||"").split("\n").filter(function(x){return x.trim();});
+  var origVolta = String(rowData[21]||"").split("\n").filter(function(x){return x.trim();});
+  var dist = 0;
+  if (d.ida) { updated[18] = montarTrechosCorr(d.ida, origIda); updated[19] = d.ida.length; for (var i=0;i<d.ida.length;i++) dist += parseFloat(d.ida[i].km)||0; }
+  else { dist += extrairKm(rowData[18]); }
+  if (d.volta) { updated[21] = montarTrechosCorr(d.volta, origVolta); updated[22] = d.volta.length; for (var i=0;i<d.volta.length;i++) dist += parseFloat(d.volta[i].km)||0; }
+  else { dist += extrairKm(rowData[21]); }
+  updated[23] = dist;
+
+  // ── Fotos: substitui só quando veio um link novo ──
+  if (d.odo_saida_link) updated[5] = d.odo_saida_link;
+  if (d.odo_chegada_link) updated[9] = d.odo_chegada_link;
+  if (d.cupom_link) updated[31] = d.cupom_link;
+
+  // ── Pedágios: substituição completa quando enviados ──
+  var tP;
+  if (d.pedagios) {
+    var peds = d.pedagios, pTxt = "", pLnk = []; tP = 0;
+    for (var i = 0; i < peds.length; i++) {
+      var v = parseFloat(peds[i].valor)||0; tP += v;
+      var pl = peds[i].foto_link || "";
+      var faseLbl = peds[i].fase ? "["+String(peds[i].fase).toUpperCase()+"] " : "";
+      pLnk.push(pl);
+      pTxt += (i+1)+". "+faseLbl+"R$ "+v.toFixed(2)+(pl?" | "+pl:"")+"\n";
+    }
+    updated[24] = pTxt.trim(); updated[25] = peds.length; updated[26] = tP.toFixed(2); updated[27] = pLnk.join("\n");
+  } else { tP = parseFloat(rowData[26]) || 0; }
+
+  // ── Combustível e totais ──
+  var usouEstim = d.usar_estimativa === true;
+  var pR = usouEstim ? PRECO_BASE : (parseFloat(d.preco_real) || parseFloat(rowData[30]) || PRECO_BASE);
+  if (d.usar_estimativa === true) updated[28] = "Sim"; else if (d.usar_estimativa === false) updated[28] = "Não";
   updated[30] = pR;
-  updated[32] = vE.toFixed(2);
-  updated[33] = vR.toFixed(2);
-  updated[34] = vT.toFixed(2);
+  var con = updated[15] === "Moto" ? 49 : 10;
+  var vE = (dist/con)*PRECO_BASE, vR = (dist/con)*pR, vT = vR + tP;
+  updated[32] = vE.toFixed(2); updated[33] = vR.toFixed(2); updated[34] = vT.toFixed(2);
+
+  var descTxt = d.descricao ? String(d.descricao) : "Pedido corrigido pelo pesquisador";
   updated[35] = "🔄 " + descTxt;
 
   s.getRange(row, 1, 1, updated.length).setValues([updated]);
@@ -507,6 +560,42 @@ function buscarSituacao(cpf) {
       return jr({success: true, found: true, situacao: {
         protocolo: d[0], status: String(d[1]).trim(), nome: d[11],
         valor_total: d[34] || "", checkin_dh: d[2] || "", checkout_dh: d[6] || "",
+        observacao: obs
+      }});
+    }
+  }
+  return jr({success: true, found: false});
+}
+
+// Extrai origem/destino/km/Maps de cada trecho (para o editor de correção)
+function parseTrechosFull(txt) {
+  if (!txt) return [];
+  var lines = String(txt).split("\n"), out = [];
+  for (var i = 0; i < lines.length; i++) {
+    var l = lines[i].trim(); if (!l) continue;
+    var rota = l.match(/^\d+\.\s*(.+?)\s*→\s*(.+?)\s*\|/);
+    var km = l.match(/\|\s*([\d.]+)\s*km/);
+    var maps = l.match(/Maps:\s*(\S+)/);
+    out.push({ origem: rota?rota[1].trim():"", destino: rota?rota[2].trim():"", km: km?km[1]:"0", maps: maps?maps[1]:"" });
+  }
+  return out;
+}
+
+// Carrega o pedido completo para o editor de correção (app do motorista)
+function carregarPedido(p) {
+  if (!p) return jr({success: false, error: "Protocolo vazio"});
+  var allData = getSheet().getDataRange().getValues();
+  for (var i = allData.length-1; i >= 1; i--) {
+    if (String(allData[i][0]).trim() === p.trim()) {
+      var d = allData[i];
+      var val = String(d[35]||""), m = val.match(/ADMIN:\s*(.+)$/), obs = m ? m[1].trim() : "";
+      return jr({success: true, found: true, pedido: {
+        protocolo: d[0], status: String(d[1]).trim(),
+        nome: d[11], cpf: d[12], email: d[13], telefone: d[14], veiculo: d[15], placa: d[16],
+        ida: parseTrechosFull(d[18]), volta: parseTrechosFull(d[21]),
+        dist_total: d[23], pedagios_texto: d[24]||"",
+        usou_estimativa: d[28], preco_base: d[29], preco_real: d[30],
+        checkin_foto: d[5]||"", checkout_foto: d[9]||"", cupom: d[31]||"",
         observacao: obs
       }});
     }
