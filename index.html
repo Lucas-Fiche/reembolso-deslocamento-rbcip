@@ -390,6 +390,7 @@
 <div class="sec" id="secOk"><div class="ss"><div class="si">✅</div><h2>Solicitação Enviada!</h2><p>Reembolso registrado com check-in, paradas (IDA e VOLTA) e check-out.</p><div class="sid" id="ok_proto"></div><div class="sid" id="ok_val" style="margin-left:8px;background:var(--success-bg);color:#065F46"></div>
   <div class="card" style="background:linear-gradient(135deg,#DBEAFE,#BFDBFE);border:2px solid #3B82F6;text-align:center;padding:24px 20px;margin-top:24px"><div style="font-size:32px;margin-bottom:8px">🕐</div><div style="font-size:15px;font-weight:700;color:#1E40AF;margin-bottom:8px">Prazo de processamento</div><p style="font-size:14px;color:#1E3A8A;line-height:1.6;margin:0">As solicitações levam até <strong>5 dias úteis</strong> para serem processadas.</p></div>
   <button class="bp" style="margin-top:16px" onclick="location.reload()">+ Novo Registro</button></div></div>
+  <div style="text-align:center;font-size:12px;color:var(--text-muted);padding:18px 0 4px;line-height:1.6;border-top:1px solid var(--border);margin-top:8px">Qualquer problema ou dúvida, fale comigo:<br><a href="https://wa.me/5511936233054" style="color:var(--accent);font-weight:700;text-decoration:none">📱 +55 11 93623-3054</a></div>
 </div>
 <div class="lo" id="ld"><div class="sp"></div><p id="lt">Enviando…</p></div>
 
@@ -432,7 +433,8 @@ function renderSituacao(s){
   return '<div style="background:'+c.bg+';border:1px solid '+c.bd+';border-radius:10px;padding:14px">'
     +'<div style="font-size:15px;font-weight:700;color:'+c.fg+'">'+c.ic+' '+c.t+'</div>'
     +'<div style="font-size:12px;color:'+c.fg+';opacity:.85;margin-top:2px;font-family:\'JetBrains Mono\',monospace">'+escTxt(s.protocolo)+'</div>'
-    +'<div style="font-size:13px;color:'+c.fg+';margin-top:8px;line-height:1.5">'+c.m+'</div>'+valHtml+obs+'</div>';
+    +'<div style="font-size:13px;color:'+c.fg+';margin-top:8px;line-height:1.5">'+c.m+'</div>'+valHtml+obs
+    +'<div style="margin-top:10px;font-size:12px;color:'+c.fg+';line-height:1.5">📱 Dúvidas ou problemas? Fale comigo: <strong>+55 11 93623-3054</strong></div></div>';
 }
 function buscarCPF(){var cpf=document.getElementById("busca_cpf").value.trim(),res=document.getElementById("busca_res");if(!cpf){alert("Digite o CPF.");return}res.style.display="block";res.innerHTML='<span style="color:var(--text-muted)">Buscando…</span>';
   fetch(API+"?action=buscar_checkin&cpf="+encodeURIComponent(cpf)).then(function(r){return r.text()}).then(function(t){var d;try{d=JSON.parse(t)}catch(e){res.innerHTML='<span style="color:var(--danger)">Erro.</span>';return}
