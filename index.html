@@ -134,13 +134,23 @@
 </div>
 
 <!-- CHECK-IN OK -->
-<div class="sec" id="secCIOk"><div class="ss"><div class="si" style="background:#ECFDF5">🚀</div><h2>Check-in Registrado!</h2><p>Ao chegar em cada destino, registre a <strong>parada</strong> correspondente.</p><div class="sid" id="ci_proto"></div><button class="bp" style="margin-top:24px" onclick="show('secHome');sync()">← Início</button></div></div>
+<div class="sec" id="secCIOk"><div class="ss"><div class="si" style="background:#ECFDF5">🚀</div><h2>Check-in Registrado!</h2><p>Ao chegar em cada destino, registre a <strong>parada</strong> correspondente.</p><div style="background:#FFFBEB;border:1px solid #FCD34D;border-radius:10px;padding:12px 14px;margin:16px auto 0;max-width:340px;text-align:left;font-size:12px;color:#92400E;line-height:1.6">📌 <strong>Já vá guardando para o check-out:</strong><br>📸 foto do odômetro na chegada · 🗺️ print do Google Maps de cada trecho · 🧾 comprovante dos pedágios (se houver).</div><div class="sid" id="ci_proto" style="margin-top:16px"></div><button class="bp" style="margin-top:24px" onclick="show('secHome');sync()">← Início</button></div></div>
 
 <!-- VIAGEM EM ANDAMENTO -->
 <div class="sec" id="secViagem">
   <div class="card" style="background:var(--success-bg);border-color:var(--success)">
     <div style="font-size:13px;font-weight:600;color:#065F46;margin-bottom:6px">📋 Viagem em andamento</div>
     <div id="viagem_info" style="font-size:12px;color:#047857;line-height:1.6;font-family:'JetBrains Mono',monospace"></div>
+  </div>
+  <!-- Aviso antecipado do check-out -->
+  <div class="card" style="border:2px solid #F59E0B;background:#FFFBEB;padding:16px">
+    <div style="font-size:14px;font-weight:700;color:#92400E;display:flex;align-items:center;gap:8px;margin-bottom:6px"><span style="font-size:18px">📌</span> Atenção: o que você vai precisar no CHECK-OUT</div>
+    <div style="font-size:12px;color:#A16207;line-height:1.5;margin-bottom:12px">Ao finalizar a viagem, será obrigatório anexar os itens abaixo. <strong>Vá guardando durante o trajeto</strong> para não perder nada:</div>
+    <ul style="list-style:none;display:flex;flex-direction:column;gap:10px">
+      <li style="display:flex;gap:10px;font-size:13px;color:#78350F;line-height:1.45"><span style="font-size:18px">📸</span><div><strong>Foto do odômetro</strong> na chegada</div></li>
+      <li style="display:flex;gap:10px;font-size:13px;color:#78350F;line-height:1.45"><span style="font-size:18px">🗺️</span><div><strong>Print do Google Maps de cada trecho</strong> (ida e volta) — tire o print da rota a cada parada para não esquecer</div></li>
+      <li style="display:flex;gap:10px;font-size:13px;color:#78350F;line-height:1.45"><span style="font-size:18px">🧾</span><div><strong>Comprovante de cada pedágio</strong>, se houver</div></li>
+    </ul>
   </div>
   <!-- IDA -->
   <div class="card" id="ida_card">
@@ -180,7 +190,7 @@
   <div class="card"><div class="ct"><span class="ic" style="background:#FEF3C7;color:#D97706">🛣️</span> Trecho</div>
     <div class="fr"><div class="f"><label>Origem <span class="rq">*</span></label><input type="text" id="pa_orig"></div><div class="f"><label>Destino <span class="rq">*</span></label><input type="text" id="pa_dest"></div></div>
     <div class="f"><label>Distância (km) <span class="rq">*</span></label><input type="number" id="pa_km" inputmode="decimal" step="0.1"></div>
-    <p style="font-size:12px;color:var(--text-muted)">📎 Registro rápido, sem foto. O print do Maps deste trecho será pedido no check-out.</p>
+    <p style="font-size:12px;color:#92400E;background:#FFFBEB;border:1px solid #FCD34D;border-radius:8px;padding:10px 12px;line-height:1.5">⚠️ Registro rápido, sem foto agora. <strong>Tire e guarde o print do Google Maps deste trecho</strong> — ele será obrigatório no check-out.</p>
   </div>
   <button class="bp b" onclick="enviarParada()">📍 Confirmar Parada</button>
   <button class="bs" onclick="show('secViagem')">← Voltar</button>
@@ -192,6 +202,15 @@
     <div style="font-size:28px;margin-bottom:6px">🏁</div>
     <div style="font-size:16px;font-weight:700;color:#92400E">CHECK-OUT</div>
     <p style="font-size:13px;color:#A16207;margin-top:4px">Registre a chegada e finalize a viagem.</p>
+  </div>
+  <div class="card" style="border:1.5px solid #FCD34D;background:#FFFBEB">
+    <div style="font-size:13px;font-weight:700;color:#92400E;margin-bottom:10px">📋 Antes de enviar, você precisa anexar:</div>
+    <ul style="list-style:none;display:flex;flex-direction:column;gap:8px">
+      <li style="display:flex;gap:10px;font-size:13px;color:#78350F;line-height:1.45"><span style="font-size:16px">📸</span><div><strong>Foto do odômetro</strong> na chegada</div></li>
+      <li style="display:flex;gap:10px;font-size:13px;color:#78350F;line-height:1.45"><span style="font-size:16px">🗺️</span><div><strong>Print do Google Maps de cada trecho</strong> registrado (ida e volta)</div></li>
+      <li style="display:flex;gap:10px;font-size:13px;color:#78350F;line-height:1.45"><span style="font-size:16px">🧾</span><div><strong>Comprovante de cada pedágio</strong> (se houver)</div></li>
+    </ul>
+    <div style="font-size:11px;color:#A16207;margin-top:10px;line-height:1.5">Sem esses itens o envio é bloqueado. Tenha-os em mãos antes de continuar.</div>
   </div>
   <div class="card"><div class="ct"><span class="ic" style="background:#ECFDF5;color:#059669">📡</span> Localização</div>
     <div class="gs p" id="co_gs"><div class="gd"></div><span id="co_gt">Obtendo…</span></div><div class="lc" id="co_ck">--:--:--</div>
