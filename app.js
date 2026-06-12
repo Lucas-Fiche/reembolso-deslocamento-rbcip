@@ -403,6 +403,7 @@ function doLancamentoPosterior(d) {
 
   // Validação — SEMPRE sinaliza que é lançamento posterior (exceção)
   var fl = ["🕓 LANÇAMENTO POSTERIOR (GPS/horário informados manualmente)"];
+  if (d.sem_odometro === true) fl.push("SEM foto do odômetro");
   if (vTot > 500) fl.push("Valor>R$500");
   if (!usouEstim && pReal > PRECO_BASE*1.3) fl.push("Preço/L 30%+ acima");
   var val = fl.join(" | ");
