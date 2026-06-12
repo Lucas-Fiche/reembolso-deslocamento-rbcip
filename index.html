@@ -272,16 +272,18 @@
   <div class="card"><div class="ct"><span class="ic" style="background:#FEF3C7;color:#D97706">📅</span> Data e horários <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--text-muted)">(manuais)</span></div>
     <div class="f"><label>Data da viagem <span class="rq">*</span></label><input type="date" id="lp_data"></div>
     <div class="fr"><div class="f"><label>Hora de saída <span class="rq">*</span></label><input type="time" id="lp_hora_saida"></div><div class="f"><label>Hora de chegada <span class="rq">*</span></label><input type="time" id="lp_hora_chegada"></div></div>
-    <button class="bs" style="margin-top:4px" id="lp_gps_btn" onclick="lpCapturarLocal()">📍 Anexar minha localização atual (aproximada)</button>
-    <div id="lp_gps_info" style="font-size:12px;color:var(--text-muted);margin-top:8px;text-align:center">Localização não anexada (opcional)</div>
   </div>
   <div class="card"><div class="ct"><span class="ic" style="background:#EFF6FF;color:#2563EB">📸</span> Odômetro</div>
-    <label style="display:block;font-size:13px;font-weight:600;color:var(--text);margin-bottom:6px">Saída <span class="rq">*</span></label>
-    <label class="cl" for="lp_odo_saida"><div class="cz" id="lp_odo_saida_z"><div id="lp_odo_saida_p"><div class="pi">📷</div><div class="pt">Foto do odômetro de saída</div></div><img id="lp_odo_saida_v" style="display:none"></div></label>
-    <input type="file" accept="image/*" id="lp_odo_saida" class="chi" onchange="capFile(this,'lp_odo_saida_v','lp_odo_saida_p','lp_odo_saida_z')">
-    <label style="display:block;font-size:13px;font-weight:600;color:var(--text);margin:14px 0 6px">Chegada <span class="rq">*</span></label>
-    <label class="cl" for="lp_odo_chegada"><div class="cz" id="lp_odo_chegada_z"><div id="lp_odo_chegada_p"><div class="pi">📷</div><div class="pt">Foto do odômetro de chegada</div></div><img id="lp_odo_chegada_v" style="display:none"></div></label>
-    <input type="file" accept="image/*" id="lp_odo_chegada" class="chi" onchange="capFile(this,'lp_odo_chegada_v','lp_odo_chegada_p','lp_odo_chegada_z')">
+    <label style="display:flex;align-items:center;gap:8px;cursor:pointer;margin-bottom:12px;font-size:13px;font-weight:600;color:var(--text)"><input type="checkbox" id="lp_sem_odo" onchange="lpToggleSemOdo()" style="width:18px;height:18px;flex-shrink:0"> Não possuo foto do Odômetro</label>
+    <div id="lp_odo_aviso" style="display:none;background:var(--warning-bg);border:1px solid #FCD34D;border-radius:var(--radius-sm);padding:12px;margin-bottom:12px;font-size:12px;color:#92400E;line-height:1.5">⚠️ <strong>Atenção:</strong> a foto do odômetro é <strong>obrigatória</strong>. Excepcionalmente este lançamento seguirá sem ela, mas você precisará <strong>providenciar as fotos do odômetro nas próximas solicitações</strong>.</div>
+    <div id="lp_odo_fotos">
+      <label style="display:block;font-size:13px;font-weight:600;color:var(--text);margin-bottom:6px">Saída <span class="rq">*</span></label>
+      <label class="cl" for="lp_odo_saida"><div class="cz" id="lp_odo_saida_z"><div id="lp_odo_saida_p"><div class="pi">📷</div><div class="pt">Foto do odômetro de saída</div></div><img id="lp_odo_saida_v" style="display:none"></div></label>
+      <input type="file" accept="image/*" id="lp_odo_saida" class="chi" onchange="capFile(this,'lp_odo_saida_v','lp_odo_saida_p','lp_odo_saida_z')">
+      <label style="display:block;font-size:13px;font-weight:600;color:var(--text);margin:14px 0 6px">Chegada <span class="rq">*</span></label>
+      <label class="cl" for="lp_odo_chegada"><div class="cz" id="lp_odo_chegada_z"><div id="lp_odo_chegada_p"><div class="pi">📷</div><div class="pt">Foto do odômetro de chegada</div></div><img id="lp_odo_chegada_v" style="display:none"></div></label>
+      <input type="file" accept="image/*" id="lp_odo_chegada" class="chi" onchange="capFile(this,'lp_odo_chegada_v','lp_odo_chegada_p','lp_odo_chegada_z')">
+    </div>
   </div>
   <div class="card"><div class="ct"><span class="ic" style="background:#DBEAFE;color:#2563EB">➡️</span> Trechos da IDA</div>
     <p style="font-size:12px;color:var(--text-muted);margin-bottom:10px">Para cada trecho: origem, destino, km e o print do Maps.</p>
@@ -629,7 +631,7 @@ function goPosterior(){show("secPosterior");lpGps=null;lpTrechoN=0;lpFuelMode="c
   document.getElementById("lp_veic").value="";
   ["lp_odo_saida","lp_odo_chegada","lp_cupom"].forEach(function(id){document.getElementById(id).dataset.compressed=""});
   lpResetCz("lp_odo_saida_v","lp_odo_saida_p","lp_odo_saida_z");lpResetCz("lp_odo_chegada_v","lp_odo_chegada_p","lp_odo_chegada_z");lpResetCz("lp_cupv","lp_cuph","lp_cupz");
-  document.getElementById("lp_gps_info").textContent="Localização não anexada (opcional)";
+  document.getElementById("lp_sem_odo").checked=false;lpToggleSemOdo();
   document.getElementById("lp_trecho_ida").innerHTML="";document.getElementById("lp_trecho_volta").innerHTML="";
   document.getElementById("lp_ped_list_ida").innerHTML="";document.getElementById("lp_ped_list_volta").innerHTML="";
   lpSetFuelMode("cupom");
@@ -637,7 +639,7 @@ function goPosterior(){show("secPosterior");lpGps=null;lpTrechoN=0;lpFuelMode="c
   document.getElementById("lp_btnCalc").style.display="flex";document.getElementById("lp_btnEnv").style.display="none";document.getElementById("lp_btnEnv").disabled=false;
   lpAddTrecho("ida");lpAddTrecho("volta")}
 function lpSetFuelMode(m){lpFuelMode=m;document.getElementById("lp_tog_cupom").classList.toggle("on",m==="cupom");document.getElementById("lp_tog_estim").classList.toggle("on",m==="estim");document.getElementById("lp_fuel_cupom").style.display=m==="cupom"?"block":"none";document.getElementById("lp_fuel_estim").style.display=m==="estim"?"block":"none"}
-function lpCapturarLocal(){var info=document.getElementById("lp_gps_info");if(!navigator.geolocation){info.textContent="GPS indisponível neste dispositivo";return}info.textContent="Obtendo localização…";navigator.geolocation.getCurrentPosition(function(p){lpGps={lat:p.coords.latitude,lng:p.coords.longitude};info.innerHTML="📍 "+p.coords.latitude.toFixed(5)+", "+p.coords.longitude.toFixed(5)+" <span style='color:#92400E'>(aproximada — local do lançamento)</span>"},function(){info.textContent="Não foi possível obter a localização"},{enableHighAccuracy:true,timeout:15000})}
+function lpToggleSemOdo(){var sem=document.getElementById("lp_sem_odo").checked;document.getElementById("lp_odo_fotos").style.display=sem?"none":"block";document.getElementById("lp_odo_aviso").style.display=sem?"block":"none"}
 function lpAddTrecho(fase){lpTrechoN++;var n=lpTrechoN;var d=document.createElement("div");d.className="dyn-item";d.innerHTML='<button class="rm" onclick="this.parentElement.remove()">×</button><div class="fr"><div class="f" style="margin-bottom:8px"><label style="font-size:12px">Origem</label><input type="text" class="lp-orig"></div><div class="f" style="margin-bottom:8px"><label style="font-size:12px">Destino</label><input type="text" class="lp-dest"></div></div><div class="f" style="margin-bottom:8px"><label style="font-size:12px">Distância (km)</label><input type="number" class="lp-km" inputmode="decimal" step="0.1"></div><label class="cl" for="lp_tmaps_'+n+'"><div class="cz" id="lp_tmaps_'+n+'_z" style="padding:12px 10px"><div id="lp_tmaps_'+n+'_p"><div class="ps">🗺️ Anexar print do Maps deste trecho</div></div><img id="lp_tmaps_'+n+'_v" style="display:none"></div></label><input type="file" accept="image/*" id="lp_tmaps_'+n+'" class="chi lp-maps" onchange="capFile(this,\'lp_tmaps_'+n+'_v\',\'lp_tmaps_'+n+'_p\',\'lp_tmaps_'+n+'_z\')">';document.getElementById("lp_trecho_"+fase).appendChild(d)}
 function lpAddPed(fase){fase=fase||"ida";pedN++;var d=document.createElement("div");d.className="dyn-item";d.innerHTML='<button class="rm" onclick="this.parentElement.remove()">×</button><div class="f" style="margin-bottom:8px"><label style="font-size:12px">Valor (R$)</label><input type="number" class="ped-val" placeholder="15.40" inputmode="decimal" step="0.01"></div><label class="cl" for="lp_ped_f_'+pedN+'"><div class="cz" id="lp_ped_z_'+pedN+'" style="padding:12px 10px"><div id="lp_ped_p_'+pedN+'"><div class="ps">🧾 Anexar comprovante</div></div><img id="lp_ped_v_'+pedN+'" style="display:none"></div></label><input type="file" accept="image/*" id="lp_ped_f_'+pedN+'" class="chi" onchange="capFile(this,\'lp_ped_v_'+pedN+'\',\'lp_ped_p_'+pedN+'\',\'lp_ped_z_'+pedN+'\')">';document.getElementById("lp_ped_list_"+fase).appendChild(d)}
 function lpColetarTrechos(fase){var out=[],els=document.querySelectorAll("#lp_trecho_"+fase+" .dyn-item");for(var i=0;i<els.length;i++){var fI=els[i].querySelector("input[type=file]");out.push({origem:(els[i].querySelector(".lp-orig").value||"").trim(),destino:(els[i].querySelector(".lp-dest").value||"").trim(),km:els[i].querySelector(".lp-km").value,maps:fI?fI.dataset.compressed||null:null})}return out}
@@ -675,8 +677,11 @@ function uploadImgP(proto,b64,name){return post({action:"upload_imagem",protocol
 function lpEnviar(){
   if(!lpCalcular())return;
   var usarEstim=lpFuelMode==="estim";
-  if(!document.getElementById("lp_odo_saida").dataset.compressed){alert("Anexe a foto do odômetro de saída.");return}
-  if(!document.getElementById("lp_odo_chegada").dataset.compressed){alert("Anexe a foto do odômetro de chegada.");return}
+  var semOdo=document.getElementById("lp_sem_odo").checked;
+  if(!semOdo){
+    if(!document.getElementById("lp_odo_saida").dataset.compressed){alert("Anexe a foto do odômetro de saída ou marque \"Não possuo foto do Odômetro\".");return}
+    if(!document.getElementById("lp_odo_chegada").dataset.compressed){alert("Anexe a foto do odômetro de chegada ou marque \"Não possuo foto do Odômetro\".");return}
+  }
   var ida=lpColetarTrechos("ida"),volta=lpColetarTrechos("volta");
   for(var i=0;i<ida.length;i++)if(!ida[i].maps){alert("Anexe o print do Maps do trecho IDA "+(i+1)+".");return}
   for(var i=0;i<volta.length;i++)if(!volta[i].maps){alert("Anexe o print do Maps do trecho VOLTA "+(i+1)+".");return}
@@ -687,24 +692,25 @@ function lpEnviar(){
   var dataV=document.getElementById("lp_data").value,hs=document.getElementById("lp_hora_saida").value,hc=document.getElementById("lp_hora_chegada").value;
   var ciISO=new Date(dataV+"T"+hs).toISOString(),coISO=new Date(dataV+"T"+hc).toISOString();
   document.getElementById("lp_btnEnv").disabled=true;
-  var tasks=[{b64:document.getElementById("lp_odo_saida").dataset.compressed,name:"odometro_saida",key:"odoS"},{b64:document.getElementById("lp_odo_chegada").dataset.compressed,name:"odometro_chegada",key:"odoC"}];
+  var tasks=[];
+  if(!semOdo){tasks.push({b64:document.getElementById("lp_odo_saida").dataset.compressed,name:"odometro_saida",key:"odoS"});tasks.push({b64:document.getElementById("lp_odo_chegada").dataset.compressed,name:"odometro_chegada",key:"odoC"});}
   for(var i=0;i<ida.length;i++)tasks.push({b64:ida[i].maps,name:"ida_"+(i+1)+"_maps",key:"mi"+i});
   for(var i=0;i<volta.length;i++)tasks.push({b64:volta[i].maps,name:"volta_"+(i+1)+"_maps",key:"mv"+i});
   if(!usarEstim)tasks.push({b64:document.getElementById("lp_cupom").dataset.compressed,name:"cupom_combustivel",key:"cup"});
   for(var i=0;i<peds.length;i++)if(peds[i].foto)tasks.push({b64:peds[i].foto,name:"pedagio_"+peds[i].fase+"_"+(i+1),key:"ped"+i});
   var links={},total=tasks.length,idx=0;
   function next(){
-    if(idx>=total){lpEnviarPayload(proto,ciISO,coISO,ida,volta,peds,usarEstim,links);return}
+    if(idx>=total){lpEnviarPayload(proto,ciISO,coISO,ida,volta,peds,usarEstim,links,semOdo);return}
     var t=tasks[idx];ld("Enviando imagem "+(idx+1)+" de "+total+"…");
     uploadImgP(proto,t.b64,t.name).then(function(link){links[t.key]=link;idx++;next()}).catch(function(){hd();document.getElementById("lp_btnEnv").disabled=false;alert("Falha ao enviar imagem "+(idx+1)+". Verifique o sinal e tente novamente.")});
   }
   next()}
-function lpEnviarPayload(proto,ciISO,coISO,ida,volta,peds,usarEstim,links){
+function lpEnviarPayload(proto,ciISO,coISO,ida,volta,peds,usarEstim,links,semOdo){
   var idaArr=[];for(var i=0;i<ida.length;i++)idaArr.push({origem:ida[i].origem,destino:ida[i].destino,km:ida[i].km,maps_link:links["mi"+i]||"",lat:lpGps?lpGps.lat:null,lng:lpGps?lpGps.lng:null,timestamp:ciISO});
   var voltaArr=[];for(var i=0;i<volta.length;i++)voltaArr.push({origem:volta[i].origem,destino:volta[i].destino,km:volta[i].km,maps_link:links["mv"+i]||"",lat:lpGps?lpGps.lat:null,lng:lpGps?lpGps.lng:null,timestamp:coISO});
   var pedArr=[];for(var i=0;i<peds.length;i++)pedArr.push({fase:peds[i].fase,valor:peds[i].valor,foto_link:links["ped"+i]||""});
   ld("Finalizando lançamento…");
-  var payload={action:"lancamento_posterior",protocolo:proto,nome:document.getElementById("lp_nome").value,cpf:document.getElementById("lp_cpf").value,email:document.getElementById("lp_email").value,telefone:document.getElementById("lp_tel").value,veiculo:document.getElementById("lp_veic").value,placa:document.getElementById("lp_placa").value.toUpperCase(),checkin_timestamp:ciISO,checkout_timestamp:coISO,checkin_lat:lpGps?lpGps.lat:null,checkin_lng:lpGps?lpGps.lng:null,checkout_lat:lpGps?lpGps.lat:null,checkout_lng:lpGps?lpGps.lng:null,img_odometro_saida_link:links["odoS"]||"",img_odometro_chegada_link:links["odoC"]||"",ida:idaArr,volta:voltaArr,pedagios:pedArr,usar_estimativa:usarEstim,preco_real:usarEstim?PB:document.getElementById("lp_preco").value,img_cupom_link:links["cup"]||""};
+  var payload={action:"lancamento_posterior",protocolo:proto,nome:document.getElementById("lp_nome").value,cpf:document.getElementById("lp_cpf").value,email:document.getElementById("lp_email").value,telefone:document.getElementById("lp_tel").value,veiculo:document.getElementById("lp_veic").value,placa:document.getElementById("lp_placa").value.toUpperCase(),checkin_timestamp:ciISO,checkout_timestamp:coISO,checkin_lat:lpGps?lpGps.lat:null,checkin_lng:lpGps?lpGps.lng:null,checkout_lat:lpGps?lpGps.lat:null,checkout_lng:lpGps?lpGps.lng:null,img_odometro_saida_link:links["odoS"]||"",img_odometro_chegada_link:links["odoC"]||"",sem_odometro:semOdo===true,ida:idaArr,volta:voltaArr,pedagios:pedArr,usar_estimativa:usarEstim,preco_real:usarEstim?PB:document.getElementById("lp_preco").value,img_cupom_link:links["cup"]||""};
   post(payload).then(function(r){hd();if(r&&r.success===false){document.getElementById("lp_btnEnv").disabled=false;alert(r.error);return}document.getElementById("ok_proto").textContent="Protocolo: "+proto;document.getElementById("ok_val").textContent=r&&r.valor_total?"R$ "+r.valor_total:"";show("secOk")}).catch(function(e){hd();document.getElementById("lp_btnEnv").disabled=false;alert("Erro: "+e.message)})}
 var instrAberto=true;
 function toggleInstr(){instrAberto=!instrAberto;document.getElementById("instrBody").style.maxHeight=instrAberto?"2000px":"0";document.getElementById("instrArrow").style.transform=instrAberto?"":"rotate(-90deg)"}
