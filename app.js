@@ -130,6 +130,10 @@ function doPost(e) {
       if (!authAdmin(d.token)) return jr({success: false, auth: false, error: "Não autorizado."});
       return withLock(function(){ return doAtualizarStatus(d); });
     }
+    if (d.action === "editar_admin") {
+      if (!authAdmin(d.token)) return jr({success: false, auth: false, error: "Não autorizado."});
+      return withLock(function(){ return doEditarAdmin(d); });
+    }
     return jr({success: false, error: "Ação desconhecida"});
   } catch(err) { return jr({success: false, error: err.message}); }
 }
@@ -582,6 +586,42 @@ function parseTrechosFull(txt) {
     out.push({ origem: rota?rota[1].trim():"", destino: rota?rota[2].trim():"", km: km?km[1]:"0", maps: maps?maps[1]:"" });
   }
   return out;
+}
+
+// EDIÇÃO ADMINISTRATIVA — o gestor corrige o pedido direto pelo painel
+// (ex.: incluir uma parada esquecida). Recalcula distância e valores.
+// Mantém o status atual; apenas registra "Editado pelo admin" na validação.
+function doEditarAdmin(d) {
+  var s = getSheet();
+  var allData = s.getDataRange().getValues();
+  var info = findByProtoData(allData, d.protocolo);
+  if (!info) return jr({success: false, error: "Protocolo não encontrado."});
+  var row = info.row, rowData = info.data;
+  var updated = rowData.slice();
+
+  // Trechos: reconstrói preservando data/hora e GPS originais; novos trechos
+  // (parada esquecida) entram sem GPS/Maps. Distância recalculada pelos km.
+  var origIda = String(rowData[18]||"").split("\n").filter(function(x){return x.trim();});
+  var origVolta = String(rowData[21]||"").split("\n").filter(function(x){return x.trim();});
+  var dist = 0;
+  if (d.ida) { updated[18] = montarTrechosCorr(d.ida, origIda); updated[19] = d.ida.length; for (var i=0;i<d.ida.length;i++) dist += parseFloat(d.ida[i].km)||0; }
+  else { dist += extrairKm(rowData[18]); }
+  if (d.volta) { updated[21] = montarTrechosCorr(d.volta, origVolta); updated[22] = d.volta.length; for (var i=0;i<d.volta.length;i++) dist += parseFloat(d.volta[i].km)||0; }
+  else { dist += extrairKm(rowData[21]); }
+  updated[23] = dist;
+
+  var usouEstim = String(updated[28]).trim() === "Sim";
+  if (d.preco_real) updated[30] = parseFloat(d.preco_real) || updated[30];
+  var pR = usouEstim ? PRECO_BASE : (parseFloat(updated[30]) || PRECO_BASE);
+  var con = updated[15] === "Moto" ? 49 : 10;
+  var tP = parseFloat(rowData[26]) || 0;
+  var vE = (dist/con)*PRECO_BASE, vR = (dist/con)*pR, vT = vR + tP;
+  updated[32] = vE.toFixed(2); updated[33] = vR.toFixed(2); updated[34] = vT.toFixed(2);
+
+  updated[35] = (updated[35] ? updated[35] + " | " : "") + "✏️ Editado pelo admin" + (d.motivo ? ": " + d.motivo : "");
+
+  s.getRange(row, 1, 1, updated.length).setValues([updated]);
+  return jr({success: true, protocolo: d.protocolo, valor_total: vT.toFixed(2)});
 }
 
 // Carrega o pedido completo para o editor de correção (app do motorista)

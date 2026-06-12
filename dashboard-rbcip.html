@@ -178,6 +178,29 @@ tr.corr-row td:first-child::after{content:"REANALISAR";display:inline-block;marg
 .gate-box button:hover{filter:brightness(.94)}
 .gate-box button:disabled{opacity:.6;cursor:default}
 
+/* Botão e modal de edição administrativa */
+.abtn-edit{width:100%;margin-top:8px;padding:8px;border:1px solid var(--border);background:var(--surface);color:var(--text2);border-radius:var(--radius-sm);font-family:inherit;font-size:12px;font-weight:600;cursor:pointer}
+.abtn-edit:hover{background:var(--bg);color:var(--text)}
+.edit-modal{position:fixed;inset:0;background:rgba(15,23,42,.5);display:none;align-items:center;justify-content:center;z-index:450;padding:20px}
+.edit-modal.show{display:flex}
+.edit-box{background:var(--surface);border-radius:12px;width:min(640px,96vw);max-height:92vh;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 24px 60px rgba(0,0,0,.3)}
+.edit-head{padding:16px 20px;border-bottom:1px solid var(--border)}
+.edit-head h3{font-size:16px;font-weight:600;margin:0;color:var(--text)}
+.edit-body{padding:16px 20px;overflow-y:auto;flex:1}
+.edit-foot{padding:12px 20px;border-top:1px solid var(--border);display:flex;gap:8px;justify-content:flex-end}
+.ed-group-title{font-size:12px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;margin:14px 0 8px}
+.ed-trecho{display:flex;gap:6px;align-items:center;margin-bottom:6px}
+.ed-trecho input{flex:1;min-width:0;padding:7px 9px;background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-sm);font-family:inherit;font-size:13px;color:var(--text);outline:none}
+.ed-trecho input:focus{border-color:var(--primary);box-shadow:0 0 0 3px var(--primary-light)}
+.ed-trecho .ed-km{flex:0 0 72px}
+.ed-rm{flex:0 0 28px;height:30px;border:none;background:var(--danger-light);color:var(--danger);border-radius:6px;cursor:pointer;font-size:16px;line-height:1}
+.ed-add{margin-top:4px;padding:7px 12px;border:1px dashed var(--border);background:transparent;color:var(--primary);border-radius:var(--radius-sm);font-family:inherit;font-size:12px;font-weight:600;cursor:pointer}
+.edit-field{margin-top:14px}
+.edit-field label{display:block;font-size:12px;color:var(--text3);font-weight:600;margin-bottom:4px}
+.edit-field input{width:100%;padding:8px 10px;background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-sm);font-family:inherit;font-size:13px;color:var(--text);outline:none}
+.ed-save{background:var(--primary);color:#fff;border:none;padding:9px 18px;border-radius:var(--radius-sm);font-family:inherit;font-size:13px;font-weight:600;cursor:pointer}
+.ed-cancel{background:var(--bg);border:1px solid var(--border);color:var(--text2);padding:9px 18px;border-radius:var(--radius-sm);font-family:inherit;font-size:13px;font-weight:600;cursor:pointer}
+
 @media(max-width:900px){
   .cards{padding:12px 16px;gap:8px}
   .hdr h1{font-size:14px}
@@ -275,6 +298,28 @@ tr.corr-row td:first-child::after{content:"REANALISAR";display:inline-block;marg
       <div class="detail" id="detail">
         <div class="empty">Selecione um registro na tabela para ver os detalhes e a rota no mapa.</div>
       </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal de edição administrativa -->
+<div class="edit-modal" id="editModal" onclick="if(event.target===this)fecharEdicao()">
+  <div class="edit-box">
+    <div class="edit-head"><h3>Editar pedido</h3><div id="ed_proto" style="font-size:12px;color:var(--text3);margin-top:4px"></div></div>
+    <div class="edit-body">
+      <div style="font-size:12px;color:var(--text2);background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px;line-height:1.5">Edite, adicione ou remova trechos (ex.: incluir uma parada esquecida). A distância e os valores são recalculados ao salvar. Os prints do Maps das paradas já existentes são mantidos; paradas novas entram sem print.</div>
+      <div class="ed-group-title">➡️ Trechos da IDA</div>
+      <div id="ed_list_ida"></div>
+      <button class="ed-add" onclick="edAdd('ida')">+ Adicionar trecho (Ida)</button>
+      <div class="ed-group-title">↩️ Trechos da VOLTA</div>
+      <div id="ed_list_volta"></div>
+      <button class="ed-add" onclick="edAdd('volta')">+ Adicionar trecho (Volta)</button>
+      <div class="edit-field"><label>Preço real do litro (R$) — usado se o pedido não for estimativa</label><input type="number" id="ed_preco" step="0.01" inputmode="decimal"></div>
+      <div class="edit-field"><label>Motivo da edição (opcional)</label><input type="text" id="ed_motivo" placeholder="Ex: incluída parada esquecida na ida"></div>
+    </div>
+    <div class="edit-foot">
+      <button class="ed-cancel" onclick="fecharEdicao()">Cancelar</button>
+      <button class="ed-save" onclick="salvarEdicao()">Salvar e recalcular</button>
     </div>
   </div>
 </div>
@@ -475,6 +520,28 @@ function selecionar(idx){
 }
 function fecharDetalhe(){document.getElementById("detailModal").classList.remove("show");}
 
+// ── Edição administrativa (corrigir/adicionar/remover paradas pelo painel) ──
+function edAttr(s){return String(s==null?"":s).replace(/&/g,"&amp;").replace(/"/g,"&quot;").replace(/</g,"&lt;").replace(/>/g,"&gt;");}
+function edTrechoRow(t){t=t||{origem:"",destino:"",km:""};return '<div class="ed-trecho"><button class="ed-rm" onclick="this.parentElement.remove()" title="Remover">×</button><input class="ed-orig" placeholder="Origem" value="'+edAttr(t.origem)+'"><input class="ed-dest" placeholder="Destino" value="'+edAttr(t.destino)+'"><input class="ed-km" type="number" step="0.1" placeholder="km" value="'+edAttr(t.km)+'"></div>';}
+function edRender(fase,arr){var h="";for(var i=0;i<arr.length;i++)h+=edTrechoRow(arr[i]);document.getElementById("ed_list_"+fase).innerHTML=h;}
+function edAdd(fase){var d=document.createElement("div");d.innerHTML=edTrechoRow(null);document.getElementById("ed_list_"+fase).appendChild(d.firstChild);}
+function edColetar(fase){var out=[],els=document.querySelectorAll("#ed_list_"+fase+" .ed-trecho");for(var i=0;i<els.length;i++){out.push({origem:(els[i].querySelector(".ed-orig").value||"").trim(),destino:(els[i].querySelector(".ed-dest").value||"").trim(),km:els[i].querySelector(".ed-km").value});}return out;}
+function abrirEdicao(){if(!sel)return;edRender("ida",sel.ida_gps||[]);edRender("volta",sel.volta_gps||[]);document.getElementById("ed_proto").textContent=sel.protocolo+" — "+sel.nome;document.getElementById("ed_preco").value=sel.preco_real||sel.preco_base||"";document.getElementById("ed_motivo").value="";document.getElementById("editModal").classList.add("show");}
+function fecharEdicao(){document.getElementById("editModal").classList.remove("show");}
+function salvarEdicao(){
+  if(!sel)return;
+  var ida=edColetar("ida"),volta=edColetar("volta");
+  for(var i=0;i<ida.length;i++)if(!ida[i].origem||!ida[i].destino||!ida[i].km){alert("Preencha origem, destino e km do trecho IDA "+(i+1)+".");return;}
+  for(var i=0;i<volta.length;i++)if(!volta[i].origem||!volta[i].destino||!volta[i].km){alert("Preencha origem, destino e km do trecho VOLTA "+(i+1)+".");return;}
+  document.getElementById("ld").classList.remove("h");document.querySelector(".loading p").textContent="Salvando edição…";
+  apiPost({action:"editar_admin",token:ADMIN_TOKEN,protocolo:sel.protocolo,ida:ida,volta:volta,preco_real:document.getElementById("ed_preco").value,motivo:document.getElementById("ed_motivo").value.trim()})
+  .then(function(d){
+    if(d&&d.auth===false){logout(true);return;}
+    if(d&&d.success===false){alert(d.error);document.getElementById("ld").classList.add("h");return;}
+    fecharEdicao();fecharDetalhe();document.querySelector(".loading p").textContent="Carregando registros…";carregar();
+  }).catch(function(e){document.getElementById("ld").classList.add("h");alert("Erro: "+e.message);});
+}
+
 function renderActions(){
   var bar=document.getElementById("actionBar");
   if(!sel){
@@ -482,9 +549,10 @@ function renderActions(){
     return;
   }
   var d=sel,st=d.status;
+  var editBtn='<button class="abtn-edit" onclick="abrirEdicao()">✏️ Editar dados / paradas</button>';
   var h='<div class="action-bar-label">Ações — '+esc(d.protocolo)+'</div>';
   if(st==="PAGO"){
-    h+='<div class="approved-msg" style="background:#CCFBF1;border-color:#99F6E4;color:#0F766E">💰 Reembolso pago — processo concluído.</div>';
+    h+='<div class="approved-msg" style="background:#CCFBF1;border-color:#99F6E4;color:#0F766E">💰 Reembolso pago — processo concluído.</div>'+editBtn;
     bar.innerHTML=h;return;
   }
   if(st==="ABERTO"){
@@ -503,7 +571,7 @@ function renderActions(){
   var atual=st==="REJEITADO"?"REPROVADO":st;  // REJEITADO (legado) == Reprovado
   h+='<div class="action-btns">';
   ["APROVADO","PAGO","REVISÃO","REPROVADO"].forEach(function(k){if(k!==atual)h+=btns[k];});
-  h+='</div>';
+  h+='</div>'+editBtn;
   bar.innerHTML=h;
 }
 
