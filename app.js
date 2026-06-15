@@ -51,6 +51,8 @@ var CONTATO_BUSINESS = "+55 11 93623-3054";
 //   RECIBOS_FOLDER_ID  = ID da pasta no Drive onde os PDFs serão salvos
 var RECIBO_TEMPLATE_ID = propriedades.getProperty('RECIBO_TEMPLATE_ID');
 var RECIBOS_FOLDER_ID = propriedades.getProperty('RECIBOS_FOLDER_ID');
+// Destinatários do recibo gerado (separados por vírgula). NÃO vai para o solicitante.
+var EMAILS_RECIBO = propriedades.getProperty('EMAILS_RECIBO') || "lucas@rbcip.org,financeiro@rbcip.org";
 
 // 3. As demais variáveis continuam iguais, pois não são informações sensíveis
 var ABA = "Registros";
@@ -980,6 +982,30 @@ function gerarRecibo(dados) {
     var pdf = folder.createFile(blob);
     pdf.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
     copia.setTrashed(true);  // remove o Doc temporário; fica só o PDF
+
+    // Enviar o recibo aos e-mails internos (NÃO vai para o solicitante)
+    if (EMAILS_RECIBO) {
+      try {
+        MailApp.sendEmail({
+          to: EMAILS_RECIBO,
+          subject: "Recibo de reembolso Nº " + num + " — " + (dados.nome || "") + " (" + dados.protocolo + ")",
+          htmlBody: '<div style="font-family:Arial,sans-serif;max-width:520px;margin:0 auto">'
+            + '<div style="background:#1A3A5C;color:#fff;padding:16px 20px;border-radius:10px 10px 0 0">'
+            + '<h2 style="margin:0;font-size:18px">Recibo de Reembolso</h2></div>'
+            + '<div style="background:#fff;padding:20px;border-radius:0 0 10px 10px;border:1px solid #E2E8F0;border-top:none">'
+            + '<table style="width:100%;font-size:13px;color:#555;border-collapse:collapse">'
+            + '<tr><td style="padding:6px 0;font-weight:600">Recibo Nº</td><td style="padding:6px 0">' + num + '/' + new Date().getFullYear() + '</td></tr>'
+            + '<tr><td style="padding:6px 0;font-weight:600">Protocolo</td><td style="padding:6px 0">' + dados.protocolo + '</td></tr>'
+            + '<tr><td style="padding:6px 0;font-weight:600">Beneficiário</td><td style="padding:6px 0">' + (dados.nome || "") + '</td></tr>'
+            + '<tr><td style="padding:6px 0;font-weight:600">CPF</td><td style="padding:6px 0">' + (dados.cpf || "") + '</td></tr>'
+            + '<tr><td style="padding:6px 0;font-weight:600">Valor</td><td style="padding:6px 0;font-weight:700;color:#1A3A5C">' + valorFmt + '</td></tr></table>'
+            + '<p style="font-size:13px;color:#475569;margin:14px 0 0">📎 Recibo em PDF em anexo. <a href="' + pdf.getUrl() + '">Abrir no Drive</a></p>'
+            + '</div></div>',
+          attachments: [blob]
+        });
+      } catch (eMail) { Logger.log("Erro ao enviar recibo: " + eMail.message); }
+    }
+
     return { link: pdf.getUrl(), blob: blob, numero: num };
   } catch (e) {
     Logger.log("Erro ao gerar recibo: " + e.message);
@@ -1130,7 +1156,7 @@ function doAtualizarStatus(d) {
   }
 
   // ── Recibo: gera ao marcar como PAGO (se ainda não houver um) ──
-  var reciboBlob = null;
+  // O recibo é enviado aos e-mails internos dentro de gerarRecibo (não vai ao solicitante).
   if (d.novo_status === "PAGO" && !updated[38]) {
     var rec = gerarRecibo({
       protocolo: d.protocolo, nome: updated[11], cpf: updated[12],
@@ -1138,7 +1164,7 @@ function doAtualizarStatus(d) {
       descricao: "reembolso de deslocamento referente ao Protocolo " + d.protocolo + " (" + (updated[23] || 0) + " km)",
       imagens: comprovantesDaLinha(updated)
     });
-    if (rec) { updated[38] = rec.link; reciboBlob = rec.blob; }
+    if (rec) updated[38] = rec.link;
   }
 
   s.getRange(row, 1, 1, updated.length).setValues([updated]);
@@ -1196,9 +1222,7 @@ function doAtualizarStatus(d) {
         + '<p style="font-size:13px;color:#1E40AF;margin:0">🕐 O pagamento será processado em até <strong>5 dias úteis</strong>.</p></div>';
     } else if (d.novo_status === "PAGO") {
       instrucao = '<div style="background:#CCFBF1;padding:12px;border-radius:8px;margin-top:12px;border:1px solid #99F6E4">'
-        + '<p style="font-size:13px;color:#0F766E;margin:0">💰 O reembolso foi <strong>pago</strong>. Processo concluído — obrigado!</p>'
-        + (reciboBlob ? '<p style="font-size:13px;color:#0F766E;margin:8px 0 0">📎 O <strong>recibo</strong> está em anexo neste e-mail.</p>' : '')
-        + '</div>';
+        + '<p style="font-size:13px;color:#0F766E;margin:0">💰 O reembolso foi <strong>pago</strong>. Processo concluído — obrigado!</p></div>';
     }
 
     try {
@@ -1219,8 +1243,7 @@ function doAtualizarStatus(d) {
           + '<tr><td style="padding:6px 0;font-weight:600">Valor</td><td style="padding:6px 0;font-weight:700;color:#1A3A5C">R$ '+valTotal+'</td></tr>'
           + '<tr><td style="padding:6px 0;font-weight:600">Novo Status</td><td style="padding:6px 0;font-weight:700;color:'+ce.color+'">'+d.novo_status+'</td></tr></table>'
           + obsHtml + instrucao + rodapeEmail()
-          + '</div></div>',
-        attachments: reciboBlob ? [reciboBlob] : []
+          + '</div></div>'
       });
     } catch(emailErr) {
       Logger.log("Erro email status: " + emailErr.message);
