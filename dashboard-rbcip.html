@@ -314,6 +314,11 @@ tr.corr-row td:first-child::after{content:"REANALISAR";display:inline-block;marg
       <div class="ed-group-title">↩️ Trechos da VOLTA</div>
       <div id="ed_list_volta"></div>
       <button class="ed-add" onclick="edAdd('volta')">+ Adicionar trecho (Volta)</button>
+      <div class="ed-group-title">📄 Dados do recibo</div>
+      <div style="display:flex;gap:8px">
+        <div class="edit-field" style="flex:1;margin-top:0"><label>RG</label><input type="text" id="ed_rg" maxlength="20"></div>
+        <div class="edit-field" style="flex:1;margin-top:0"><label>Órgão emissor</label><input type="text" id="ed_orgao" maxlength="20" style="text-transform:uppercase"></div>
+      </div>
       <div class="edit-field"><label>Preço real do litro (R$) — usado se o pedido não for estimativa</label><input type="number" id="ed_preco" step="0.01" inputmode="decimal"></div>
       <div class="edit-field"><label>Motivo da edição (opcional)</label><input type="text" id="ed_motivo" placeholder="Ex: incluída parada esquecida na ida"></div>
     </div>
@@ -526,7 +531,7 @@ function edTrechoRow(t){t=t||{origem:"",destino:"",km:""};return '<div class="ed
 function edRender(fase,arr){var h="";for(var i=0;i<arr.length;i++)h+=edTrechoRow(arr[i]);document.getElementById("ed_list_"+fase).innerHTML=h;}
 function edAdd(fase){var d=document.createElement("div");d.innerHTML=edTrechoRow(null);document.getElementById("ed_list_"+fase).appendChild(d.firstChild);}
 function edColetar(fase){var out=[],els=document.querySelectorAll("#ed_list_"+fase+" .ed-trecho");for(var i=0;i<els.length;i++){out.push({origem:(els[i].querySelector(".ed-orig").value||"").trim(),destino:(els[i].querySelector(".ed-dest").value||"").trim(),km:els[i].querySelector(".ed-km").value});}return out;}
-function abrirEdicao(){if(!sel)return;edRender("ida",sel.ida_gps||[]);edRender("volta",sel.volta_gps||[]);document.getElementById("ed_proto").textContent=sel.protocolo+" — "+sel.nome;document.getElementById("ed_preco").value=sel.preco_real||sel.preco_base||"";document.getElementById("ed_motivo").value="";document.getElementById("editModal").classList.add("show");}
+function abrirEdicao(){if(!sel)return;edRender("ida",sel.ida_gps||[]);edRender("volta",sel.volta_gps||[]);document.getElementById("ed_proto").textContent=sel.protocolo+" — "+sel.nome;document.getElementById("ed_rg").value=sel.rg||"";document.getElementById("ed_orgao").value=sel.orgao||"";document.getElementById("ed_preco").value=sel.preco_real||sel.preco_base||"";document.getElementById("ed_motivo").value="";document.getElementById("editModal").classList.add("show");}
 function fecharEdicao(){document.getElementById("editModal").classList.remove("show");}
 function salvarEdicao(){
   if(!sel)return;
@@ -534,7 +539,7 @@ function salvarEdicao(){
   for(var i=0;i<ida.length;i++)if(!ida[i].origem||!ida[i].destino||!ida[i].km){alert("Preencha origem, destino e km do trecho IDA "+(i+1)+".");return;}
   for(var i=0;i<volta.length;i++)if(!volta[i].origem||!volta[i].destino||!volta[i].km){alert("Preencha origem, destino e km do trecho VOLTA "+(i+1)+".");return;}
   document.getElementById("ld").classList.remove("h");document.querySelector(".loading p").textContent="Salvando edição…";
-  apiPost({action:"editar_admin",token:ADMIN_TOKEN,protocolo:sel.protocolo,ida:ida,volta:volta,preco_real:document.getElementById("ed_preco").value,motivo:document.getElementById("ed_motivo").value.trim()})
+  apiPost({action:"editar_admin",token:ADMIN_TOKEN,protocolo:sel.protocolo,ida:ida,volta:volta,rg:document.getElementById("ed_rg").value.trim(),orgao:document.getElementById("ed_orgao").value.trim().toUpperCase(),preco_real:document.getElementById("ed_preco").value,motivo:document.getElementById("ed_motivo").value.trim()})
   .then(function(d){
     if(d&&d.auth===false){logout(true);return;}
     if(d&&d.success===false){alert(d.error);document.getElementById("ld").classList.add("h");return;}
@@ -586,7 +591,9 @@ function renderDetail(){
   h+=drow("Status",'<span class="st st-'+esc(d.status)+'">'+esc(d.status)+'</span>');
   h+=drow("Nome",esc(d.nome));
   h+=drow("CPF",esc(d.cpf));
+  h+=drow("RG",esc(d.rg||"—")+(d.orgao?" "+esc(d.orgao):""));
   h+=drow("Veículo",esc(d.veiculo)+" — "+esc(d.placa));
+  if(d.recibo_link)h+=drow("Recibo",'<a href="'+esc(d.recibo_link)+'" target="_blank" style="color:var(--primary);font-weight:600">📄 Ver recibo (PDF)</a>');
   h+='</div>';
 
   h+='<div class="detail-section">';
