@@ -111,8 +111,10 @@
   <div class="card"><div class="ct"><span class="ic" style="background:#EFF6FF;color:#2563EB">👤</span> Identificação</div>
     <div class="f"><label>Nome completo <span class="rq">*</span></label><input type="text" id="ci_nome" autocomplete="name"></div>
     <div class="f"><label>CPF <span class="rq">*</span></label><input type="text" id="ci_cpf" inputmode="numeric" maxlength="14"></div>
+    <div class="fr"><div class="f"><label>RG <span class="rq">*</span></label><input type="text" id="ci_rg" maxlength="20"></div><div class="f"><label>Órgão emissor <span class="rq">*</span></label><input type="text" id="ci_orgao" placeholder="Ex: SSP/SP" maxlength="20"></div></div>
     <div class="fr"><div class="f"><label>E-mail <span class="rq">*</span></label><input type="email" id="ci_email"></div><div class="f"><label>Telefone <span class="rq">*</span></label><input type="tel" id="ci_tel" maxlength="15"></div></div>
     <div class="fr"><div class="f"><label>Veículo <span class="rq">*</span></label><select id="ci_veic"><option value="">Selecione</option><option>Carro</option><option>Moto</option></select></div><div class="f"><label>Placa <span class="rq">*</span></label><input type="text" id="ci_placa" maxlength="8" style="text-transform:uppercase"></div></div>
+    <p style="font-size:11px;color:var(--text-muted);margin-top:4px">RG e órgão emissor são usados no recibo de reembolso.</p>
   </div>
   <div class="card"><div class="ct"><span class="ic" style="background:#FEF3C7;color:#D97706">📍</span> Paradas do Percurso</div>
     <div class="fr">
@@ -266,6 +268,7 @@
   <div class="card"><div class="ct"><span class="ic" style="background:#EFF6FF;color:#2563EB">👤</span> Identificação</div>
     <div class="f"><label>Nome completo <span class="rq">*</span></label><input type="text" id="lp_nome" autocomplete="name"></div>
     <div class="f"><label>CPF <span class="rq">*</span></label><input type="text" id="lp_cpf" inputmode="numeric" maxlength="14"></div>
+    <div class="fr"><div class="f"><label>RG <span class="rq">*</span></label><input type="text" id="lp_rg" maxlength="20"></div><div class="f"><label>Órgão emissor <span class="rq">*</span></label><input type="text" id="lp_orgao" placeholder="Ex: SSP/SP" maxlength="20"></div></div>
     <div class="fr"><div class="f"><label>E-mail <span class="rq">*</span></label><input type="email" id="lp_email"></div><div class="f"><label>Telefone <span class="rq">*</span></label><input type="tel" id="lp_tel" maxlength="15"></div></div>
     <div class="fr"><div class="f"><label>Veículo <span class="rq">*</span></label><select id="lp_veic"><option value="">Selecione</option><option>Carro</option><option>Moto</option></select></div><div class="f"><label>Placa <span class="rq">*</span></label><input type="text" id="lp_placa" maxlength="8" style="text-transform:uppercase"></div></div>
   </div>
@@ -339,6 +342,7 @@
 
   <div class="card"><div class="ct"><span class="ic" style="background:#EFF6FF;color:#2563EB">👤</span> Dados pessoais</div>
     <div class="f"><label>Nome completo</label><input type="text" id="corr_nome"></div>
+    <div class="fr"><div class="f"><label>RG</label><input type="text" id="corr_rg" maxlength="20"></div><div class="f"><label>Órgão emissor</label><input type="text" id="corr_orgao" maxlength="20" style="text-transform:uppercase"></div></div>
     <div class="fr"><div class="f"><label>E-mail</label><input type="email" id="corr_email"></div><div class="f"><label>Telefone</label><input type="tel" id="corr_tel" maxlength="15"></div></div>
     <div class="fr"><div class="f"><label>Veículo</label><select id="corr_veic"><option>Carro</option><option>Moto</option></select></div><div class="f"><label>Placa</label><input type="text" id="corr_placa" maxlength="8" style="text-transform:uppercase"></div></div>
   </div>
@@ -453,9 +457,11 @@ function capFile(inp,pvId,phId,zId){var file=inp.files[0];if(!file)return;compre
 
 // ═══ CHECK-IN ═══
 function goCheckin(){show("secCI");reqGPS("ci_gs","ci_gt");clock("ci_ck");trip={}}
-function enviarCI(){var erros=[];["ci_nome","ci_cpf","ci_email","ci_tel","ci_veic","ci_placa"].forEach(function(id){document.getElementById(id).style.borderColor=""});
+function enviarCI(){var erros=[];["ci_nome","ci_cpf","ci_rg","ci_orgao","ci_email","ci_tel","ci_veic","ci_placa"].forEach(function(id){document.getElementById(id).style.borderColor=""});
   if(!document.getElementById("ci_nome").value.trim()){markErr("ci_nome");erros.push("• Nome")}
   var cpf=document.getElementById("ci_cpf").value.trim();if(!cpf){markErr("ci_cpf");erros.push("• CPF")}else if(!validarCPF(cpf)){markErr("ci_cpf");erros.push("• CPF inválido")}
+  if(!document.getElementById("ci_rg").value.trim()){markErr("ci_rg");erros.push("• RG")}
+  if(!document.getElementById("ci_orgao").value.trim()){markErr("ci_orgao");erros.push("• Órgão emissor")}
   var em=document.getElementById("ci_email").value.trim();if(!em){markErr("ci_email");erros.push("• E-mail")}else if(!validarEmail(em)){markErr("ci_email");erros.push("• E-mail inválido")}
   var tel=document.getElementById("ci_tel").value.trim();if(!tel){markErr("ci_tel");erros.push("• Telefone")}else if(!validarTel(tel)){markErr("ci_tel");erros.push("• Telefone inválido")}
   if(!document.getElementById("ci_veic").value){markErr("ci_veic");erros.push("• Veículo")}
@@ -463,9 +469,9 @@ function enviarCI(){var erros=[];["ci_nome","ci_cpf","ci_email","ci_tel","ci_vei
   if(!trip||!trip.checkin_foto)erros.push("• Foto do odômetro");
   if(erros.length){alert("Corrija:\n\n"+erros.join("\n"));return}
   var proto="RB-"+Date.now().toString(36).toUpperCase();
-  trip.protocolo=proto;trip.nome=document.getElementById("ci_nome").value;trip.cpf=document.getElementById("ci_cpf").value;trip.email=document.getElementById("ci_email").value;trip.telefone=document.getElementById("ci_tel").value;trip.veiculo=document.getElementById("ci_veic").value;trip.placa=document.getElementById("ci_placa").value.toUpperCase();trip.ida_plan=parseInt(document.getElementById("ci_ida").value)||1;var _vp=parseInt(document.getElementById("ci_volta").value,10);trip.volta_plan=isNaN(_vp)?1:_vp;trip.ida_paradas=[];trip.volta_paradas=[];trip.ida_count=0;trip.volta_count=0;
+  trip.protocolo=proto;trip.nome=document.getElementById("ci_nome").value;trip.cpf=document.getElementById("ci_cpf").value;trip.rg=document.getElementById("ci_rg").value.trim();trip.orgao=document.getElementById("ci_orgao").value.trim().toUpperCase();trip.email=document.getElementById("ci_email").value;trip.telefone=document.getElementById("ci_tel").value;trip.veiculo=document.getElementById("ci_veic").value;trip.placa=document.getElementById("ci_placa").value.toUpperCase();trip.ida_plan=parseInt(document.getElementById("ci_ida").value)||1;var _vp=parseInt(document.getElementById("ci_volta").value,10);trip.volta_plan=isNaN(_vp)?1:_vp;trip.ida_paradas=[];trip.volta_paradas=[];trip.ida_count=0;trip.volta_count=0;
   ld("Registrando check-in…");
-  post({action:"checkin",protocolo:proto,nome:trip.nome,cpf:trip.cpf,email:trip.email,telefone:trip.telefone,veiculo:trip.veiculo,placa:trip.placa,checkin_timestamp:trip.checkin_timestamp,checkin_lat:trip.checkin_lat,checkin_lng:trip.checkin_lng,img_odometro_saida:trip.checkin_foto,ida_paradas:trip.ida_plan,volta_paradas:trip.volta_plan}).then(function(r){hd();if(r&&r.success===false){alert(r.error);return}saveTrip(trip);document.getElementById("ci_proto").textContent="Protocolo: "+proto;show("secCIOk")}).catch(function(e){hd();alert("Erro: "+e.message)})}
+  post({action:"checkin",protocolo:proto,nome:trip.nome,cpf:trip.cpf,rg:trip.rg,orgao:trip.orgao,email:trip.email,telefone:trip.telefone,veiculo:trip.veiculo,placa:trip.placa,checkin_timestamp:trip.checkin_timestamp,checkin_lat:trip.checkin_lat,checkin_lng:trip.checkin_lng,img_odometro_saida:trip.checkin_foto,ida_paradas:trip.ida_plan,volta_paradas:trip.volta_plan}).then(function(r){hd();if(r&&r.success===false){alert(r.error);return}saveTrip(trip);document.getElementById("ci_proto").textContent="Protocolo: "+proto;show("secCIOk")}).catch(function(e){hd();alert("Erro: "+e.message)})}
 
 // ═══ VIAGEM ═══
 function goViagem(){trip=loadTrip();if(!trip)return;show("secViagem");ld("Atualizando…");
@@ -593,7 +599,7 @@ function abrirCorr(protocolo){show("secCorrigir");document.getElementById("corr_
 function corrPreencher(p){corrPedido=p;corrPedN=0;corrTrechoN=0;
   document.getElementById("corr_motivo").innerHTML=p.observacao?('📋 <strong>Motivo da revisão:</strong> '+escTxt(p.observacao)):'O gestor solicitou ajustes. Revise os dados abaixo e reenvie.';
   document.getElementById("corr_info").textContent="Protocolo: "+p.protocolo;
-  document.getElementById("corr_nome").value=p.nome||"";document.getElementById("corr_email").value=p.email||"";document.getElementById("corr_tel").value=p.telefone||"";
+  document.getElementById("corr_nome").value=p.nome||"";document.getElementById("corr_rg").value=p.rg||"";document.getElementById("corr_orgao").value=p.orgao||"";document.getElementById("corr_email").value=p.email||"";document.getElementById("corr_tel").value=p.telefone||"";
   document.getElementById("corr_veic").value=(p.veiculo==="Moto")?"Moto":"Carro";document.getElementById("corr_placa").value=p.placa||"";
   corrRenderTrechos("ida",p.ida||[]);corrRenderTrechos("volta",p.volta||[]);
   document.getElementById("corr_volta_card").style.display="block";
@@ -625,7 +631,7 @@ function enviarCorrecao(){if(!corrPedido)return;var proto=corrPedido.protocolo;
     var voltaArr=volta.map(function(t,i){return {origem:t.origem,destino:t.destino,km:t.km,maps_link:links["mv"+i]||""}});
     var pedArr=peds.map(function(pp,i){return {fase:pp.fase,valor:pp.valor,foto_link:links["ped"+i]||pp.foto_link||""}});
     ld("Enviando correção…");
-    post({action:"corrigir",protocolo:proto,descricao:document.getElementById("corr_desc").value.trim(),nome:document.getElementById("corr_nome").value,email:document.getElementById("corr_email").value,telefone:document.getElementById("corr_tel").value,veiculo:document.getElementById("corr_veic").value,placa:document.getElementById("corr_placa").value.toUpperCase(),ida:idaArr,volta:voltaArr,odo_saida_link:links["odoS"]||"",odo_chegada_link:links["odoC"]||"",usar_estimativa:usarEstim,preco_real:usarEstim?PB:preco,cupom_link:links["cup"]||"",pedagios:pedArr}).then(function(r){hd();if(r&&r.success===false){alert(r.error);return}document.getElementById("ok_proto").textContent="Protocolo: "+proto;document.getElementById("ok_val").textContent=r&&r.valor_total?"R$ "+r.valor_total+" (corrigido)":"";show("secOk")}).catch(function(e){hd();alert("Erro: "+e.message)})
+    post({action:"corrigir",protocolo:proto,descricao:document.getElementById("corr_desc").value.trim(),nome:document.getElementById("corr_nome").value,rg:document.getElementById("corr_rg").value.trim(),orgao:document.getElementById("corr_orgao").value.trim().toUpperCase(),email:document.getElementById("corr_email").value,telefone:document.getElementById("corr_tel").value,veiculo:document.getElementById("corr_veic").value,placa:document.getElementById("corr_placa").value.toUpperCase(),ida:idaArr,volta:voltaArr,odo_saida_link:links["odoS"]||"",odo_chegada_link:links["odoC"]||"",usar_estimativa:usarEstim,preco_real:usarEstim?PB:preco,cupom_link:links["cup"]||"",pedagios:pedArr}).then(function(r){hd();if(r&&r.success===false){alert(r.error);return}document.getElementById("ok_proto").textContent="Protocolo: "+proto;document.getElementById("ok_val").textContent=r&&r.valor_total?"R$ "+r.valor_total+" (corrigido)":"";show("secOk")}).catch(function(e){hd();alert("Erro: "+e.message)})
   }
   function next(){if(idx>=total){done();return}var tk=tasks[idx];ld("Enviando imagem "+(idx+1)+" de "+total+"…");uploadImgP(proto,tk.b64,tk.name).then(function(link){links[tk.key]=link;idx++;next()}).catch(function(){hd();alert("Falha ao enviar imagem "+(idx+1)+". Verifique o sinal e tente novamente.")})}
   if(total){ld("Enviando imagens…");next()}else{done()}}
@@ -633,7 +639,7 @@ function enviarCorrecao(){if(!corrPedido)return;var proto=corrPedido.protocolo;
 var lpGps=null,lpTrechoN=0,lpFuelMode="cupom";
 function lpResetCz(vId,pId,zId){var v=document.getElementById(vId);if(v){v.style.display="none";v.src=""}var p=document.getElementById(pId);if(p)p.style.display="block";var z=document.getElementById(zId);if(z)z.classList.remove("ok")}
 function goPosterior(){show("secPosterior");lpGps=null;lpTrechoN=0;lpFuelMode="cupom";
-  ["lp_nome","lp_cpf","lp_email","lp_tel","lp_placa","lp_data","lp_hora_saida","lp_hora_chegada","lp_preco"].forEach(function(id){document.getElementById(id).value=""});
+  ["lp_nome","lp_cpf","lp_rg","lp_orgao","lp_email","lp_tel","lp_placa","lp_data","lp_hora_saida","lp_hora_chegada","lp_preco"].forEach(function(id){document.getElementById(id).value=""});
   document.getElementById("lp_veic").value="";
   ["lp_odo_saida","lp_odo_chegada","lp_cupom"].forEach(function(id){document.getElementById(id).dataset.compressed=""});
   lpResetCz("lp_odo_saida_v","lp_odo_saida_p","lp_odo_saida_z");lpResetCz("lp_odo_chegada_v","lp_odo_chegada_p","lp_odo_chegada_z");lpResetCz("lp_cupv","lp_cuph","lp_cupz");
@@ -656,6 +662,8 @@ function lpCalcular(){
   var cpf=document.getElementById("lp_cpf").value.trim();if(!cpf){erros.push("• CPF")}else if(!validarCPF(cpf))erros.push("• CPF inválido");
   var em=document.getElementById("lp_email").value.trim();if(!em){erros.push("• E-mail")}else if(!validarEmail(em))erros.push("• E-mail inválido");
   var tel=document.getElementById("lp_tel").value.trim();if(!tel){erros.push("• Telefone")}else if(!validarTel(tel))erros.push("• Telefone inválido");
+  if(!document.getElementById("lp_rg").value.trim())erros.push("• RG");
+  if(!document.getElementById("lp_orgao").value.trim())erros.push("• Órgão emissor");
   if(!document.getElementById("lp_veic").value)erros.push("• Veículo");
   if(!document.getElementById("lp_placa").value.trim())erros.push("• Placa");
   if(!document.getElementById("lp_data").value)erros.push("• Data da viagem");
@@ -716,7 +724,7 @@ function lpEnviarPayload(proto,ciISO,coISO,ida,volta,peds,usarEstim,links,semOdo
   var voltaArr=[];for(var i=0;i<volta.length;i++)voltaArr.push({origem:volta[i].origem,destino:volta[i].destino,km:volta[i].km,maps_link:links["mv"+i]||"",lat:lpGps?lpGps.lat:null,lng:lpGps?lpGps.lng:null,timestamp:coISO});
   var pedArr=[];for(var i=0;i<peds.length;i++)pedArr.push({fase:peds[i].fase,valor:peds[i].valor,foto_link:links["ped"+i]||""});
   ld("Finalizando lançamento…");
-  var payload={action:"lancamento_posterior",protocolo:proto,nome:document.getElementById("lp_nome").value,cpf:document.getElementById("lp_cpf").value,email:document.getElementById("lp_email").value,telefone:document.getElementById("lp_tel").value,veiculo:document.getElementById("lp_veic").value,placa:document.getElementById("lp_placa").value.toUpperCase(),checkin_timestamp:ciISO,checkout_timestamp:coISO,checkin_lat:lpGps?lpGps.lat:null,checkin_lng:lpGps?lpGps.lng:null,checkout_lat:lpGps?lpGps.lat:null,checkout_lng:lpGps?lpGps.lng:null,img_odometro_saida_link:links["odoS"]||"",img_odometro_chegada_link:links["odoC"]||"",sem_odometro:semOdo===true,ida:idaArr,volta:voltaArr,pedagios:pedArr,usar_estimativa:usarEstim,preco_real:usarEstim?PB:document.getElementById("lp_preco").value,img_cupom_link:links["cup"]||""};
+  var payload={action:"lancamento_posterior",protocolo:proto,nome:document.getElementById("lp_nome").value,cpf:document.getElementById("lp_cpf").value,rg:document.getElementById("lp_rg").value.trim(),orgao:document.getElementById("lp_orgao").value.trim().toUpperCase(),email:document.getElementById("lp_email").value,telefone:document.getElementById("lp_tel").value,veiculo:document.getElementById("lp_veic").value,placa:document.getElementById("lp_placa").value.toUpperCase(),checkin_timestamp:ciISO,checkout_timestamp:coISO,checkin_lat:lpGps?lpGps.lat:null,checkin_lng:lpGps?lpGps.lng:null,checkout_lat:lpGps?lpGps.lat:null,checkout_lng:lpGps?lpGps.lng:null,img_odometro_saida_link:links["odoS"]||"",img_odometro_chegada_link:links["odoC"]||"",sem_odometro:semOdo===true,ida:idaArr,volta:voltaArr,pedagios:pedArr,usar_estimativa:usarEstim,preco_real:usarEstim?PB:document.getElementById("lp_preco").value,img_cupom_link:links["cup"]||""};
   post(payload).then(function(r){hd();if(r&&r.success===false){document.getElementById("lp_btnEnv").disabled=false;alert(r.error);return}document.getElementById("ok_proto").textContent="Protocolo: "+proto;document.getElementById("ok_val").textContent=r&&r.valor_total?"R$ "+r.valor_total:"";show("secOk")}).catch(function(e){hd();document.getElementById("lp_btnEnv").disabled=false;alert("Erro: "+e.message)})}
 var instrAberto=true;
 function toggleInstr(){instrAberto=!instrAberto;document.getElementById("instrBody").style.maxHeight=instrAberto?"2000px":"0";document.getElementById("instrArrow").style.transform=instrAberto?"":"rotate(-90deg)"}

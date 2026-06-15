@@ -46,6 +46,11 @@ var PAINEL_SENHA = propriedades.getProperty('PAINEL_SENHA');
 var ADMIN_EMAIL = propriedades.getProperty('ADMIN_EMAIL');
 // Contato de suporte exibido nos e-mails e avisos do app
 var CONTATO_BUSINESS = "+55 11 93623-3054";
+// Geração de recibo (substitui o Autocrat). Defina nas Propriedades do script:
+//   RECIBO_TEMPLATE_ID = ID do Google Doc modelo (com as tags <<...>>)
+//   RECIBOS_FOLDER_ID  = ID da pasta no Drive onde os PDFs serão salvos
+var RECIBO_TEMPLATE_ID = propriedades.getProperty('RECIBO_TEMPLATE_ID');
+var RECIBOS_FOLDER_ID = propriedades.getProperty('RECIBOS_FOLDER_ID');
 
 // 3. As demais variáveis continuam iguais, pois não são informações sensíveis
 var ABA = "Registros";
@@ -66,7 +71,7 @@ var LOCK_TIMEOUT = 15000; // 15s
 function setupPlanilha() {
   var ss = SpreadsheetApp.openById(SPREADSHEET_ID);
   var s = ss.getSheetByName(ABA); if (!s) s = ss.insertSheet(ABA);
-  var h = ["Protocolo","Status","CI DH","CI Lat","CI Lng","CI Foto","CO DH","CO Lat","CO Lng","CO Foto","Tempo","Nome","CPF","E-mail","Telefone","Veículo","Placa","Ida Plan","Ida Trechos","Ida Qtd","Volta Plan","Volta Trechos","Volta Qtd","Dist Total (km)","Pedágios","Qtd Ped","Val Pedágios","Comprov Ped","Usou Estimativa?","Preço Base","Preço Real","Cupom Comb","Val Estimado","Val Real","Val Total","Validação"];
+  var h = ["Protocolo","Status","CI DH","CI Lat","CI Lng","CI Foto","CO DH","CO Lat","CO Lng","CO Foto","Tempo","Nome","CPF","E-mail","Telefone","Veículo","Placa","Ida Plan","Ida Trechos","Ida Qtd","Volta Plan","Volta Trechos","Volta Qtd","Dist Total (km)","Pedágios","Qtd Ped","Val Pedágios","Comprov Ped","Usou Estimativa?","Preço Base","Preço Real","Cupom Comb","Val Estimado","Val Real","Val Total","Validação","RG","Órgão Emissor","Recibo"];
   s.getRange(1,1,1,h.length).setValues([h]);
   s.getRange(1,1,1,h.length).setFontWeight("bold").setBackground("#1A3A5C").setFontColor("#FFF").setFontFamily("Arial").setFontSize(9).setHorizontalAlignment("center").setWrap(true);
   s.setFrozenRows(1);
@@ -173,7 +178,8 @@ function doCheckin(d) {
   var row = [d.protocolo, "ABERTO", fts(d.checkin_timestamp), d.checkin_lat||"", d.checkin_lng||"", foto,
     "","","","","", d.nome, d.cpf, d.email, d.telefone, d.veiculo, d.placa,
     d.ida_paradas||1, "", 0, d.volta_paradas||0, "", 0,
-    0, "", 0, "", "", "", PRECO_BASE, "", "", "", "", "", ""];
+    0, "", 0, "", "", "", PRECO_BASE, "", "", "", "", "", "",
+    d.rg||"", d.orgao||"", ""];   // AK=RG, AL=Órgão Emissor, AM=Recibo
   s.appendRow(row);
 
   // Formatar status — 1 chamada
@@ -423,7 +429,8 @@ function doLancamentoPosterior(d) {
     volta.length || 0, voltaTxt, volta.length,
     dTot, pTxt.trim(), peds.length, tPed.toFixed(2), pLnk.join("\n"),
     usouEstim ? "Sim" : "Não", PRECO_BASE, pReal, d.img_cupom_link||"",
-    vEst.toFixed(2), vReal.toFixed(2), vTot.toFixed(2), val
+    vEst.toFixed(2), vReal.toFixed(2), vTot.toFixed(2), val,
+    d.rg||"", d.orgao||"", ""   // AK=RG, AL=Órgão Emissor, AM=Recibo
   ];
   s.appendRow(row);
   var lastRow = s.getLastRow();
@@ -482,6 +489,8 @@ function doCorrigir(d) {
   if (d.telefone) updated[14] = d.telefone;
   if (d.veiculo) updated[15] = d.veiculo;
   if (d.placa) updated[16] = d.placa;
+  if (d.rg !== undefined) updated[36] = d.rg;
+  if (d.orgao !== undefined) updated[37] = d.orgao;
 
   // ── Trechos: reconstrói preservando data/hora e GPS originais ──
   var origIda = String(rowData[18]||"").split("\n").filter(function(x){return x.trim();});
@@ -599,6 +608,15 @@ function doEditarAdmin(d) {
   var row = info.row, rowData = info.data;
   var updated = rowData.slice();
 
+  // Dados pessoais (inclui RG / Órgão Emissor, usados no recibo)
+  if (d.nome !== undefined) updated[11] = d.nome;
+  if (d.email !== undefined) updated[13] = d.email;
+  if (d.telefone !== undefined) updated[14] = d.telefone;
+  if (d.veiculo !== undefined && d.veiculo) updated[15] = d.veiculo;
+  if (d.placa !== undefined) updated[16] = d.placa;
+  if (d.rg !== undefined) updated[36] = d.rg;
+  if (d.orgao !== undefined) updated[37] = d.orgao;
+
   // Trechos: reconstrói preservando data/hora e GPS originais; novos trechos
   // (parada esquecida) entram sem GPS/Maps. Distância recalculada pelos km.
   var origIda = String(rowData[18]||"").split("\n").filter(function(x){return x.trim();});
@@ -635,6 +653,7 @@ function carregarPedido(p) {
       return jr({success: true, found: true, pedido: {
         protocolo: d[0], status: String(d[1]).trim(),
         nome: d[11], cpf: d[12], email: d[13], telefone: d[14], veiculo: d[15], placa: d[16],
+        rg: d[36] || "", orgao: d[37] || "",
         ida: parseTrechosFull(d[18]), volta: parseTrechosFull(d[21]),
         dist_total: d[23], pedagios_texto: d[24]||"",
         usou_estimativa: d[28], preco_base: d[29], preco_real: d[30],
@@ -829,6 +848,136 @@ function rodapeEmail() {
     + '<p style="font-size:13px;color:#475569;margin:0">📱 Qualquer problema ou dúvida, fale comigo: <strong>' + CONTATO_BUSINESS + '</strong></p></div>';
 }
 
+// ══════════════════════════════════════════════════════════════
+// GERAÇÃO DE RECIBO (substitui o Autocrat)
+// Copia um Google Doc modelo, troca as tags <<...>>, exporta em PDF,
+// salva na pasta de recibos e devolve {link, blob, numero}.
+// ══════════════════════════════════════════════════════════════
+function dataPorExtenso(dt) {
+  var meses = ["janeiro","fevereiro","março","abril","maio","junho","julho","agosto","setembro","outubro","novembro","dezembro"];
+  return dt.getDate() + " de " + meses[dt.getMonth()] + " de " + dt.getFullYear();
+}
+
+function valorPorExtenso(v) {
+  v = Number(v) || 0;
+  var reais = Math.floor(v + 1e-9);
+  var centavos = Math.round((v - reais) * 100);
+  var u = ["","um","dois","três","quatro","cinco","seis","sete","oito","nove","dez","onze","doze","treze","quatorze","quinze","dezesseis","dezessete","dezoito","dezenove"];
+  var d = ["","","vinte","trinta","quarenta","cinquenta","sessenta","setenta","oitenta","noventa"];
+  var c = ["","cento","duzentos","trezentos","quatrocentos","quinhentos","seiscentos","setecentos","oitocentos","novecentos"];
+  function tres(n) {
+    if (n === 0) return "";
+    if (n === 100) return "cem";
+    var s = [], cent = Math.floor(n/100), resto = n%100;
+    if (cent > 0) s.push(c[cent]);
+    if (resto > 0) {
+      if (resto < 20) s.push(u[resto]);
+      else { var dez = Math.floor(resto/10), uni = resto%10; s.push(d[dez] + (uni > 0 ? " e " + u[uni] : "")); }
+    }
+    return s.join(" e ");
+  }
+  function ext(n) {
+    if (n === 0) return "zero";
+    var partes = [];
+    var milhoes = Math.floor(n/1000000), milhares = Math.floor((n%1000000)/1000), resto = n%1000;
+    if (milhoes > 0) partes.push(milhoes === 1 ? "um milhão" : tres(milhoes) + " milhões");
+    if (milhares > 0) partes.push(milhares === 1 ? "mil" : tres(milhares) + " mil");
+    if (resto > 0) partes.push(tres(resto));
+    return partes.join(" e ");
+  }
+  var txt = "";
+  if (reais > 0) txt += ext(reais) + (reais === 1 ? " real" : " reais");
+  if (centavos > 0) { if (reais > 0) txt += " e "; txt += ext(centavos) + (centavos === 1 ? " centavo" : " centavos"); }
+  if (reais === 0 && centavos === 0) txt = "zero reais";
+  return txt;
+}
+
+function proximoNumeroRecibo() {
+  var n = parseInt(propriedades.getProperty('RECIBO_SEQ') || "0", 10) + 1;
+  propriedades.setProperty('RECIBO_SEQ', String(n));
+  return ("00" + n).slice(-3);
+}
+
+function blobFromDriveUrl(url) {
+  try {
+    var m = String(url).match(/[-\w]{25,}/);  // ID do arquivo no Drive
+    if (!m) return null;
+    return DriveApp.getFileById(m[0]).getBlob();
+  } catch (e) { return null; }
+}
+
+// Substitui <<Link Imagem Autocrat>> pelos comprovantes da viagem (pág. 2)
+function inserirComprovantes(body, imagens) {
+  var found = body.findText("<<Link Imagem Autocrat>>");
+  if (!found) return;
+  var el = found.getElement();
+  el.asText().setText("");                 // limpa o placeholder
+  var par = el.getParent();
+  var parent = par.getParent();
+  var at;
+  try { at = parent.getChildIndex(par) + 1; } catch (e) { return; }
+  for (var i = 0; i < imagens.length; i++) {
+    var blob = blobFromDriveUrl(imagens[i].url);
+    if (!blob) continue;
+    try {
+      var cap = parent.insertParagraph(at++, imagens[i].label);
+      cap.editAsText().setBold(true).setFontSize(9);
+      var imgPar = parent.insertParagraph(at++, "");
+      var inl = imgPar.appendInlineImage(blob);
+      var w = inl.getWidth(), hh = inl.getHeight(), maxW = 380;
+      if (w > maxW) { inl.setWidth(maxW); inl.setHeight(Math.round(hh * maxW / w)); }
+    } catch (e) {}
+  }
+}
+
+// dados: {protocolo,nome,cpf,rg,orgao,valor,descricao,imagens:[{label,url}]}
+function gerarRecibo(dados) {
+  if (!RECIBO_TEMPLATE_ID || !RECIBOS_FOLDER_ID) return null;  // não configurado → ignora
+  try {
+    var folder = DriveApp.getFolderById(RECIBOS_FOLDER_ID);
+    var num = proximoNumeroRecibo();
+    var nomeArq = "Recibo_" + num + "_" + dados.protocolo;
+    var copia = DriveApp.getFileById(RECIBO_TEMPLATE_ID).makeCopy(nomeArq, folder);
+    var doc = DocumentApp.openById(copia.getId());
+    var body = doc.getBody();
+    var valorFmt = "R$ " + (Number(dados.valor) || 0).toFixed(2).replace(".", ",");
+    body.replaceText("<<Nome_Completo>>", dados.nome || "");
+    body.replaceText("<<RG>>", dados.rg || "—");
+    body.replaceText("<<Orgao_Emissor>>", dados.orgao || "");
+    body.replaceText("<<CPF>>", dados.cpf || "");
+    body.replaceText("<<Valor_Total>>", valorFmt);
+    body.replaceText("<<Valor_Extenso>>", valorPorExtenso(dados.valor));
+    body.replaceText("<<Descricao_Pagamento>>", dados.descricao || "reembolso de deslocamento");
+    body.replaceText("<<Chave_Pix>>", dados.cpf || "");
+    body.replaceText("<<Data_Atual>>", dataPorExtenso(new Date()));
+    body.replaceText("<<Nome_Assinatura>>", dados.nome || "");
+    body.replaceText("<<N_Recibo>>", num);
+    inserirComprovantes(body, dados.imagens || []);
+    doc.saveAndClose();
+    var blob = copia.getAs("application/pdf").setName(nomeArq + ".pdf");
+    var pdf = folder.createFile(blob);
+    pdf.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+    copia.setTrashed(true);  // remove o Doc temporário; fica só o PDF
+    return { link: pdf.getUrl(), blob: blob, numero: num };
+  } catch (e) {
+    Logger.log("Erro ao gerar recibo: " + e.message);
+    return null;
+  }
+}
+
+// Monta a lista de comprovantes (odômetro, Maps, cupom) a partir da linha
+function comprovantesDaLinha(rowData) {
+  var imgs = [];
+  if (rowData[5]) imgs.push({label: "Odômetro — saída", url: rowData[5]});
+  if (rowData[9]) imgs.push({label: "Odômetro — chegada", url: rowData[9]});
+  var mIda = String(rowData[18] || "").match(/Maps:\s*(\S+)/g) || [];
+  for (var i = 0; i < mIda.length; i++) imgs.push({label: "Maps — ida " + (i+1), url: mIda[i].replace(/Maps:\s*/, "")});
+  var mVolta = String(rowData[21] || "").match(/Maps:\s*(\S+)/g) || [];
+  for (var i = 0; i < mVolta.length; i++) imgs.push({label: "Maps — volta " + (i+1), url: mVolta[i].replace(/Maps:\s*/, "")});
+  if (rowData[31]) imgs.push({label: "Cupom combustível", url: rowData[31]});
+  return imgs;
+}
+
 function jr(o) {
   return ContentService.createTextOutput(JSON.stringify(o)).setMimeType(ContentService.MimeType.JSON);
 }
@@ -901,7 +1050,10 @@ function listarRegistros(statusFiltro) {
       val_estimado: row[32],
       val_real: row[33],
       val_total: row[34],
-      validacao: row[35]
+      validacao: row[35],
+      rg: row[36] || "",
+      orgao: row[37] || "",
+      recibo_link: row[38] || ""
     });
   }
 
@@ -953,6 +1105,18 @@ function doAtualizarStatus(d) {
   // Se há observação do admin, adicionar na validação
   if (d.observacao) {
     updated[35] = (updated[35] ? updated[35] + " | " : "") + "ADMIN: " + d.observacao;
+  }
+
+  // ── Recibo: gera ao marcar como PAGO (se ainda não houver um) ──
+  var reciboBlob = null;
+  if (d.novo_status === "PAGO" && !updated[38]) {
+    var rec = gerarRecibo({
+      protocolo: d.protocolo, nome: updated[11], cpf: updated[12],
+      rg: updated[36], orgao: updated[37], valor: updated[34],
+      descricao: "reembolso de deslocamento referente ao Protocolo " + d.protocolo + " (" + (updated[23] || 0) + " km)",
+      imagens: comprovantesDaLinha(updated)
+    });
+    if (rec) { updated[38] = rec.link; reciboBlob = rec.blob; }
   }
 
   s.getRange(row, 1, 1, updated.length).setValues([updated]);
@@ -1010,7 +1174,9 @@ function doAtualizarStatus(d) {
         + '<p style="font-size:13px;color:#1E40AF;margin:0">🕐 O pagamento será processado em até <strong>5 dias úteis</strong>.</p></div>';
     } else if (d.novo_status === "PAGO") {
       instrucao = '<div style="background:#CCFBF1;padding:12px;border-radius:8px;margin-top:12px;border:1px solid #99F6E4">'
-        + '<p style="font-size:13px;color:#0F766E;margin:0">💰 O reembolso foi <strong>pago</strong>. Processo concluído — obrigado!</p></div>';
+        + '<p style="font-size:13px;color:#0F766E;margin:0">💰 O reembolso foi <strong>pago</strong>. Processo concluído — obrigado!</p>'
+        + (reciboBlob ? '<p style="font-size:13px;color:#0F766E;margin:8px 0 0">📎 O <strong>recibo</strong> está em anexo neste e-mail.</p>' : '')
+        + '</div>';
     }
 
     try {
@@ -1031,7 +1197,8 @@ function doAtualizarStatus(d) {
           + '<tr><td style="padding:6px 0;font-weight:600">Valor</td><td style="padding:6px 0;font-weight:700;color:#1A3A5C">R$ '+valTotal+'</td></tr>'
           + '<tr><td style="padding:6px 0;font-weight:600">Novo Status</td><td style="padding:6px 0;font-weight:700;color:'+ce.color+'">'+d.novo_status+'</td></tr></table>'
           + obsHtml + instrucao + rodapeEmail()
-          + '</div></div>'
+          + '</div></div>',
+        attachments: reciboBlob ? [reciboBlob] : []
       });
     } catch(emailErr) {
       Logger.log("Erro email status: " + emailErr.message);
