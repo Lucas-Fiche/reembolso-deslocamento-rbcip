@@ -139,6 +139,10 @@ function doPost(e) {
       if (!authAdmin(d.token)) return jr({success: false, auth: false, error: "Não autorizado."});
       return withLock(function(){ return doEditarAdmin(d); });
     }
+    if (d.action === "gerar_recibo") {
+      if (!authAdmin(d.token)) return jr({success: false, auth: false, error: "Não autorizado."});
+      return withLock(function(){ return doGerarRecibo(d); });
+    }
     return jr({success: false, error: "Ação desconhecida"});
   } catch(err) { return jr({success: false, error: err.message}); }
 }
@@ -640,6 +644,24 @@ function doEditarAdmin(d) {
 
   s.getRange(row, 1, 1, updated.length).setValues([updated]);
   return jr({success: true, protocolo: d.protocolo, valor_total: vT.toFixed(2)});
+}
+
+// GERAR RECIBO NOVAMENTE — reemite o recibo (novo número) e atualiza o link
+function doGerarRecibo(d) {
+  var s = getSheet();
+  var allData = s.getDataRange().getValues();
+  var info = findByProtoData(allData, d.protocolo);
+  if (!info) return jr({success: false, error: "Protocolo não encontrado."});
+  var updated = info.data;
+  var rec = gerarRecibo({
+    protocolo: updated[0], nome: updated[11], cpf: updated[12],
+    rg: updated[36], orgao: updated[37], valor: updated[34],
+    descricao: "reembolso de deslocamento referente ao Protocolo " + updated[0] + " (" + (updated[23] || 0) + " km)",
+    imagens: comprovantesDaLinha(updated)
+  });
+  if (!rec) return jr({success: false, error: "Recibo não configurado. Defina RECIBO_TEMPLATE_ID e RECIBOS_FOLDER_ID nas Propriedades do script."});
+  s.getRange(info.row, 39).setValue(rec.link);  // coluna AM (Recibo)
+  return jr({success: true, protocolo: d.protocolo, recibo_link: rec.link, numero: rec.numero});
 }
 
 // Carrega o pedido completo para o editor de correção (app do motorista)

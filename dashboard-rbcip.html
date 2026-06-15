@@ -546,6 +546,19 @@ function salvarEdicao(){
     fecharEdicao();fecharDetalhe();document.querySelector(".loading p").textContent="Carregando registros…";carregar();
   }).catch(function(e){document.getElementById("ld").classList.add("h");alert("Erro: "+e.message);});
 }
+function gerarReciboNovamente(){
+  if(!sel)return;
+  if(sel.recibo_link && !confirm("Já existe um recibo para este pedido. Gerar novamente cria um recibo com NOVO número e substitui o link atual. Continuar?"))return;
+  document.getElementById("ld").classList.remove("h");document.querySelector(".loading p").textContent="Gerando recibo…";
+  apiPost({action:"gerar_recibo",token:ADMIN_TOKEN,protocolo:sel.protocolo})
+  .then(function(d){
+    document.getElementById("ld").classList.add("h");
+    if(d&&d.auth===false){logout(true);return;}
+    if(d&&d.success===false){alert(d.error);return;}
+    if(d&&d.recibo_link){window.open(d.recibo_link,"_blank");}
+    fecharDetalhe();carregar();
+  }).catch(function(e){document.getElementById("ld").classList.add("h");alert("Erro: "+e.message);});
+}
 
 function renderActions(){
   var bar=document.getElementById("actionBar");
@@ -555,9 +568,10 @@ function renderActions(){
   }
   var d=sel,st=d.status;
   var editBtn='<button class="abtn-edit" onclick="abrirEdicao()">✏️ Editar dados / paradas</button>';
+  var reciboBtn='<button class="abtn-edit" onclick="gerarReciboNovamente()">📄 '+(d.recibo_link?"Gerar recibo novamente":"Gerar recibo")+'</button>';
   var h='<div class="action-bar-label">Ações — '+esc(d.protocolo)+'</div>';
   if(st==="PAGO"){
-    h+='<div class="approved-msg" style="background:#CCFBF1;border-color:#99F6E4;color:#0F766E">💰 Reembolso pago — processo concluído.</div>'+editBtn;
+    h+='<div class="approved-msg" style="background:#CCFBF1;border-color:#99F6E4;color:#0F766E">💰 Reembolso pago — processo concluído.</div>'+editBtn+reciboBtn;
     bar.innerHTML=h;return;
   }
   if(st==="ABERTO"){
@@ -576,7 +590,7 @@ function renderActions(){
   var atual=st==="REJEITADO"?"REPROVADO":st;  // REJEITADO (legado) == Reprovado
   h+='<div class="action-btns">';
   ["APROVADO","PAGO","REVISÃO","REPROVADO"].forEach(function(k){if(k!==atual)h+=btns[k];});
-  h+='</div>'+editBtn;
+  h+='</div>'+editBtn+reciboBtn;
   bar.innerHTML=h;
 }
 
@@ -627,13 +641,23 @@ function renderDetail(){
     h+='</div>';
   }
 
-  if(d.checkin_foto||d.checkout_foto||d.cupom){
+  // Comprovantes de pedágio (extraídos do texto de pedágios) e prints do Maps
+  var pedLinks=[];
+  if(d.pedagios){var pls=String(d.pedagios).split("\n");for(var i=0;i<pls.length;i++){var mm=pls[i].match(/https?:\/\/\S+/);if(mm){var fase=/\[VOLTA\]/i.test(pls[i])?"volta":"ida";var val=pls[i].match(/R\$\s*[\d.,]+/);pedLinks.push({url:mm[0],label:"Pedágio "+(i+1)+" ("+fase+")"+(val?" — "+val[0]:"")});}}}
+  var mapLinks=[];
+  function pushMaps(txt,fase){if(!txt)return;var ls=String(txt).split("\n");for(var i=0;i<ls.length;i++){var mm=ls[i].match(/Maps:\s*(\S+)/);if(mm)mapLinks.push({url:mm[1],label:"Maps "+fase+" "+(i+1)});}}
+  pushMaps(d.ida_texto,"ida");pushMaps(d.volta_texto,"volta");
+
+  if(d.checkin_foto||d.checkout_foto||d.cupom||pedLinks.length||mapLinks.length){
     h+='<div class="detail-section">';
     h+='<div class="detail-section-title">Anexos</div>';
     h+='<div class="detail-links">';
-    if(d.checkin_foto)h+='<a href="'+esc(d.checkin_foto)+'" target="_blank">Odômetro — saída</a>';
-    if(d.checkout_foto)h+='<a href="'+esc(d.checkout_foto)+'" target="_blank">Odômetro — chegada</a>';
-    if(d.cupom)h+='<a href="'+esc(d.cupom)+'" target="_blank">Cupom fiscal — combustível</a>';
+    if(d.checkin_foto)h+='<a href="'+esc(d.checkin_foto)+'" target="_blank">📷 Odômetro — saída</a>';
+    if(d.checkout_foto)h+='<a href="'+esc(d.checkout_foto)+'" target="_blank">📷 Odômetro — chegada</a>';
+    for(var i=0;i<mapLinks.length;i++)h+='<a href="'+esc(mapLinks[i].url)+'" target="_blank">🗺️ '+esc(mapLinks[i].label)+'</a>';
+    if(d.cupom)h+='<a href="'+esc(d.cupom)+'" target="_blank">⛽ Cupom fiscal — combustível</a>';
+    for(var i=0;i<pedLinks.length;i++)h+='<a href="'+esc(pedLinks[i].url)+'" target="_blank">🧾 '+esc(pedLinks[i].label)+'</a>';
+    if(d.recibo_link)h+='<a href="'+esc(d.recibo_link)+'" target="_blank">📄 Recibo (PDF)</a>';
     h+='</div></div>';
   }
 
