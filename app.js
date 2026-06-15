@@ -73,7 +73,7 @@ var LOCK_TIMEOUT = 15000; // 15s
 function setupPlanilha() {
   var ss = SpreadsheetApp.openById(SPREADSHEET_ID);
   var s = ss.getSheetByName(ABA); if (!s) s = ss.insertSheet(ABA);
-  var h = ["Protocolo","Status","CI DH","CI Lat","CI Lng","CI Foto","CO DH","CO Lat","CO Lng","CO Foto","Tempo","Nome","CPF","E-mail","Telefone","Veículo","Placa","Ida Plan","Ida Trechos","Ida Qtd","Volta Plan","Volta Trechos","Volta Qtd","Dist Total (km)","Pedágios","Qtd Ped","Val Pedágios","Comprov Ped","Usou Estimativa?","Preço Base","Preço Real","Cupom Comb","Val Estimado","Val Real","Val Total","Validação","RG","Órgão Emissor","Recibo"];
+  var h = ["Protocolo","Status","CI DH","CI Lat","CI Lng","CI Foto","CO DH","CO Lat","CO Lng","CO Foto","Tempo","Nome","CPF","E-mail","Telefone","Veículo","Placa","Ida Plan","Ida Trechos","Ida Qtd","Volta Plan","Volta Trechos","Volta Qtd","Dist Total (km)","Pedágios","Qtd Ped","Val Pedágios","Comprov Ped","Usou Estimativa?","Preço Base","Preço Real","Cupom Comb","Val Estimado","Val Real","Val Total","Validação","RG","Órgão Emissor","Recibo","Caronas","Consumo (km/L)","Foto Consumo"];
   s.getRange(1,1,1,h.length).setValues([h]);
   s.getRange(1,1,1,h.length).setFontWeight("bold").setBackground("#1A3A5C").setFontColor("#FFF").setFontFamily("Arial").setFontSize(9).setHorizontalAlignment("center").setWrap(true);
   s.setFrozenRows(1);
@@ -185,7 +185,7 @@ function doCheckin(d) {
     "","","","","", d.nome, d.cpf, d.email, d.telefone, d.veiculo, d.placa,
     d.ida_paradas||1, "", 0, d.volta_paradas||0, "", 0,
     0, "", 0, "", "", "", PRECO_BASE, "", "", "", "", "", "",
-    d.rg||"", d.orgao||"", ""];   // AK=RG, AL=Órgão Emissor, AM=Recibo
+    d.rg||"", d.orgao||"", "", "", "", ""];   // RG, Órgão, Recibo, Caronas, Consumo, FotoConsumo
   s.appendRow(row);
 
   // Formatar status — 1 chamada
@@ -289,7 +289,8 @@ function doFinalizar(d) {
 
   // Cálculos (km extraído dos textos ORIGINAIS, antes de anexar links)
   var dTot = extrairKm(rowData[18]) + extrairKm(rowData[21]); // ida + volta textos
-  var con = d.veiculo === "Moto" ? 49 : 10;
+  // Consumo: usa o informado pelo motorista (km/L) se houver; senão o padrão do veículo
+  var con = (parseFloat(d.consumo) > 0) ? parseFloat(d.consumo) : (d.veiculo === "Moto" ? 49 : 10);
   var usouEstim = d.usar_estimativa === true;
   var pReal = usouEstim ? PRECO_BASE : (parseFloat(d.preco_real) || PRECO_BASE);
   var vEst = (dTot/con) * PRECO_BASE, vReal = (dTot/con) * pReal, vTot = vReal + tPed;
@@ -338,6 +339,9 @@ function doFinalizar(d) {
   updated[33] = vReal.toFixed(2);             // AH
   updated[34] = vTot.toFixed(2);              // AI
   updated[35] = val;                          // AJ
+  updated[39] = Array.isArray(d.caronas) ? d.caronas.filter(function(x){return x && String(x).trim();}).map(function(x){return String(x).trim();}).join(", ") : (d.caronas || "");  // AN Caronas
+  updated[40] = con;                          // AO Consumo (km/L) efetivo
+  updated[41] = d.img_consumo_link || "";     // AP Foto Consumo
 
   // 1 ÚNICA chamada de escrita para toda a linha
   s.getRange(row, 1, 1, updated.length).setValues([updated]);
@@ -396,7 +400,7 @@ function doLancamentoPosterior(d) {
   var dVolta = 0; for (var i = 0; i < volta.length; i++) dVolta += parseFloat(volta[i].km) || 0;
   var dTot = dIda + dVolta;
 
-  var con = d.veiculo === "Moto" ? 49 : 10;
+  var con = (parseFloat(d.consumo) > 0) ? parseFloat(d.consumo) : (d.veiculo === "Moto" ? 49 : 10);
   var usouEstim = d.usar_estimativa === true;
   var pReal = usouEstim ? PRECO_BASE : (parseFloat(d.preco_real) || PRECO_BASE);
   var vEst = (dTot/con) * PRECO_BASE, vReal = (dTot/con) * pReal;
@@ -436,7 +440,8 @@ function doLancamentoPosterior(d) {
     dTot, pTxt.trim(), peds.length, tPed.toFixed(2), pLnk.join("\n"),
     usouEstim ? "Sim" : "Não", PRECO_BASE, pReal, d.img_cupom_link||"",
     vEst.toFixed(2), vReal.toFixed(2), vTot.toFixed(2), val,
-    d.rg||"", d.orgao||"", ""   // AK=RG, AL=Órgão Emissor, AM=Recibo
+    d.rg||"", d.orgao||"", "",   // RG, Órgão, Recibo
+    (Array.isArray(d.caronas) ? d.caronas.filter(function(x){return x && String(x).trim();}).map(function(x){return String(x).trim();}).join(", ") : (d.caronas || "")), con, d.img_consumo_link||""   // Caronas, Consumo, FotoConsumo
   ];
   s.appendRow(row);
   var lastRow = s.getLastRow();
@@ -532,7 +537,11 @@ function doCorrigir(d) {
   var pR = usouEstim ? PRECO_BASE : (parseFloat(d.preco_real) || parseFloat(rowData[30]) || PRECO_BASE);
   if (d.usar_estimativa === true) updated[28] = "Sim"; else if (d.usar_estimativa === false) updated[28] = "Não";
   updated[30] = pR;
-  var con = updated[15] === "Moto" ? 49 : 10;
+  // Consumo: usa o informado na correção (se houver), senão o já armazenado, senão o padrão do veículo
+  if (d.consumo !== undefined && parseFloat(d.consumo) > 0) updated[40] = parseFloat(d.consumo);
+  if (d.img_consumo_link) updated[41] = d.img_consumo_link;
+  if (d.caronas !== undefined) updated[39] = Array.isArray(d.caronas) ? d.caronas.filter(function(x){return x && String(x).trim();}).map(function(x){return String(x).trim();}).join(", ") : (d.caronas || "");
+  var con = (parseFloat(updated[40]) > 0) ? parseFloat(updated[40]) : (updated[15] === "Moto" ? 49 : 10);
   var vE = (dist/con)*PRECO_BASE, vR = (dist/con)*pR, vT = vR + tP;
   updated[32] = vE.toFixed(2); updated[33] = vR.toFixed(2); updated[34] = vT.toFixed(2);
 
@@ -637,7 +646,9 @@ function doEditarAdmin(d) {
   var usouEstim = String(updated[28]).trim() === "Sim";
   if (d.preco_real) updated[30] = parseFloat(d.preco_real) || updated[30];
   var pR = usouEstim ? PRECO_BASE : (parseFloat(updated[30]) || PRECO_BASE);
-  var con = updated[15] === "Moto" ? 49 : 10;
+  if (d.consumo !== undefined && parseFloat(d.consumo) > 0) updated[40] = parseFloat(d.consumo);
+  if (d.caronas !== undefined) updated[39] = d.caronas || "";
+  var con = (parseFloat(updated[40]) > 0) ? parseFloat(updated[40]) : (updated[15] === "Moto" ? 49 : 10);
   var tP = parseFloat(rowData[26]) || 0;
   var vE = (dist/con)*PRECO_BASE, vR = (dist/con)*pR, vT = vR + tP;
   updated[32] = vE.toFixed(2); updated[33] = vR.toFixed(2); updated[34] = vT.toFixed(2);
@@ -682,6 +693,7 @@ function carregarPedido(p) {
         dist_total: d[23], pedagios_texto: d[24]||"",
         usou_estimativa: d[28], preco_base: d[29], preco_real: d[30],
         checkin_foto: d[5]||"", checkout_foto: d[9]||"", cupom: d[31]||"",
+        caronas: d[39]||"", consumo: d[40]||"", foto_consumo: d[41]||"",
         observacao: obs
       }});
     }
@@ -1023,6 +1035,7 @@ function comprovantesDaLinha(rowData) {
   var mVolta = String(rowData[21] || "").match(/Maps:\s*(\S+)/g) || [];
   for (var i = 0; i < mVolta.length; i++) imgs.push({label: "Maps — volta " + (i+1), url: mVolta[i].replace(/Maps:\s*/, "")});
   if (rowData[31]) imgs.push({label: "Cupom combustível", url: rowData[31]});
+  if (rowData[41]) imgs.push({label: "Painel — consumo", url: rowData[41]});
   return imgs;
 }
 
@@ -1101,7 +1114,10 @@ function listarRegistros(statusFiltro) {
       validacao: row[35],
       rg: row[36] || "",
       orgao: row[37] || "",
-      recibo_link: row[38] || ""
+      recibo_link: row[38] || "",
+      caronas: row[39] || "",
+      consumo: row[40] || "",
+      foto_consumo: row[41] || ""
     });
   }
 

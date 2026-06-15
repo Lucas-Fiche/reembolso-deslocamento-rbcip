@@ -253,6 +253,28 @@
       </div>
     </div>
   </div>
+  <div class="card"><div class="ct"><span class="ic" style="background:#EFF6FF;color:#2563EB">🧍</span> Caronas</div>
+    <p style="font-size:12px;color:var(--text-muted);margin-bottom:10px">Nome de quem pegou carona com você (se houver). Deixe vazio se viajou sozinho.</p>
+    <div id="carona_list"></div>
+    <button class="add-btn" onclick="addCarona()">+ Adicionar carona</button>
+  </div>
+  <div class="card"><div class="ct"><span class="ic" style="background:#FEF3C7;color:#D97706">🚗</span> Consumo do veículo</div>
+    <div class="tog-row">
+      <button class="tog-btn on" id="tog_con_pad" onclick="setConMode('padrao')">Usar padrão</button>
+      <button class="tog-btn" id="tog_con_custom" onclick="setConMode('custom')">Informar meu consumo</button>
+    </div>
+    <div id="con_padrao">
+      <div style="padding:14px;background:var(--warning-bg);border-radius:var(--radius-sm);border:1px solid #FCD34D;text-align:center">
+        <div style="font-size:13px;font-weight:600;color:#92400E;margin-bottom:4px">Será usado o consumo padrão</div>
+        <div id="con_padrao_val" style="font-size:18px;font-weight:700;color:#92400E">10 km/L</div>
+      </div>
+    </div>
+    <div id="con_custom" style="display:none">
+      <div class="f"><label>Consumo do seu carro (km/L) <span class="rq">*</span></label><input type="number" id="co_consumo" placeholder="Ex: 8.5" inputmode="decimal" step="0.1"></div>
+      <label class="cl" for="co_confoto"><div class="cz" id="co_confz"><div id="co_confh"><div class="pi">📷</div><div class="pt">Foto do painel com o consumo</div></div><img id="co_confv" style="display:none"></div></label>
+      <input type="file" accept="image/*" id="co_confoto" class="chi" onchange="capFile(this,'co_confv','co_confh','co_confz')">
+    </div>
+  </div>
   <div class="card" id="resumoCard" style="display:none;background:var(--bg)"><div id="resumo"></div></div>
   <button class="bp b" onclick="calcular()" id="btnCalc">🧮 Calcular Reembolso</button>
   <button class="bp g" id="btnEnv" onclick="enviarFinal()" style="display:none;margin-top:10px">📤 Enviar Solicitação</button>
@@ -270,7 +292,7 @@
     <div class="f"><label>CPF <span class="rq">*</span></label><input type="text" id="lp_cpf" inputmode="numeric" maxlength="14"></div>
     <div class="fr"><div class="f"><label>RG <span class="rq">*</span></label><input type="text" id="lp_rg" maxlength="20"></div><div class="f"><label>Órgão emissor <span class="rq">*</span></label><input type="text" id="lp_orgao" placeholder="Ex: SSP/SP" maxlength="20"></div></div>
     <div class="fr"><div class="f"><label>E-mail <span class="rq">*</span></label><input type="email" id="lp_email"></div><div class="f"><label>Telefone <span class="rq">*</span></label><input type="tel" id="lp_tel" maxlength="15"></div></div>
-    <div class="fr"><div class="f"><label>Veículo <span class="rq">*</span></label><select id="lp_veic"><option value="">Selecione</option><option>Carro</option><option>Moto</option></select></div><div class="f"><label>Placa <span class="rq">*</span></label><input type="text" id="lp_placa" maxlength="8" style="text-transform:uppercase"></div></div>
+    <div class="fr"><div class="f"><label>Veículo <span class="rq">*</span></label><select id="lp_veic" onchange="lpUpdateConPadrao()"><option value="">Selecione</option><option>Carro</option><option>Moto</option></select></div><div class="f"><label>Placa <span class="rq">*</span></label><input type="text" id="lp_placa" maxlength="8" style="text-transform:uppercase"></div></div>
   </div>
   <div class="card"><div class="ct"><span class="ic" style="background:#FEF3C7;color:#D97706">📅</span> Data e horários <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--text-muted)">(manuais)</span></div>
     <div class="f"><label>Data da viagem <span class="rq">*</span></label><input type="date" id="lp_data"></div>
@@ -323,6 +345,28 @@
         <div style="font-size:20px;font-weight:700;color:#92400E">R$ 6,79/L</div>
         <p style="font-size:12px;color:#A16207;margin-top:6px">Sem cupom fiscal, o cálculo usará o valor base.</p>
       </div>
+    </div>
+  </div>
+  <div class="card"><div class="ct"><span class="ic" style="background:#EFF6FF;color:#2563EB">🧍</span> Caronas</div>
+    <p style="font-size:12px;color:var(--text-muted);margin-bottom:10px">Nome de quem pegou carona (se houver).</p>
+    <div id="lp_carona_list"></div>
+    <button class="add-btn" onclick="lpAddCarona()">+ Adicionar carona</button>
+  </div>
+  <div class="card"><div class="ct"><span class="ic" style="background:#FEF3C7;color:#D97706">🚗</span> Consumo do veículo</div>
+    <div class="tog-row">
+      <button class="tog-btn on" id="lp_tog_con_pad" onclick="lpSetConMode('padrao')">Usar padrão</button>
+      <button class="tog-btn" id="lp_tog_con_custom" onclick="lpSetConMode('custom')">Informar meu consumo</button>
+    </div>
+    <div id="lp_con_padrao">
+      <div style="padding:14px;background:var(--warning-bg);border-radius:var(--radius-sm);border:1px solid #FCD34D;text-align:center">
+        <div style="font-size:13px;font-weight:600;color:#92400E;margin-bottom:4px">Será usado o consumo padrão</div>
+        <div id="lp_con_padrao_val" style="font-size:18px;font-weight:700;color:#92400E">10 km/L</div>
+      </div>
+    </div>
+    <div id="lp_con_custom" style="display:none">
+      <div class="f"><label>Consumo do seu carro (km/L) <span class="rq">*</span></label><input type="number" id="lp_consumo" placeholder="Ex: 8.5" inputmode="decimal" step="0.1"></div>
+      <label class="cl" for="lp_confoto"><div class="cz" id="lp_confz"><div id="lp_confh"><div class="pi">📷</div><div class="pt">Foto do painel com o consumo</div></div><img id="lp_confv" style="display:none"></div></label>
+      <input type="file" accept="image/*" id="lp_confoto" class="chi" onchange="capFile(this,'lp_confv','lp_confh','lp_confz')">
     </div>
   </div>
   <div class="card" id="lp_resumoCard" style="display:none;background:var(--bg)"><div id="lp_resumo"></div></div>
@@ -511,7 +555,7 @@ function enviarParada(){var o=document.getElementById("pa_orig").value.trim(),d=
     var arr=curFase==="ida"?"ida_paradas":"volta_paradas";trip[arr]=trip[arr]||[];trip[arr].push({orig:o,dest:d,km:k,time:fmtD(now)});saveTrip(trip);goViagem()}).catch(function(e){hd();alert("Erro: "+e.message)})}
 
 // ═══ FINALIZAR ═══
-function goFinalizar(){show("secFinal");reqGPS("co_gs","co_gt");clock("co_ck");coCapt={ts:null,lat:null,lng:null,b64:null};document.getElementById("co_pv").style.display="none";document.getElementById("co_ph").style.display="block";document.getElementById("co_cz").classList.remove("ok");document.getElementById("co_cupv").style.display="none";document.getElementById("co_cuph").style.display="block";document.getElementById("co_cupz").classList.remove("ok");document.getElementById("resumoCard").style.display="none";document.getElementById("btnEnv").style.display="none";document.getElementById("btnCalc").style.display="flex";document.getElementById("ped_list_ida").innerHTML="";document.getElementById("ped_list_volta").innerHTML="";document.getElementById("co_cupom").dataset.compressed="";document.getElementById("co_preco").value="";fuelMode="cupom";setFuelMode("cupom");renderMapsList()}
+function goFinalizar(){show("secFinal");reqGPS("co_gs","co_gt");clock("co_ck");coCapt={ts:null,lat:null,lng:null,b64:null};document.getElementById("co_pv").style.display="none";document.getElementById("co_ph").style.display="block";document.getElementById("co_cz").classList.remove("ok");document.getElementById("co_cupv").style.display="none";document.getElementById("co_cuph").style.display="block";document.getElementById("co_cupz").classList.remove("ok");document.getElementById("resumoCard").style.display="none";document.getElementById("btnEnv").style.display="none";document.getElementById("btnCalc").style.display="flex";document.getElementById("ped_list_ida").innerHTML="";document.getElementById("ped_list_volta").innerHTML="";document.getElementById("co_cupom").dataset.compressed="";document.getElementById("co_preco").value="";fuelMode="cupom";setFuelMode("cupom");document.getElementById("carona_list").innerHTML="";conMode="padrao";setConMode("padrao");document.getElementById("con_padrao_val").textContent=((trip&&trip.veiculo==="Moto")?"49":"10")+" km/L";document.getElementById("co_consumo").value="";document.getElementById("co_confoto").dataset.compressed="";lpResetCz("co_confv","co_confh","co_confz");renderMapsList()}
 function renderMapsList(){var pI=trip.ida_paradas||[],pV=trip.volta_paradas||[],h="";
   for(var i=0;i<pI.length;i++)h+=mapsItem("mida_"+i,"IDA — Parada "+(i+1),pI[i]);
   for(var i=0;i<pV.length;i++)h+=mapsItem("mvolta_"+i,"VOLTA — Parada "+(i+1),pV[i]);
@@ -524,18 +568,25 @@ function mapsItem(id,label,p){var sub=(p?(p.orig+" → "+p.dest+" · "+p.km+" km
     '<input type="file" accept="image/*" id="'+id+'" class="chi" onchange="capFile(this,\''+id+'_v\',\''+id+'_p\',\''+id+'_z\')">'+
     '</div>'}
 function setFuelMode(m){fuelMode=m;document.getElementById("tog_cupom").classList.toggle("on",m==="cupom");document.getElementById("tog_estim").classList.toggle("on",m==="estim");document.getElementById("fuel_cupom").style.display=m==="cupom"?"block":"none";document.getElementById("fuel_estim").style.display=m==="estim"?"block":"none"}
+var conMode="padrao",caronaN=0;
+function setConMode(m){conMode=m;document.getElementById("tog_con_pad").classList.toggle("on",m==="padrao");document.getElementById("tog_con_custom").classList.toggle("on",m==="custom");document.getElementById("con_padrao").style.display=m==="padrao"?"block":"none";document.getElementById("con_custom").style.display=m==="custom"?"block":"none"}
+function conPadrao(){return (trip&&trip.veiculo==="Moto")?49:10}
+function getConsumo(){return conMode==="custom"?(parseFloat(document.getElementById("co_consumo").value)||0):conPadrao()}
+function addCarona(nome){caronaN++;var d=document.createElement("div");d.className="dyn-item";d.innerHTML='<button class="rm" onclick="this.parentElement.remove()">×</button><input type="text" class="carona-nome" placeholder="Nome do carona" value="'+(nome?escAttr(nome):"")+'" style="width:100%;padding:10px 12px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-family:inherit;font-size:15px;color:var(--text);outline:none">';document.getElementById("carona_list").appendChild(d)}
+function coletarCaronas(){var out=[],els=document.querySelectorAll("#carona_list .carona-nome");for(var i=0;i<els.length;i++){var v=(els[i].value||"").trim();if(v)out.push(v)}return out}
 var pedN=0;function addPed(fase){fase=fase||"ida";pedN++;var d=document.createElement("div");d.className="dyn-item";d.innerHTML='<button class="rm" onclick="this.parentElement.remove()">×</button><div class="f" style="margin-bottom:8px"><label style="font-size:12px">Valor (R$)</label><input type="number" class="ped-val" placeholder="15.40" inputmode="decimal" step="0.01"></div><label class="cl" for="ped_f_'+pedN+'"><div class="cz" id="ped_z_'+pedN+'" style="padding:12px 10px"><div id="ped_p_'+pedN+'"><div class="ps">🧾 Anexar comprovante</div></div><img id="ped_v_'+pedN+'" style="display:none"></div></label><input type="file" accept="image/*" id="ped_f_'+pedN+'" class="chi" onchange="capFile(this,\'ped_v_'+pedN+'\',\'ped_p_'+pedN+'\',\'ped_z_'+pedN+'\')">';document.getElementById("ped_list_"+fase).appendChild(d)}
 function coletarPedagios(){var out=[];["ida","volta"].forEach(function(f){var els=document.querySelectorAll("#ped_list_"+f+" .dyn-item");for(var i=0;i<els.length;i++){var fI=els[i].querySelector("input[type=file]");out.push({fase:f,valor:parseFloat(els[i].querySelector(".ped-val").value)||0,foto:fI?fI.dataset.compressed||null:null})}});return out}
 
 function calcular(){
   if(!coCapt.b64){alert("Tire a foto do odômetro.");return}
+  if(conMode==="custom"){var _cc=parseFloat(document.getElementById("co_consumo").value);if(!_cc||_cc<=0){alert("Informe o consumo do seu carro (km/L) ou use o padrão.");document.getElementById("co_consumo").focus();return}}
   var usarEstim=fuelMode==="estim",precoReal=PB;
   if(!usarEstim){precoReal=parseFloat(document.getElementById("co_preco").value);if(!precoReal||precoReal<=0){alert("Informe o preço do litro.");document.getElementById("co_preco").focus();return}if(!document.getElementById("co_cupom").dataset.compressed){alert("Anexe o cupom fiscal.");return}}
   var peds=coletarPedagios(),tPed=0;
   for(var i=0;i<peds.length;i++){if(!peds[i].valor){alert("Informe o valor do pedágio "+(i+1)+" ("+peds[i].fase.toUpperCase()+").");return}tPed+=peds[i].valor}
   var dIda=0,pI=trip.ida_paradas||[];for(var i=0;i<pI.length;i++)dIda+=parseFloat(pI[i].km)||0;
   var dVolta=0,pV=trip.volta_paradas||[];for(var i=0;i<pV.length;i++)dVolta+=parseFloat(pV[i].km)||0;
-  var dTot=dIda+dVolta,con=trip.veiculo==="Moto"?49:10;
+  var dTot=dIda+dVolta,con=getConsumo();
   var vEst=(dTot/con)*PB,vReal=(dTot/con)*precoReal,vTot=vReal+tPed;
   var trTxt="<strong>IDA:</strong><br>";for(var i=0;i<pI.length;i++)trTxt+="• "+pI[i].orig+" → "+pI[i].dest+": "+pI[i].km+" km<br>";
   trTxt+="<strong>VOLTA:</strong><br>";for(var i=0;i<pV.length;i++)trTxt+="• "+pV[i].orig+" → "+pV[i].dest+": "+pV[i].km+" km<br>";
@@ -553,6 +604,13 @@ function enviarFinal(){
   for(var i=0;i<pI.length;i++){var el=document.getElementById("mida_"+i);if(!el||!el.dataset.compressed){alert("Anexe o print do Maps da Parada "+(i+1)+" da IDA.");return}mIda.push(el.dataset.compressed)}
   for(var i=0;i<pV.length;i++){var el=document.getElementById("mvolta_"+i);if(!el||!el.dataset.compressed){alert("Anexe o print do Maps da Parada "+(i+1)+" da VOLTA.");return}mVolta.push(el.dataset.compressed)}
   if(!usarEstim&&!document.getElementById("co_cupom").dataset.compressed){alert("Anexe o cupom fiscal.");return}
+  // Consumo customizado: exige km/L e foto do painel
+  var con=getConsumo();
+  if(conMode==="custom"){
+    if(!con||con<=0){alert("Informe o consumo do seu carro (km/L) ou use o padrão.");return}
+    if(!document.getElementById("co_confoto").dataset.compressed){alert("Anexe a foto do painel com o consumo.");return}
+  }
+  var caronas=coletarCaronas();
   // Coletar pedágios (ida + volta)
   var pedVals=coletarPedagios();
   document.getElementById("btnEnv").disabled=true;
@@ -561,22 +619,23 @@ function enviarFinal(){
   for(var i=0;i<mIda.length;i++)tasks.push({b64:mIda[i],name:"ida_"+(i+1)+"_maps",key:"mi"+i});
   for(var i=0;i<mVolta.length;i++)tasks.push({b64:mVolta[i],name:"volta_"+(i+1)+"_maps",key:"mv"+i});
   if(!usarEstim)tasks.push({b64:document.getElementById("co_cupom").dataset.compressed,name:"cupom_combustivel",key:"cup"});
+  if(conMode==="custom")tasks.push({b64:document.getElementById("co_confoto").dataset.compressed,name:"painel_consumo",key:"con"});
   for(var i=0;i<pedVals.length;i++)if(pedVals[i].foto)tasks.push({b64:pedVals[i].foto,name:"pedagio_"+pedVals[i].fase+"_"+(i+1),key:"ped"+i});
   var links={},total=tasks.length,idx=0;
   function next(){
-    if(idx>=total){enviarPayloadFinal(links,pedVals,usarEstim);return}
+    if(idx>=total){enviarPayloadFinal(links,pedVals,usarEstim,caronas,con);return}
     var t=tasks[idx];ld("Enviando imagem "+(idx+1)+" de "+total+"…");
     uploadImg(t.b64,t.name).then(function(link){links[t.key]=link;idx++;next()}).catch(function(){hd();document.getElementById("btnEnv").disabled=false;alert("Falha ao enviar imagem "+(idx+1)+". Verifique o sinal e tente novamente.")});
   }
   next();
 }
-function enviarPayloadFinal(links,pedVals,usarEstim){
+function enviarPayloadFinal(links,pedVals,usarEstim,caronas,con){
   var pI=trip.ida_paradas||[],pV=trip.volta_paradas||[];
   var maps_ida=[];for(var i=0;i<pI.length;i++)maps_ida.push(links["mi"+i]||"");
   var maps_volta=[];for(var i=0;i<pV.length;i++)maps_volta.push(links["mv"+i]||"");
   var peds=[];for(var i=0;i<pedVals.length;i++)peds.push({fase:pedVals[i].fase,valor:pedVals[i].valor,foto_link:links["ped"+i]||""});
   ld("Finalizando…");
-  var payload={action:"finalizar",protocolo:trip.protocolo,timestamp_envio:new Date().toISOString(),veiculo:trip.veiculo,checkin_timestamp_iso:trip.checkin_timestamp,checkout_timestamp:coCapt.ts,checkout_lat:coCapt.lat,checkout_lng:coCapt.lng,img_odometro_chegada_link:links["odo"]||"",maps_ida:maps_ida,maps_volta:maps_volta,pedagios:peds,usar_estimativa:usarEstim,preco_real:usarEstim?PB:document.getElementById("co_preco").value,img_cupom_link:links["cup"]||""};
+  var payload={action:"finalizar",protocolo:trip.protocolo,timestamp_envio:new Date().toISOString(),veiculo:trip.veiculo,checkin_timestamp_iso:trip.checkin_timestamp,checkout_timestamp:coCapt.ts,checkout_lat:coCapt.lat,checkout_lng:coCapt.lng,img_odometro_chegada_link:links["odo"]||"",maps_ida:maps_ida,maps_volta:maps_volta,pedagios:peds,usar_estimativa:usarEstim,preco_real:usarEstim?PB:document.getElementById("co_preco").value,img_cupom_link:links["cup"]||"",caronas:caronas||[],consumo:con||"",img_consumo_link:links["con"]||""};
   post(payload).then(function(r){hd();clearTrip();trip=null;document.getElementById("ok_proto").textContent="Protocolo: "+payload.protocolo;document.getElementById("ok_val").textContent=r&&r.valor_total?"R$ "+r.valor_total:"";show("secOk")}).catch(function(e){hd();document.getElementById("btnEnv").disabled=false;alert("Erro ao finalizar: "+e.message)})}
 
 // ═══ CORREÇÃO (editor completo do pedido em revisão) ═══
@@ -647,10 +706,18 @@ function goPosterior(){show("secPosterior");lpGps=null;lpTrechoN=0;lpFuelMode="c
   document.getElementById("lp_trecho_ida").innerHTML="";document.getElementById("lp_trecho_volta").innerHTML="";
   document.getElementById("lp_ped_list_ida").innerHTML="";document.getElementById("lp_ped_list_volta").innerHTML="";
   lpSetFuelMode("cupom");
+  document.getElementById("lp_carona_list").innerHTML="";lpConMode="padrao";lpSetConMode("padrao");document.getElementById("lp_consumo").value="";document.getElementById("lp_confoto").dataset.compressed="";lpResetCz("lp_confv","lp_confh","lp_confz");
   document.getElementById("lp_resumoCard").style.display="none";
   document.getElementById("lp_btnCalc").style.display="flex";document.getElementById("lp_btnEnv").style.display="none";document.getElementById("lp_btnEnv").disabled=false;
   lpAddTrecho("ida");lpAddTrecho("volta")}
 function lpSetFuelMode(m){lpFuelMode=m;document.getElementById("lp_tog_cupom").classList.toggle("on",m==="cupom");document.getElementById("lp_tog_estim").classList.toggle("on",m==="estim");document.getElementById("lp_fuel_cupom").style.display=m==="cupom"?"block":"none";document.getElementById("lp_fuel_estim").style.display=m==="estim"?"block":"none"}
+var lpConMode="padrao",lpCaronaN=0;
+function lpConPadrao(){return document.getElementById("lp_veic").value==="Moto"?49:10}
+function lpUpdateConPadrao(){var el=document.getElementById("lp_con_padrao_val");if(el)el.textContent=lpConPadrao()+" km/L"}
+function lpSetConMode(m){lpConMode=m;document.getElementById("lp_tog_con_pad").classList.toggle("on",m==="padrao");document.getElementById("lp_tog_con_custom").classList.toggle("on",m==="custom");document.getElementById("lp_con_padrao").style.display=m==="padrao"?"block":"none";document.getElementById("lp_con_custom").style.display=m==="custom"?"block":"none";lpUpdateConPadrao()}
+function lpGetConsumo(){return lpConMode==="custom"?(parseFloat(document.getElementById("lp_consumo").value)||0):lpConPadrao()}
+function lpAddCarona(nome){lpCaronaN++;var d=document.createElement("div");d.className="dyn-item";d.innerHTML='<button class="rm" onclick="this.parentElement.remove()">×</button><input type="text" class="lp-carona-nome" placeholder="Nome do carona" value="'+(nome?escAttr(nome):"")+'" style="width:100%;padding:10px 12px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-family:inherit;font-size:15px;color:var(--text);outline:none">';document.getElementById("lp_carona_list").appendChild(d)}
+function lpColetarCaronas(){var out=[],els=document.querySelectorAll("#lp_carona_list .lp-carona-nome");for(var i=0;i<els.length;i++){var v=(els[i].value||"").trim();if(v)out.push(v)}return out}
 function lpToggleSemOdo(){var sem=document.getElementById("lp_sem_odo").checked;document.getElementById("lp_odo_fotos").style.display=sem?"none":"block";document.getElementById("lp_odo_aviso").style.display=sem?"block":"none"}
 function lpAddTrecho(fase){lpTrechoN++;var n=lpTrechoN;var d=document.createElement("div");d.className="dyn-item";d.innerHTML='<button class="rm" onclick="this.parentElement.remove()">×</button><div class="fr"><div class="f" style="margin-bottom:8px"><label style="font-size:12px">Origem</label><input type="text" class="lp-orig"></div><div class="f" style="margin-bottom:8px"><label style="font-size:12px">Destino</label><input type="text" class="lp-dest"></div></div><div class="f" style="margin-bottom:8px"><label style="font-size:12px">Distância (km)</label><input type="number" class="lp-km" inputmode="decimal" step="0.1"></div><label class="cl" for="lp_tmaps_'+n+'"><div class="cz" id="lp_tmaps_'+n+'_z" style="padding:12px 10px"><div id="lp_tmaps_'+n+'_p"><div class="ps">🗺️ Anexar print do Maps deste trecho</div></div><img id="lp_tmaps_'+n+'_v" style="display:none"></div></label><input type="file" accept="image/*" id="lp_tmaps_'+n+'" class="chi lp-maps" onchange="capFile(this,\'lp_tmaps_'+n+'_v\',\'lp_tmaps_'+n+'_p\',\'lp_tmaps_'+n+'_z\')">';document.getElementById("lp_trecho_"+fase).appendChild(d)}
 function lpAddPed(fase){fase=fase||"ida";pedN++;var d=document.createElement("div");d.className="dyn-item";d.innerHTML='<button class="rm" onclick="this.parentElement.remove()">×</button><div class="f" style="margin-bottom:8px"><label style="font-size:12px">Valor (R$)</label><input type="number" class="ped-val" placeholder="15.40" inputmode="decimal" step="0.01"></div><label class="cl" for="lp_ped_f_'+pedN+'"><div class="cz" id="lp_ped_z_'+pedN+'" style="padding:12px 10px"><div id="lp_ped_p_'+pedN+'"><div class="ps">🧾 Anexar comprovante</div></div><img id="lp_ped_v_'+pedN+'" style="display:none"></div></label><input type="file" accept="image/*" id="lp_ped_f_'+pedN+'" class="chi" onchange="capFile(this,\'lp_ped_v_'+pedN+'\',\'lp_ped_p_'+pedN+'\',\'lp_ped_z_'+pedN+'\')">';document.getElementById("lp_ped_list_"+fase).appendChild(d)}
@@ -675,10 +742,11 @@ function lpCalcular(){
   trval(ida,"Trecho IDA");trval(volta,"Trecho VOLTA");
   var usarEstim=lpFuelMode==="estim",precoReal=PB;
   if(!usarEstim){precoReal=parseFloat(document.getElementById("lp_preco").value);if(!precoReal||precoReal<=0)erros.push("• Preço real do litro")}
+  if(lpConMode==="custom"&&(!parseFloat(document.getElementById("lp_consumo").value)||parseFloat(document.getElementById("lp_consumo").value)<=0))erros.push("• Consumo do veículo (km/L)");
   if(erros.length){alert("Corrija:\n\n"+erros.join("\n"));return null}
   var dIda=0;for(var i=0;i<ida.length;i++)dIda+=parseFloat(ida[i].km)||0;
   var dVolta=0;for(var i=0;i<volta.length;i++)dVolta+=parseFloat(volta[i].km)||0;
-  var dTot=dIda+dVolta,con=document.getElementById("lp_veic").value==="Moto"?49:10;
+  var dTot=dIda+dVolta,con=lpGetConsumo();
   var peds=lpColetarPedagios(),tPed=0;for(var i=0;i<peds.length;i++)tPed+=peds[i].valor;
   var vEst=(dTot/con)*PB,vReal=(dTot/con)*precoReal,vTot=vReal+tPed;
   var trTxt="<strong>IDA:</strong><br>";for(var i=0;i<ida.length;i++)trTxt+="• "+ida[i].origem+" → "+ida[i].destino+": "+ida[i].km+" km<br>";
@@ -702,6 +770,9 @@ function lpEnviar(){
   if(!usarEstim&&!document.getElementById("lp_cupom").dataset.compressed){alert("Anexe o cupom fiscal.");return}
   var peds=lpColetarPedagios();
   for(var i=0;i<peds.length;i++)if(!peds[i].valor){alert("Informe o valor do pedágio "+(i+1)+" ("+peds[i].fase.toUpperCase()+").");return}
+  var con=lpGetConsumo();
+  if(lpConMode==="custom"&&!document.getElementById("lp_confoto").dataset.compressed){alert("Anexe a foto do painel com o consumo.");return}
+  var caronas=lpColetarCaronas();
   var proto="RBP-"+Date.now().toString(36).toUpperCase();
   var dataV=document.getElementById("lp_data").value,hs=document.getElementById("lp_hora_saida").value,hc=document.getElementById("lp_hora_chegada").value;
   var ciISO=new Date(dataV+"T"+hs).toISOString(),coISO=new Date(dataV+"T"+hc).toISOString();
@@ -711,20 +782,21 @@ function lpEnviar(){
   for(var i=0;i<ida.length;i++)tasks.push({b64:ida[i].maps,name:"ida_"+(i+1)+"_maps",key:"mi"+i});
   for(var i=0;i<volta.length;i++)tasks.push({b64:volta[i].maps,name:"volta_"+(i+1)+"_maps",key:"mv"+i});
   if(!usarEstim)tasks.push({b64:document.getElementById("lp_cupom").dataset.compressed,name:"cupom_combustivel",key:"cup"});
+  if(lpConMode==="custom")tasks.push({b64:document.getElementById("lp_confoto").dataset.compressed,name:"painel_consumo",key:"con"});
   for(var i=0;i<peds.length;i++)if(peds[i].foto)tasks.push({b64:peds[i].foto,name:"pedagio_"+peds[i].fase+"_"+(i+1),key:"ped"+i});
   var links={},total=tasks.length,idx=0;
   function next(){
-    if(idx>=total){lpEnviarPayload(proto,ciISO,coISO,ida,volta,peds,usarEstim,links,semOdo);return}
+    if(idx>=total){lpEnviarPayload(proto,ciISO,coISO,ida,volta,peds,usarEstim,links,semOdo,caronas,con);return}
     var t=tasks[idx];ld("Enviando imagem "+(idx+1)+" de "+total+"…");
     uploadImgP(proto,t.b64,t.name).then(function(link){links[t.key]=link;idx++;next()}).catch(function(){hd();document.getElementById("lp_btnEnv").disabled=false;alert("Falha ao enviar imagem "+(idx+1)+". Verifique o sinal e tente novamente.")});
   }
   next()}
-function lpEnviarPayload(proto,ciISO,coISO,ida,volta,peds,usarEstim,links,semOdo){
+function lpEnviarPayload(proto,ciISO,coISO,ida,volta,peds,usarEstim,links,semOdo,caronas,con){
   var idaArr=[];for(var i=0;i<ida.length;i++)idaArr.push({origem:ida[i].origem,destino:ida[i].destino,km:ida[i].km,maps_link:links["mi"+i]||"",lat:lpGps?lpGps.lat:null,lng:lpGps?lpGps.lng:null,timestamp:ciISO});
   var voltaArr=[];for(var i=0;i<volta.length;i++)voltaArr.push({origem:volta[i].origem,destino:volta[i].destino,km:volta[i].km,maps_link:links["mv"+i]||"",lat:lpGps?lpGps.lat:null,lng:lpGps?lpGps.lng:null,timestamp:coISO});
   var pedArr=[];for(var i=0;i<peds.length;i++)pedArr.push({fase:peds[i].fase,valor:peds[i].valor,foto_link:links["ped"+i]||""});
   ld("Finalizando lançamento…");
-  var payload={action:"lancamento_posterior",protocolo:proto,nome:document.getElementById("lp_nome").value,cpf:document.getElementById("lp_cpf").value,rg:document.getElementById("lp_rg").value.trim(),orgao:document.getElementById("lp_orgao").value.trim().toUpperCase(),email:document.getElementById("lp_email").value,telefone:document.getElementById("lp_tel").value,veiculo:document.getElementById("lp_veic").value,placa:document.getElementById("lp_placa").value.toUpperCase(),checkin_timestamp:ciISO,checkout_timestamp:coISO,checkin_lat:lpGps?lpGps.lat:null,checkin_lng:lpGps?lpGps.lng:null,checkout_lat:lpGps?lpGps.lat:null,checkout_lng:lpGps?lpGps.lng:null,img_odometro_saida_link:links["odoS"]||"",img_odometro_chegada_link:links["odoC"]||"",sem_odometro:semOdo===true,ida:idaArr,volta:voltaArr,pedagios:pedArr,usar_estimativa:usarEstim,preco_real:usarEstim?PB:document.getElementById("lp_preco").value,img_cupom_link:links["cup"]||""};
+  var payload={action:"lancamento_posterior",protocolo:proto,nome:document.getElementById("lp_nome").value,cpf:document.getElementById("lp_cpf").value,rg:document.getElementById("lp_rg").value.trim(),orgao:document.getElementById("lp_orgao").value.trim().toUpperCase(),email:document.getElementById("lp_email").value,telefone:document.getElementById("lp_tel").value,veiculo:document.getElementById("lp_veic").value,placa:document.getElementById("lp_placa").value.toUpperCase(),checkin_timestamp:ciISO,checkout_timestamp:coISO,checkin_lat:lpGps?lpGps.lat:null,checkin_lng:lpGps?lpGps.lng:null,checkout_lat:lpGps?lpGps.lat:null,checkout_lng:lpGps?lpGps.lng:null,img_odometro_saida_link:links["odoS"]||"",img_odometro_chegada_link:links["odoC"]||"",sem_odometro:semOdo===true,ida:idaArr,volta:voltaArr,pedagios:pedArr,usar_estimativa:usarEstim,preco_real:usarEstim?PB:document.getElementById("lp_preco").value,img_cupom_link:links["cup"]||"",caronas:caronas||[],consumo:con||"",img_consumo_link:links["con"]||""};
   post(payload).then(function(r){hd();if(r&&r.success===false){document.getElementById("lp_btnEnv").disabled=false;alert(r.error);return}document.getElementById("ok_proto").textContent="Protocolo: "+proto;document.getElementById("ok_val").textContent=r&&r.valor_total?"R$ "+r.valor_total:"";show("secOk")}).catch(function(e){hd();document.getElementById("lp_btnEnv").disabled=false;alert("Erro: "+e.message)})}
 var instrAberto=true;
 function toggleInstr(){instrAberto=!instrAberto;document.getElementById("instrBody").style.maxHeight=instrAberto?"2000px":"0";document.getElementById("instrArrow").style.transform=instrAberto?"":"rotate(-90deg)"}
