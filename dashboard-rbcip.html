@@ -319,7 +319,11 @@ tr.corr-row td:first-child::after{content:"REANALISAR";display:inline-block;marg
         <div class="edit-field" style="flex:1;margin-top:0"><label>RG</label><input type="text" id="ed_rg" maxlength="20"></div>
         <div class="edit-field" style="flex:1;margin-top:0"><label>Órgão emissor</label><input type="text" id="ed_orgao" maxlength="20" style="text-transform:uppercase"></div>
       </div>
-      <div class="edit-field"><label>Preço real do litro (R$) — usado se o pedido não for estimativa</label><input type="number" id="ed_preco" step="0.01" inputmode="decimal"></div>
+      <div style="display:flex;gap:8px">
+        <div class="edit-field" style="flex:1"><label>Preço real do litro (R$) — se não for estimativa</label><input type="number" id="ed_preco" step="0.01" inputmode="decimal"></div>
+        <div class="edit-field" style="flex:1"><label>Consumo (km/L)</label><input type="number" id="ed_consumo" step="0.1" inputmode="decimal"></div>
+      </div>
+      <div class="edit-field"><label>Caronas (nomes separados por vírgula)</label><input type="text" id="ed_caronas" placeholder="Ex: João, Maria"></div>
       <div class="edit-field"><label>Motivo da edição (opcional)</label><input type="text" id="ed_motivo" placeholder="Ex: incluída parada esquecida na ida"></div>
     </div>
     <div class="edit-foot">
@@ -531,7 +535,7 @@ function edTrechoRow(t){t=t||{origem:"",destino:"",km:""};return '<div class="ed
 function edRender(fase,arr){var h="";for(var i=0;i<arr.length;i++)h+=edTrechoRow(arr[i]);document.getElementById("ed_list_"+fase).innerHTML=h;}
 function edAdd(fase){var d=document.createElement("div");d.innerHTML=edTrechoRow(null);document.getElementById("ed_list_"+fase).appendChild(d.firstChild);}
 function edColetar(fase){var out=[],els=document.querySelectorAll("#ed_list_"+fase+" .ed-trecho");for(var i=0;i<els.length;i++){out.push({origem:(els[i].querySelector(".ed-orig").value||"").trim(),destino:(els[i].querySelector(".ed-dest").value||"").trim(),km:els[i].querySelector(".ed-km").value});}return out;}
-function abrirEdicao(){if(!sel)return;edRender("ida",sel.ida_gps||[]);edRender("volta",sel.volta_gps||[]);document.getElementById("ed_proto").textContent=sel.protocolo+" — "+sel.nome;document.getElementById("ed_rg").value=sel.rg||"";document.getElementById("ed_orgao").value=sel.orgao||"";document.getElementById("ed_preco").value=sel.preco_real||sel.preco_base||"";document.getElementById("ed_motivo").value="";document.getElementById("editModal").classList.add("show");}
+function abrirEdicao(){if(!sel)return;edRender("ida",sel.ida_gps||[]);edRender("volta",sel.volta_gps||[]);document.getElementById("ed_proto").textContent=sel.protocolo+" — "+sel.nome;document.getElementById("ed_rg").value=sel.rg||"";document.getElementById("ed_orgao").value=sel.orgao||"";document.getElementById("ed_preco").value=sel.preco_real||sel.preco_base||"";document.getElementById("ed_consumo").value=sel.consumo||"";document.getElementById("ed_caronas").value=sel.caronas||"";document.getElementById("ed_motivo").value="";document.getElementById("editModal").classList.add("show");}
 function fecharEdicao(){document.getElementById("editModal").classList.remove("show");}
 function salvarEdicao(){
   if(!sel)return;
@@ -539,7 +543,7 @@ function salvarEdicao(){
   for(var i=0;i<ida.length;i++)if(!ida[i].origem||!ida[i].destino||!ida[i].km){alert("Preencha origem, destino e km do trecho IDA "+(i+1)+".");return;}
   for(var i=0;i<volta.length;i++)if(!volta[i].origem||!volta[i].destino||!volta[i].km){alert("Preencha origem, destino e km do trecho VOLTA "+(i+1)+".");return;}
   document.getElementById("ld").classList.remove("h");document.querySelector(".loading p").textContent="Salvando edição…";
-  apiPost({action:"editar_admin",token:ADMIN_TOKEN,protocolo:sel.protocolo,ida:ida,volta:volta,rg:document.getElementById("ed_rg").value.trim(),orgao:document.getElementById("ed_orgao").value.trim().toUpperCase(),preco_real:document.getElementById("ed_preco").value,motivo:document.getElementById("ed_motivo").value.trim()})
+  apiPost({action:"editar_admin",token:ADMIN_TOKEN,protocolo:sel.protocolo,ida:ida,volta:volta,rg:document.getElementById("ed_rg").value.trim(),orgao:document.getElementById("ed_orgao").value.trim().toUpperCase(),preco_real:document.getElementById("ed_preco").value,consumo:document.getElementById("ed_consumo").value,caronas:document.getElementById("ed_caronas").value.trim(),motivo:document.getElementById("ed_motivo").value.trim()})
   .then(function(d){
     if(d&&d.auth===false){logout(true);return;}
     if(d&&d.success===false){alert(d.error);document.getElementById("ld").classList.add("h");return;}
@@ -607,6 +611,7 @@ function renderDetail(){
   h+=drow("CPF",esc(d.cpf));
   h+=drow("RG",esc(d.rg||"—")+(d.orgao?" "+esc(d.orgao):""));
   h+=drow("Veículo",esc(d.veiculo)+" — "+esc(d.placa));
+  if(d.caronas)h+=drow("Caronas",esc(d.caronas));
   if(d.recibo_link)h+=drow("Recibo",'<a href="'+esc(d.recibo_link)+'" target="_blank" style="color:var(--primary);font-weight:600">📄 Ver recibo (PDF)</a>');
   h+='</div>';
 
@@ -620,6 +625,7 @@ function renderDetail(){
   h+='<div class="detail-section">';
   h+='<div class="detail-section-title">Valores</div>';
   h+=drow("Distância Total",(d.dist_total||0)+" km");
+  if(d.consumo)h+=drow("Consumo",esc(d.consumo)+" km/L"+(d.foto_consumo?' <a href="'+esc(d.foto_consumo)+'" target="_blank" style="color:var(--primary)">(foto)</a>':""));
   h+=drow("Pedágios","R$ "+(parseFloat(d.val_pedagios)||0).toFixed(2)+" ("+(d.qtd_pedagios||0)+" cobranças)");
   h+=drow("Combustível",esc(d.usou_estimativa==="Sim"?"Estimativa — R$ "+d.preco_base+"/L":"Real — R$ "+(d.preco_real||d.preco_base)+"/L"));
   h+=drow("Val. Estimado","R$ "+(parseFloat(d.val_estimado)||0).toFixed(2));
@@ -648,7 +654,7 @@ function renderDetail(){
   function pushMaps(txt,fase){if(!txt)return;var ls=String(txt).split("\n");for(var i=0;i<ls.length;i++){var mm=ls[i].match(/Maps:\s*(\S+)/);if(mm)mapLinks.push({url:mm[1],label:"Maps "+fase+" "+(i+1)});}}
   pushMaps(d.ida_texto,"ida");pushMaps(d.volta_texto,"volta");
 
-  if(d.checkin_foto||d.checkout_foto||d.cupom||pedLinks.length||mapLinks.length){
+  if(d.checkin_foto||d.checkout_foto||d.cupom||d.foto_consumo||pedLinks.length||mapLinks.length){
     h+='<div class="detail-section">';
     h+='<div class="detail-section-title">Anexos</div>';
     h+='<div class="detail-links">';
@@ -656,6 +662,7 @@ function renderDetail(){
     if(d.checkout_foto)h+='<a href="'+esc(d.checkout_foto)+'" target="_blank">📷 Odômetro — chegada</a>';
     for(var i=0;i<mapLinks.length;i++)h+='<a href="'+esc(mapLinks[i].url)+'" target="_blank">🗺️ '+esc(mapLinks[i].label)+'</a>';
     if(d.cupom)h+='<a href="'+esc(d.cupom)+'" target="_blank">⛽ Cupom fiscal — combustível</a>';
+    if(d.foto_consumo)h+='<a href="'+esc(d.foto_consumo)+'" target="_blank">🚗 Painel — consumo</a>';
     for(var i=0;i<pedLinks.length;i++)h+='<a href="'+esc(pedLinks[i].url)+'" target="_blank">🧾 '+esc(pedLinks[i].label)+'</a>';
     if(d.recibo_link)h+='<a href="'+esc(d.recibo_link)+'" target="_blank">📄 Recibo (PDF)</a>';
     h+='</div></div>';
