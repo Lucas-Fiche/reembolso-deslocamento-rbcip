@@ -126,6 +126,7 @@ function doPost(e) {
     if (d.action === "finalizar") return withLock(function(){ return doFinalizar(d); });
     if (d.action === "lancamento_posterior") return withLock(function(){ return doLancamentoPosterior(d); });
     if (d.action === "corrigir") return withLock(function(){ return doCorrigir(d); });
+    if (d.action === "adicionar_pedagio") return withLock(function(){ return doAdicionarPedagio(d); });
     if (d.action === "set_volta") return withLock(function(){ return doSetVolta(d); });
     // ── Ações ADMINISTRATIVAS: exigem a senha do painel (PAINEL_SENHA) ──
     if (d.action === "login_admin") return jr({success: authAdmin(d.token), auth: authAdmin(d.token)});
@@ -158,6 +159,7 @@ function doGet(e) {
     if (a === "buscar_viagem") return buscarViagem(e.parameter.protocolo || "");
     if (a === "buscar_revisao") return buscarRevisao(e.parameter.cpf || "");
     if (a === "buscar_situacao") return buscarSituacao(e.parameter.cpf || "");
+    if (a === "listar_por_cpf") return listarPorCpf(e.parameter.cpf || "");
     if (a === "carregar_pedido") return carregarPedido(e.parameter.protocolo || "");
     if (a === "listar") {
       // Endpoint sensível (retorna todos os dados): exige a senha do painel.
@@ -596,6 +598,65 @@ function buscarSituacao(cpf) {
     }
   }
   return jr({success: true, found: false});
+}
+
+// Lista os protocolos recentes de um CPF (para o lançamento de pedágio pendente)
+function listarPorCpf(cpf) {
+  if (!cpf) return jr({success: false, error: "CPF vazio"});
+  var allData = getSheet().getDataRange().getValues();
+  var out = [];
+  for (var i = allData.length-1; i >= 1 && out.length < 12; i--) {
+    if (String(allData[i][12]).trim() === cpf.trim()) {
+      var d = allData[i];
+      out.push({
+        protocolo: d[0], status: String(d[1]).trim(), checkin_dh: d[2] || "",
+        dist_total: d[23] || 0, val_total: d[34] || "", qtd_pedagios: d[25] || 0
+      });
+    }
+  }
+  return jr({success: true, found: out.length > 0, protocolos: out});
+}
+
+// Adiciona pedágio(s) a um protocolo existente (comprovante chegou depois).
+// Recalcula o total = valor real do combustível + total de pedágios.
+function doAdicionarPedagio(d) {
+  var s = getSheet();
+  var allData = s.getDataRange().getValues();
+  var info = findByProtoData(allData, d.protocolo);
+  if (!info) return jr({success: false, error: "Protocolo não encontrado."});
+  var row = info.row, updated = info.data.slice();
+  if (d.cpf && String(updated[12]).trim() !== String(d.cpf).trim())
+    return jr({success: false, error: "CPF não confere com o protocolo."});
+  var novos = d.pedagios || [];
+  if (!novos.length) return jr({success: false, error: "Nenhum pedágio informado."});
+
+  var qtdExist = parseInt(updated[25]) || 0;
+  var valExist = parseFloat(updated[26]) || 0;
+  var addVal = 0, addLinhas = [], addLinks = [];
+  for (var i = 0; i < novos.length; i++) {
+    var v = parseFloat(novos[i].valor) || 0; addVal += v;
+    var pl = novos[i].foto_link || "";
+    var faseLbl = novos[i].fase ? "["+String(novos[i].fase).toUpperCase()+"] " : "";
+    var num = qtdExist + i + 1;
+    addLinhas.push(num+". "+faseLbl+"R$ "+v.toFixed(2)+(pl?" | "+pl:"")+" (add)");
+    addLinks.push(pl);
+  }
+  var existTxt = String(updated[24] || "");
+  var existLinks = String(updated[27] || "");
+  updated[24] = (existTxt ? existTxt + "\n" : "") + addLinhas.join("\n");
+  updated[25] = qtdExist + novos.length;
+  var novoValPed = valExist + addVal;
+  updated[26] = novoValPed.toFixed(2);
+  updated[27] = (existLinks ? existLinks + "\n" : "") + addLinks.join("\n");
+
+  // Total = valor real do combustível (col AH=33) + total de pedágios
+  var vReal = parseFloat(updated[33]) || 0;
+  var vTot = vReal + novoValPed;
+  updated[34] = vTot.toFixed(2);
+  updated[35] = (updated[35] ? updated[35] + " | " : "") + "🧾 Pedágio adicionado posteriormente (" + fts(new Date().toISOString()) + ")";
+
+  s.getRange(row, 1, 1, updated.length).setValues([updated]);
+  return jr({success: true, protocolo: d.protocolo, valor_total: vTot.toFixed(2), qtd_pedagios: updated[25]});
 }
 
 // Extrai origem/destino/km/Maps de cada trecho (para o editor de correção)

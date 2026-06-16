@@ -104,6 +104,11 @@
     <p style="font-size:13px;color:#A16207;margin-bottom:12px">Não conseguiu registrar a rota durante a viagem? Use este modo <strong>apenas em casos excepcionais</strong>. O GPS e o horário serão <strong>informados manualmente</strong> (sem garantia) e o pedido será sinalizado para conferência do gestor.</p>
     <button class="bp y" style="padding:12px" onclick="goPosterior()">🕓 Fazer lançamento posterior</button>
   </div>
+  <div class="card" style="border:1.5px solid #FCA5A5;background:#FEF2F2">
+    <div class="ct" style="color:#991B1B"><span class="ic" style="background:#FEE2E2;color:#DC2626">🧾</span> Pedágio Pendente</div>
+    <p style="font-size:13px;color:#B91C1C;margin-bottom:12px">Usa plano de pedágio (Sem Parar, ConectCar…) e o comprovante chegou <strong>depois</strong> de enviar o reembolso? Adicione o pedágio à sua solicitação aqui.</p>
+    <button class="bp b" style="padding:12px" onclick="goPedagio()">🧾 Lançar pedágio pendente</button>
+  </div>
 </div>
 
 <!-- CHECK-IN -->
@@ -375,6 +380,27 @@
   <button class="bs" onclick="show('secHome')">← Voltar</button>
 </div>
 
+<!-- PEDÁGIO PENDENTE -->
+<div class="sec" id="secPedagio">
+  <div class="card" style="background:#FEF2F2;border:2px solid #F87171">
+    <div class="ct" style="color:#991B1B"><span class="ic" style="background:#FEE2E2;color:#DC2626">🧾</span> Pedágio Pendente</div>
+    <p style="font-size:13px;color:#B91C1C;line-height:1.6">Adicione um pedágio que você não conseguiu lançar na hora (ex.: plano de pedágio que envia o comprovante depois). Informe seu CPF para localizar a solicitação.</p>
+  </div>
+  <div class="card"><div class="ct"><span class="ic" style="background:#EFF6FF;color:#2563EB">🔍</span> Localizar solicitação</div>
+    <div class="f"><label>CPF</label><input type="text" id="pdg_cpf" inputmode="numeric" maxlength="14"></div>
+    <button class="bp b" onclick="buscarProtocolosPedagio()">🔍 Buscar minhas solicitações</button>
+    <div id="pdg_res" style="margin-top:12px"></div>
+  </div>
+  <div class="card" id="pdg_form_card" style="display:none">
+    <div class="ct"><span class="ic" style="background:#FEF2F2;color:#DC2626">🧾</span> Adicionar pedágio(s)</div>
+    <div id="pdg_sel_info" style="font-size:13px;color:#3730A3;background:#E0E7FF;border-radius:8px;padding:10px;margin-bottom:12px"></div>
+    <div id="pdg_list"></div>
+    <button class="add-btn" onclick="pdgAddItem()">+ Adicionar pedágio</button>
+    <button class="bp g" onclick="enviarPedagios()" style="margin-top:12px">📤 Enviar pedágio(s)</button>
+  </div>
+  <button class="bs" onclick="show('secHome')">← Voltar</button>
+</div>
+
 <!-- CORRIGIR -->
 <div class="sec" id="secCorrigir">
   <div class="card" style="background:#FEF3C7;border:2px solid #F59E0B">
@@ -457,7 +483,7 @@ function reqGPS(s,t){var e=document.getElementById(s);e.className="gs p";documen
 function clock(id){var u=function(){document.getElementById(id).textContent=fmtD(new Date())};u();clk=setInterval(u,1000)}
 function compress(file){return new Promise(function(ok,no){if(!file||!file.type.startsWith("image/")){var r=new FileReader();r.onload=function(){ok(r.result)};r.onerror=function(){no(new Error("Erro"))};r.readAsDataURL(file);return}var r=new FileReader();r.onerror=function(){no(new Error("Erro"))};r.onload=function(){var img=new Image();img.onerror=function(){no(new Error("Erro"))};img.onload=function(){var c=document.createElement("canvas"),w=img.width,h=img.height;if(w>1280){h=Math.round(h*(1280/w));w=1280}c.width=w;c.height=h;c.getContext("2d").drawImage(img,0,0,w,h);ok(c.toDataURL("image/jpeg",.6));c.width=0;c.height=0};img.src=r.result};r.readAsDataURL(file)})}
 function post(p){return fetch(API,{method:"POST",redirect:"follow",headers:{"Content-Type":"text/plain"},body:JSON.stringify(p)}).then(function(r){return r.text()}).then(function(t){try{return JSON.parse(t)}catch(e){return{success:true}}})}
-document.addEventListener("input",function(e){if(e.target.id==="ci_cpf"||e.target.id==="busca_cpf"||e.target.id==="lp_cpf"){var v=e.target.value.replace(/\D/g,"").slice(0,11);if(v.length>9)v=v.replace(/(\d{3})(\d{3})(\d{3})(\d{1,2})/,"$1.$2.$3-$4");else if(v.length>6)v=v.replace(/(\d{3})(\d{3})(\d{1,3})/,"$1.$2.$3");else if(v.length>3)v=v.replace(/(\d{3})(\d{1,3})/,"$1.$2");e.target.value=v}if(e.target.id==="ci_tel"||e.target.id==="lp_tel"||e.target.id==="corr_tel"){var v=e.target.value.replace(/\D/g,"").slice(0,11);if(v.length>6)v=v.replace(/(\d{2})(\d{5})(\d{1,4})/,"($1) $2-$3");else if(v.length>2)v=v.replace(/(\d{2})(\d{1,5})/,"($1) $2");e.target.value=v}});
+document.addEventListener("input",function(e){if(e.target.id==="ci_cpf"||e.target.id==="busca_cpf"||e.target.id==="lp_cpf"||e.target.id==="pdg_cpf"){var v=e.target.value.replace(/\D/g,"").slice(0,11);if(v.length>9)v=v.replace(/(\d{3})(\d{3})(\d{3})(\d{1,2})/,"$1.$2.$3-$4");else if(v.length>6)v=v.replace(/(\d{3})(\d{3})(\d{1,3})/,"$1.$2.$3");else if(v.length>3)v=v.replace(/(\d{3})(\d{1,3})/,"$1.$2");e.target.value=v}if(e.target.id==="ci_tel"||e.target.id==="lp_tel"||e.target.id==="corr_tel"){var v=e.target.value.replace(/\D/g,"").slice(0,11);if(v.length>6)v=v.replace(/(\d{2})(\d{5})(\d{1,4})/,"($1) $2-$3");else if(v.length>2)v=v.replace(/(\d{2})(\d{1,5})/,"($1) $2");e.target.value=v}});
 function validarCPF(c){c=c.replace(/\D/g,"");if(c==="00000000000")return true;/* CPF fictício liberado para testes/tutorial */if(c.length!==11||/^(\d)\1{10}$/.test(c))return false;var s=0;for(var i=0;i<9;i++)s+=parseInt(c[i])*(10-i);var r=11-(s%11),d1=r>=10?0:r;if(parseInt(c[9])!==d1)return false;s=0;for(var i=0;i<10;i++)s+=parseInt(c[i])*(11-i);r=11-(s%11);return parseInt(c[10])===(r>=10?0:r)}
 function validarEmail(e){return/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e)}function validarTel(t){return t.replace(/\D/g,"").length>=10}
 function markErr(id){document.getElementById(id).style.borderColor="var(--danger)";setTimeout(function(){document.getElementById(id).style.borderColor=""},4000)}
@@ -798,6 +824,34 @@ function lpEnviarPayload(proto,ciISO,coISO,ida,volta,peds,usarEstim,links,semOdo
   ld("Finalizando lançamento…");
   var payload={action:"lancamento_posterior",protocolo:proto,nome:document.getElementById("lp_nome").value,cpf:document.getElementById("lp_cpf").value,rg:document.getElementById("lp_rg").value.trim(),orgao:document.getElementById("lp_orgao").value.trim().toUpperCase(),email:document.getElementById("lp_email").value,telefone:document.getElementById("lp_tel").value,veiculo:document.getElementById("lp_veic").value,placa:document.getElementById("lp_placa").value.toUpperCase(),checkin_timestamp:ciISO,checkout_timestamp:coISO,checkin_lat:lpGps?lpGps.lat:null,checkin_lng:lpGps?lpGps.lng:null,checkout_lat:lpGps?lpGps.lat:null,checkout_lng:lpGps?lpGps.lng:null,img_odometro_saida_link:links["odoS"]||"",img_odometro_chegada_link:links["odoC"]||"",sem_odometro:semOdo===true,ida:idaArr,volta:voltaArr,pedagios:pedArr,usar_estimativa:usarEstim,preco_real:usarEstim?PB:document.getElementById("lp_preco").value,img_cupom_link:links["cup"]||"",caronas:caronas||[],consumo:con||"",img_consumo_link:links["con"]||""};
   post(payload).then(function(r){hd();if(r&&r.success===false){document.getElementById("lp_btnEnv").disabled=false;alert(r.error);return}document.getElementById("ok_proto").textContent="Protocolo: "+proto;document.getElementById("ok_val").textContent=r&&r.valor_total?"R$ "+r.valor_total:"";show("secOk")}).catch(function(e){hd();document.getElementById("lp_btnEnv").disabled=false;alert("Erro: "+e.message)})}
+// ═══ PEDÁGIO PENDENTE ═══
+var pdgProto=null,pdgCpf="",pdgN=0,pdgListData=[];
+function goPedagio(){show("secPedagio");document.getElementById("pdg_cpf").value="";document.getElementById("pdg_res").innerHTML="";document.getElementById("pdg_form_card").style.display="none";document.getElementById("pdg_list").innerHTML="";pdgProto=null;pdgN=0}
+function buscarProtocolosPedagio(){var cpf=document.getElementById("pdg_cpf").value.trim(),res=document.getElementById("pdg_res");if(!cpf){alert("Digite o CPF.");return}if(!validarCPF(cpf)){alert("CPF inválido.");return}res.innerHTML='<span style="color:var(--text-muted)">Buscando…</span>';document.getElementById("pdg_form_card").style.display="none";
+  fetch(API+"?action=listar_por_cpf&cpf="+encodeURIComponent(cpf)).then(function(r){return r.text()}).then(function(t){var d;try{d=JSON.parse(t)}catch(e){res.innerHTML='<span style="color:var(--danger)">Erro ao buscar.</span>';return}
+    if(!d.success||!d.protocolos||!d.protocolos.length){res.innerHTML='<div style="color:#92400E;background:var(--warning-bg);padding:10px;border-radius:8px">Nenhuma solicitação encontrada para este CPF.</div>';return}
+    pdgCpf=cpf;pdgListData=d.protocolos;
+    var h='<p style="font-size:12px;color:var(--text-muted);margin-bottom:8px">Toque na solicitação que você quer complementar:</p>';
+    for(var i=0;i<d.protocolos.length;i++){var p=d.protocolos[i];h+='<button class="bs" style="text-align:left;width:100%;margin-bottom:6px;padding:10px 12px" onclick="selecionarProtocoloPedagio('+i+')"><strong>'+escTxt(p.protocolo)+'</strong> · '+escTxt(p.status)+'<br><span style="font-size:12px;color:var(--text-muted)">'+escTxt(fmtDH(p.checkin_dh))+' · R$ '+(parseFloat(p.val_total)||0).toFixed(2)+' · '+(p.qtd_pedagios||0)+' pedágio(s)</span></button>'}
+    res.innerHTML=h;
+  }).catch(function(e){res.innerHTML='<span style="color:var(--danger)">Erro: '+e.message+'</span>'})}
+function fmtDH(s){if(!s)return"—";return String(s)}
+function selecionarProtocoloPedagio(i){var p=pdgListData[i];if(!p)return;pdgProto=p;
+  document.getElementById("pdg_sel_info").innerHTML='Adicionando pedágio ao protocolo <strong>'+escTxt(p.protocolo)+'</strong><br><span style="font-size:12px">Status: '+escTxt(p.status)+' · Total atual: R$ '+(parseFloat(p.val_total)||0).toFixed(2)+'</span>';
+  document.getElementById("pdg_form_card").style.display="block";document.getElementById("pdg_list").innerHTML="";pdgN=0;pdgAddItem();
+  document.getElementById("pdg_form_card").scrollIntoView({behavior:"smooth"})}
+function pdgAddItem(){pdgN++;var n=pdgN;var d=document.createElement("div");d.className="dyn-item";d.innerHTML='<button class="rm" onclick="this.parentElement.remove()">×</button><div class="fr"><div class="f" style="margin-bottom:8px"><label style="font-size:12px">Fase</label><select class="pdg-fase"><option value="ida">Ida</option><option value="volta">Volta</option></select></div><div class="f" style="margin-bottom:8px"><label style="font-size:12px">Valor (R$)</label><input type="number" class="pdg-val" placeholder="15.40" inputmode="decimal" step="0.01"></div></div><label class="cl" for="pdg_f_'+n+'"><div class="cz" id="pdg_z_'+n+'" style="padding:12px 10px"><div id="pdg_p_'+n+'"><div class="ps">🧾 Anexar comprovante</div></div><img id="pdg_v_'+n+'" style="display:none"></div></label><input type="file" accept="image/*" id="pdg_f_'+n+'" class="chi" onchange="capFile(this,\'pdg_v_'+n+'\',\'pdg_p_'+n+'\',\'pdg_z_'+n+'\')">';document.getElementById("pdg_list").appendChild(d)}
+function pdgColetar(){var out=[],els=document.querySelectorAll("#pdg_list .dyn-item");for(var i=0;i<els.length;i++){var fI=els[i].querySelector("input[type=file]");out.push({fase:els[i].querySelector(".pdg-fase").value,valor:parseFloat(els[i].querySelector(".pdg-val").value)||0,foto:fI?fI.dataset.compressed||null:null})}return out}
+function enviarPedagios(){if(!pdgProto)return;var items=pdgColetar();if(!items.length){alert("Adicione ao menos um pedágio.");return}
+  for(var i=0;i<items.length;i++){if(!items[i].valor){alert("Informe o valor do pedágio "+(i+1)+".");return}if(!items[i].foto){alert("Anexe o comprovante do pedágio "+(i+1)+".");return}}
+  var proto=pdgProto.protocolo,tasks=[];for(var i=0;i<items.length;i++)tasks.push({b64:items[i].foto,name:"pedagio_add_"+(i+1),key:"p"+i});
+  var links={},total=tasks.length,idx=0;
+  function next(){
+    if(idx>=total){var arr=[];for(var i=0;i<items.length;i++)arr.push({fase:items[i].fase,valor:items[i].valor,foto_link:links["p"+i]||""});ld("Enviando pedágios…");
+      post({action:"adicionar_pedagio",protocolo:proto,cpf:pdgCpf,pedagios:arr}).then(function(r){hd();if(r&&r.success===false){alert(r.error);return}document.getElementById("ok_proto").textContent="Protocolo: "+proto;document.getElementById("ok_val").textContent=r&&r.valor_total?"R$ "+r.valor_total+" (atualizado)":"";show("secOk")}).catch(function(e){hd();alert("Erro: "+e.message)});return}
+    var t=tasks[idx];ld("Enviando comprovante "+(idx+1)+" de "+total+"…");
+    uploadImgP(proto,t.b64,t.name).then(function(link){links[t.key]=link;idx++;next()}).catch(function(){hd();alert("Falha ao enviar comprovante "+(idx+1)+". Verifique o sinal e tente novamente.")});}
+  ld("Enviando…");next()}
 var instrAberto=true;
 function toggleInstr(){instrAberto=!instrAberto;document.getElementById("instrBody").style.maxHeight=instrAberto?"2000px":"0";document.getElementById("instrArrow").style.transform=instrAberto?"":"rotate(-90deg)"}
 sync();
