@@ -86,15 +86,15 @@ function setupPlanilha() {
   }
   // Aba "Controle" — visão para o administrativo: Data | Nome | Valor | Status
   // (atualiza sozinha via QUERY; não mexe na ordem das colunas de Registros)
-  if (!ss.getSheetByName("Controle")) {
-    var ctrl = ss.insertSheet("Controle");
-    ctrl.getRange(1,1,1,4).setValues([["Data","Nome","Valor","Status"]]);
-    ctrl.getRange(1,1,1,4).setFontWeight("bold").setBackground("#1A3A5C").setFontColor("#FFF").setFontFamily("Arial").setFontSize(9).setHorizontalAlignment("center");
-    ctrl.setFrozenRows(1);
-    // C=CI DH (Data), L=Nome, AI=Val Total (Valor), B=Status
-    ctrl.getRange("A2").setFormula('=IFERROR(QUERY(' + ABA + '!A2:AP, "select C, L, AI, B where A is not null"), "")');
-    ctrl.setColumnWidth(1,160); ctrl.setColumnWidth(2,240); ctrl.setColumnWidth(3,110); ctrl.setColumnWidth(4,120);
-  }
+  // Idempotente: cria se não existir e (re)escreve cabeçalho + fórmula a cada execução.
+  var ctrl = ss.getSheetByName("Controle") || ss.insertSheet("Controle");
+  ctrl.getRange(1,1,1,4).setValues([["Data","Nome","Valor","Status"]]);
+  ctrl.getRange(1,1,1,4).setFontWeight("bold").setBackground("#1A3A5C").setFontColor("#FFF").setFontFamily("Arial").setFontSize(9).setHorizontalAlignment("center");
+  ctrl.setFrozenRows(1);
+  // Separadores de argumento em ; (locale pt-BR). As vírgulas em "select C, L, AI, B"
+  // são da linguagem QUERY e permanecem. C=CI DH (Data), L=Nome, AI=Val Total, B=Status.
+  ctrl.getRange("A2").setFormula('=IFERROR(QUERY(Registros!A2:AP; "select C, L, AI, B where A is not null"); "")');
+  ctrl.setColumnWidth(1,160); ctrl.setColumnWidth(2,240); ctrl.setColumnWidth(3,110); ctrl.setColumnWidth(4,120);
   Logger.log("OK v5.2");
 }
 
