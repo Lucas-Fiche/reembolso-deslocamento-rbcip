@@ -832,11 +832,13 @@ function buscarProtocolosPedagio(){var cpf=document.getElementById("pdg_cpf").va
     if(!d.success||!d.protocolos||!d.protocolos.length){res.innerHTML='<div style="color:#92400E;background:var(--warning-bg);padding:10px;border-radius:8px">Nenhuma solicitação encontrada para este CPF.</div>';return}
     pdgCpf=cpf;pdgListData=d.protocolos;
     var h='<p style="font-size:12px;color:var(--text-muted);margin-bottom:8px">Toque na solicitação que você quer complementar:</p>';
-    for(var i=0;i<d.protocolos.length;i++){var p=d.protocolos[i];h+='<button class="bs" style="text-align:left;width:100%;margin-bottom:6px;padding:10px 12px" onclick="selecionarProtocoloPedagio('+i+')"><strong>'+escTxt(p.protocolo)+'</strong> · '+escTxt(p.status)+'<br><span style="font-size:12px;color:var(--text-muted)">'+escTxt(fmtDH(p.checkin_dh))+' · R$ '+(parseFloat(p.val_total)||0).toFixed(2)+' · '+(p.qtd_pedagios||0)+' pedágio(s)</span></button>'}
+    for(var i=0;i<d.protocolos.length;i++){var p=d.protocolos[i],pago=String(p.status).trim()==="PAGO",sub='<span style="font-size:12px;color:var(--text-muted)">'+escTxt(fmtDH(p.checkin_dh))+' · R$ '+(parseFloat(p.val_total)||0).toFixed(2)+' · '+(p.qtd_pedagios||0)+' pedágio(s)</span>';
+      if(pago)h+='<div style="text-align:left;width:100%;margin-bottom:6px;padding:10px 12px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg);opacity:.75"><strong>'+escTxt(p.protocolo)+'</strong> · '+escTxt(p.status)+'<br>'+sub+'<br><span style="font-size:12px;color:#991B1B">🔒 Já paga — não é possível adicionar pedágios.</span></div>';
+      else h+='<button class="bs" style="text-align:left;width:100%;margin-bottom:6px;padding:10px 12px" onclick="selecionarProtocoloPedagio('+i+')"><strong>'+escTxt(p.protocolo)+'</strong> · '+escTxt(p.status)+'<br>'+sub+'</button>';}
     res.innerHTML=h;
   }).catch(function(e){res.innerHTML='<span style="color:var(--danger)">Erro: '+e.message+'</span>'})}
 function fmtDH(s){if(!s)return"—";return String(s)}
-function selecionarProtocoloPedagio(i){var p=pdgListData[i];if(!p)return;pdgProto=p;
+function selecionarProtocoloPedagio(i){var p=pdgListData[i];if(!p)return;if(String(p.status).trim()==="PAGO"){alert("Esta solicitação já foi paga — não é possível adicionar pedágios.");return}pdgProto=p;
   document.getElementById("pdg_sel_info").innerHTML='Adicionando pedágio ao protocolo <strong>'+escTxt(p.protocolo)+'</strong><br><span style="font-size:12px">Status: '+escTxt(p.status)+' · Total atual: R$ '+(parseFloat(p.val_total)||0).toFixed(2)+'</span>';
   document.getElementById("pdg_form_card").style.display="block";document.getElementById("pdg_list").innerHTML="";pdgN=0;pdgAddItem();
   document.getElementById("pdg_form_card").scrollIntoView({behavior:"smooth"})}

@@ -627,6 +627,8 @@ function doAdicionarPedagio(d) {
   var row = info.row, updated = info.data.slice();
   if (d.cpf && String(updated[12]).trim() !== String(d.cpf).trim())
     return jr({success: false, error: "CPF não confere com o protocolo."});
+  if (String(updated[1]).trim() === "PAGO")
+    return jr({success: false, error: "Esta solicitação já foi paga — não é possível adicionar pedágios."});
   var novos = d.pedagios || [];
   if (!novos.length) return jr({success: false, error: "Nenhum pedágio informado."});
 
