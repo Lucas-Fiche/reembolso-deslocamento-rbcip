@@ -52,7 +52,7 @@ var CONTATO_BUSINESS = "+55 11 93623-3054";
 var RECIBO_TEMPLATE_ID = propriedades.getProperty('RECIBO_TEMPLATE_ID');
 var RECIBOS_FOLDER_ID = propriedades.getProperty('RECIBOS_FOLDER_ID');
 // Destinatários do recibo gerado (separados por vírgula). NÃO vai para o solicitante.
-var EMAILS_RECIBO = propriedades.getProperty('EMAILS_RECIBO') || "lucas@rbcip.org,financeiro@rbcip.org";
+var EMAILS_RECIBO = propriedades.getProperty('EMAILS_RECIBO') || "lucas@rbcip.org,financeiro@rbcip.org,luiz.rocha@rbcip.org";
 
 // 3. As demais variáveis continuam iguais, pois não são informações sensíveis
 var ABA = "Registros";
