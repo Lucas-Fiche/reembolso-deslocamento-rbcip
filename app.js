@@ -86,16 +86,34 @@ function setupPlanilha() {
   }
   // Aba "Controle" — visão para o administrativo: Data | Nome | Valor | Status
   // (atualiza sozinha via QUERY; não mexe na ordem das colunas de Registros)
-  if (!ss.getSheetByName("Controle")) {
-    var ctrl = ss.insertSheet("Controle");
-    ctrl.getRange(1,1,1,4).setValues([["Data","Nome","Valor","Status"]]);
-    ctrl.getRange(1,1,1,4).setFontWeight("bold").setBackground("#1A3A5C").setFontColor("#FFF").setFontFamily("Arial").setFontSize(9).setHorizontalAlignment("center");
-    ctrl.setFrozenRows(1);
-    // C=CI DH (Data), L=Nome, AI=Val Total (Valor), B=Status
-    ctrl.getRange("A2").setFormula('=IFERROR(QUERY(' + ABA + '!A2:AP, "select C, L, AI, B where A is not null"), "")');
-    ctrl.setColumnWidth(1,160); ctrl.setColumnWidth(2,240); ctrl.setColumnWidth(3,110); ctrl.setColumnWidth(4,120);
-  }
+  // Idempotente: cria se não existir e (re)escreve cabeçalho + fórmula a cada execução.
+  var ctrl = ss.getSheetByName("Controle") || ss.insertSheet("Controle");
+  ctrl.getRange(1,1,1,4).setValues([["Data","Nome","Valor","Status"]]);
+  ctrl.getRange(1,1,1,4).setFontWeight("bold").setBackground("#1A3A5C").setFontColor("#FFF").setFontFamily("Arial").setFontSize(9).setHorizontalAlignment("center");
+  ctrl.setFrozenRows(1);
+  // Separadores de argumento em ; (locale pt-BR). As vírgulas em "select C, L, AI, B"
+  // são da linguagem QUERY e permanecem. C=CI DH (Data), L=Nome, AI=Val Total, B=Status.
+  ctrl.getRange("A2").setFormula('=IFERROR(QUERY(Registros!A2:AP; "select C, L, AI, B where A is not null"); "")');
+  ctrl.setColumnWidth(1,160); ctrl.setColumnWidth(2,240); ctrl.setColumnWidth(3,110); ctrl.setColumnWidth(4,120);
   Logger.log("OK v5.2");
+}
+
+// MIGRAÇÃO ÚNICA — converte os valores antigos (texto "93.02") em número.
+// Rode uma vez no editor do Apps Script para corrigir registros já existentes.
+function corrigirValoresNumericos() {
+  var s = getSheet();
+  var data = s.getDataRange().getValues();
+  var cols = [26, 32, 33, 34];  // 0-index: Val Pedágios, Val Estimado, Val Real, Val Total
+  for (var i = 1; i < data.length; i++) {
+    for (var c = 0; c < cols.length; c++) {
+      var v = data[i][cols[c]];
+      if (v !== "" && v !== null && typeof v !== "number") {
+        var n = parseFloat(String(v).replace(",", "."));
+        if (!isNaN(n)) s.getRange(i+1, cols[c]+1).setValue(n);
+      }
+    }
+  }
+  Logger.log("Valores convertidos para número.");
 }
 
 // ══════════════════════════════════════════════════════════════
@@ -122,6 +140,10 @@ function withLock(fn) {
 function authAdmin(token) {
   return !!PAINEL_SENHA && String(token || "") === String(PAINEL_SENHA);
 }
+
+// Arredonda para 2 casas e devolve NÚMERO (não texto) — para os valores na
+// planilha entrarem como número (somáveis no pt-BR), e não como "93.02".
+function r2(x) { return Math.round((Number(x) || 0) * 100) / 100; }
 
 // ══════════════════════════════════════════════════════════════
 // ROUTERS
@@ -343,15 +365,15 @@ function doFinalizar(d) {
   updated[23] = dTot;                         // X
   updated[24] = pTxt.trim();                  // Y
   updated[25] = peds.length;                  // Z
-  updated[26] = tPed.toFixed(2);              // AA
+  updated[26] = r2(tPed);                     // AA
   updated[27] = pLnk.join("\n");              // AB
   updated[28] = usouEstim ? "Sim" : "Não";    // AC
   updated[29] = PRECO_BASE;                   // AD
   updated[30] = pReal;                        // AE
   updated[31] = lcup;                         // AF
-  updated[32] = vEst.toFixed(2);              // AG
-  updated[33] = vReal.toFixed(2);             // AH
-  updated[34] = vTot.toFixed(2);              // AI
+  updated[32] = r2(vEst);                     // AG
+  updated[33] = r2(vReal);                    // AH
+  updated[34] = r2(vTot);                     // AI
   updated[35] = val;                          // AJ
   updated[39] = Array.isArray(d.caronas) ? d.caronas.filter(function(x){return x && String(x).trim();}).map(function(x){return String(x).trim();}).join(", ") : (d.caronas || "");  // AN Caronas
   updated[40] = con;                          // AO Consumo (km/L) efetivo
@@ -451,9 +473,9 @@ function doLancamentoPosterior(d) {
     d.nome, d.cpf, d.email, d.telefone, d.veiculo, d.placa,
     ida.length || 1, idaTxt, ida.length,
     volta.length || 0, voltaTxt, volta.length,
-    dTot, pTxt.trim(), peds.length, tPed.toFixed(2), pLnk.join("\n"),
+    dTot, pTxt.trim(), peds.length, r2(tPed), pLnk.join("\n"),
     usouEstim ? "Sim" : "Não", PRECO_BASE, pReal, d.img_cupom_link||"",
-    vEst.toFixed(2), vReal.toFixed(2), vTot.toFixed(2), val,
+    r2(vEst), r2(vReal), r2(vTot), val,
     d.rg||"", d.orgao||"", "",   // RG, Órgão, Recibo
     (Array.isArray(d.caronas) ? d.caronas.filter(function(x){return x && String(x).trim();}).map(function(x){return String(x).trim();}).join(", ") : (d.caronas || "")), con, d.img_consumo_link||""   // Caronas, Consumo, FotoConsumo
   ];
@@ -543,7 +565,7 @@ function doCorrigir(d) {
       pLnk.push(pl);
       pTxt += (i+1)+". "+faseLbl+"R$ "+v.toFixed(2)+(pl?" | "+pl:"")+"\n";
     }
-    updated[24] = pTxt.trim(); updated[25] = peds.length; updated[26] = tP.toFixed(2); updated[27] = pLnk.join("\n");
+    updated[24] = pTxt.trim(); updated[25] = peds.length; updated[26] = r2(tP); updated[27] = pLnk.join("\n");
   } else { tP = parseFloat(rowData[26]) || 0; }
 
   // ── Combustível e totais ──
@@ -557,7 +579,7 @@ function doCorrigir(d) {
   if (d.caronas !== undefined) updated[39] = Array.isArray(d.caronas) ? d.caronas.filter(function(x){return x && String(x).trim();}).map(function(x){return String(x).trim();}).join(", ") : (d.caronas || "");
   var con = (parseFloat(updated[40]) > 0) ? parseFloat(updated[40]) : (updated[15] === "Moto" ? 49 : 10);
   var vE = (dist/con)*PRECO_BASE, vR = (dist/con)*pR, vT = vR + tP;
-  updated[32] = vE.toFixed(2); updated[33] = vR.toFixed(2); updated[34] = vT.toFixed(2);
+  updated[32] = r2(vE); updated[33] = r2(vR); updated[34] = r2(vT);
 
   var descTxt = d.descricao ? String(d.descricao) : "Pedido corrigido pelo pesquisador";
   updated[35] = "🔄 " + descTxt;
@@ -661,13 +683,13 @@ function doAdicionarPedagio(d) {
   updated[24] = (existTxt ? existTxt + "\n" : "") + addLinhas.join("\n");
   updated[25] = qtdExist + novos.length;
   var novoValPed = valExist + addVal;
-  updated[26] = novoValPed.toFixed(2);
+  updated[26] = r2(novoValPed);
   updated[27] = (existLinks ? existLinks + "\n" : "") + addLinks.join("\n");
 
   // Total = valor real do combustível (col AH=33) + total de pedágios
   var vReal = parseFloat(updated[33]) || 0;
   var vTot = vReal + novoValPed;
-  updated[34] = vTot.toFixed(2);
+  updated[34] = r2(vTot);
   updated[35] = (updated[35] ? updated[35] + " | " : "") + "🧾 Pedágio adicionado posteriormente (" + fts(new Date().toISOString()) + ")";
 
   s.getRange(row, 1, 1, updated.length).setValues([updated]);
@@ -727,7 +749,7 @@ function doEditarAdmin(d) {
   var con = (parseFloat(updated[40]) > 0) ? parseFloat(updated[40]) : (updated[15] === "Moto" ? 49 : 10);
   var tP = parseFloat(rowData[26]) || 0;
   var vE = (dist/con)*PRECO_BASE, vR = (dist/con)*pR, vT = vR + tP;
-  updated[32] = vE.toFixed(2); updated[33] = vR.toFixed(2); updated[34] = vT.toFixed(2);
+  updated[32] = r2(vE); updated[33] = r2(vR); updated[34] = r2(vT);
 
   updated[35] = (updated[35] ? updated[35] + " | " : "") + "✏️ Editado pelo admin" + (d.motivo ? ": " + d.motivo : "");
 
