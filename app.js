@@ -84,7 +84,18 @@ function setupPlanilha() {
     hist.getRange(1,1,1,h.length).setFontWeight("bold").setBackground("#4A5568").setFontColor("#FFF").setFontFamily("Arial").setFontSize(9).setHorizontalAlignment("center").setWrap(true);
     hist.setFrozenRows(1);
   }
-  Logger.log("OK v5.1");
+  // Aba "Controle" — visão para o administrativo: Data | Nome | Valor | Status
+  // (atualiza sozinha via QUERY; não mexe na ordem das colunas de Registros)
+  if (!ss.getSheetByName("Controle")) {
+    var ctrl = ss.insertSheet("Controle");
+    ctrl.getRange(1,1,1,4).setValues([["Data","Nome","Valor","Status"]]);
+    ctrl.getRange(1,1,1,4).setFontWeight("bold").setBackground("#1A3A5C").setFontColor("#FFF").setFontFamily("Arial").setFontSize(9).setHorizontalAlignment("center");
+    ctrl.setFrozenRows(1);
+    // C=CI DH (Data), L=Nome, AI=Val Total (Valor), B=Status
+    ctrl.getRange("A2").setFormula('=IFERROR(QUERY(' + ABA + '!A2:AP, "select C, L, AI, B where A is not null"), "")');
+    ctrl.setColumnWidth(1,160); ctrl.setColumnWidth(2,240); ctrl.setColumnWidth(3,110); ctrl.setColumnWidth(4,120);
+  }
+  Logger.log("OK v5.2");
 }
 
 // ══════════════════════════════════════════════════════════════
@@ -126,6 +137,7 @@ function doPost(e) {
     if (d.action === "finalizar") return withLock(function(){ return doFinalizar(d); });
     if (d.action === "lancamento_posterior") return withLock(function(){ return doLancamentoPosterior(d); });
     if (d.action === "corrigir") return withLock(function(){ return doCorrigir(d); });
+    if (d.action === "adicionar_pedagio") return withLock(function(){ return doAdicionarPedagio(d); });
     if (d.action === "set_volta") return withLock(function(){ return doSetVolta(d); });
     // ── Ações ADMINISTRATIVAS: exigem a senha do painel (PAINEL_SENHA) ──
     if (d.action === "login_admin") return jr({success: authAdmin(d.token), auth: authAdmin(d.token)});
@@ -158,6 +170,7 @@ function doGet(e) {
     if (a === "buscar_viagem") return buscarViagem(e.parameter.protocolo || "");
     if (a === "buscar_revisao") return buscarRevisao(e.parameter.cpf || "");
     if (a === "buscar_situacao") return buscarSituacao(e.parameter.cpf || "");
+    if (a === "listar_por_cpf") return listarPorCpf(e.parameter.cpf || "");
     if (a === "carregar_pedido") return carregarPedido(e.parameter.protocolo || "");
     if (a === "listar") {
       // Endpoint sensível (retorna todos os dados): exige a senha do painel.
@@ -314,6 +327,7 @@ function doFinalizar(d) {
   if (vTot > 500) fl.push("Valor>R$500");
   if (!usouEstim && pReal > PRECO_BASE*1.3) fl.push("Preço/L 30%+ acima");
   var val = fl.length === 0 ? "✅ OK" : "⚠️ " + fl.join(" | ");
+  if (d.pedagios_depois === true) val += " | 🧾 Pedágios pendentes (serão lançados depois)";
 
   // ── BATCH: montar array com todas as colunas e gravar de uma vez ──
   // Atualizar colunas B(2) a AJ(36) = 35 células a partir da col 2
@@ -596,6 +610,68 @@ function buscarSituacao(cpf) {
     }
   }
   return jr({success: true, found: false});
+}
+
+// Lista os protocolos recentes de um CPF (para o lançamento de pedágio pendente)
+function listarPorCpf(cpf) {
+  if (!cpf) return jr({success: false, error: "CPF vazio"});
+  var allData = getSheet().getDataRange().getValues();
+  var out = [];
+  for (var i = allData.length-1; i >= 1 && out.length < 12; i--) {
+    if (String(allData[i][12]).trim() === cpf.trim()) {
+      var d = allData[i];
+      out.push({
+        protocolo: d[0], status: String(d[1]).trim(), checkin_dh: d[2] || "",
+        dist_total: d[23] || 0, val_total: d[34] || "", qtd_pedagios: d[25] || 0
+      });
+    }
+  }
+  return jr({success: true, found: out.length > 0, protocolos: out});
+}
+
+// Adiciona pedágio(s) a um protocolo existente (comprovante chegou depois).
+// Recalcula o total = valor real do combustível + total de pedágios.
+function doAdicionarPedagio(d) {
+  var s = getSheet();
+  var allData = s.getDataRange().getValues();
+  var info = findByProtoData(allData, d.protocolo);
+  if (!info) return jr({success: false, error: "Protocolo não encontrado."});
+  var row = info.row, updated = info.data.slice();
+  if (d.cpf && String(updated[12]).trim() !== String(d.cpf).trim())
+    return jr({success: false, error: "CPF não confere com o protocolo."});
+  var stAtual = String(updated[1]).trim();
+  if (stAtual === "PAGO" || stAtual === "APROVADO")
+    return jr({success: false, error: "Esta solicitação já está " + (stAtual === "PAGO" ? "paga" : "aprovada") + " — não é possível adicionar pedágios."});
+  var novos = d.pedagios || [];
+  if (!novos.length) return jr({success: false, error: "Nenhum pedágio informado."});
+
+  var qtdExist = parseInt(updated[25]) || 0;
+  var valExist = parseFloat(updated[26]) || 0;
+  var addVal = 0, addLinhas = [], addLinks = [];
+  for (var i = 0; i < novos.length; i++) {
+    var v = parseFloat(novos[i].valor) || 0; addVal += v;
+    var pl = novos[i].foto_link || "";
+    var faseLbl = novos[i].fase ? "["+String(novos[i].fase).toUpperCase()+"] " : "";
+    var num = qtdExist + i + 1;
+    addLinhas.push(num+". "+faseLbl+"R$ "+v.toFixed(2)+(pl?" | "+pl:"")+" (add)");
+    addLinks.push(pl);
+  }
+  var existTxt = String(updated[24] || "");
+  var existLinks = String(updated[27] || "");
+  updated[24] = (existTxt ? existTxt + "\n" : "") + addLinhas.join("\n");
+  updated[25] = qtdExist + novos.length;
+  var novoValPed = valExist + addVal;
+  updated[26] = novoValPed.toFixed(2);
+  updated[27] = (existLinks ? existLinks + "\n" : "") + addLinks.join("\n");
+
+  // Total = valor real do combustível (col AH=33) + total de pedágios
+  var vReal = parseFloat(updated[33]) || 0;
+  var vTot = vReal + novoValPed;
+  updated[34] = vTot.toFixed(2);
+  updated[35] = (updated[35] ? updated[35] + " | " : "") + "🧾 Pedágio adicionado posteriormente (" + fts(new Date().toISOString()) + ")";
+
+  s.getRange(row, 1, 1, updated.length).setValues([updated]);
+  return jr({success: true, protocolo: d.protocolo, valor_total: vTot.toFixed(2), qtd_pedagios: updated[25]});
 }
 
 // Extrai origem/destino/km/Maps de cada trecho (para o editor de correção)
