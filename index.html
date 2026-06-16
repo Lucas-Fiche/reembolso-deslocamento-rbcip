@@ -133,7 +133,7 @@
   </div>
   <div class="card"><div class="ct"><span class="ic" style="background:#EFF6FF;color:#2563EB">📸</span> Odômetro — SAÍDA</div>
     <label class="cl" for="ci_foto"><div class="cz" id="ci_cz"><div id="ci_ph"><div class="pi">📷</div><div class="pt">Toque para fotografar</div></div><img id="ci_pv" style="display:none"></div></label>
-    <input type="file" accept="image/*" capture="environment" id="ci_foto" class="chi" onchange="capFoto(this,'ci')">
+    <input type="file" accept="image/*" id="ci_foto" class="chi" onchange="capFoto(this,'ci')">
     <div class="cm" id="ci_cm"><div class="mr"><span class="ml">⏱</span><span id="ci_ts">—</span></div><div class="mr"><span class="ml">📍</span><span id="ci_co">—</span></div></div>
   </div>
   <button class="bp g" onclick="enviarCI()">✅ Confirmar CHECK-IN</button>
@@ -224,7 +224,7 @@
   </div>
   <div class="card"><div class="ct"><span class="ic" style="background:#FEF3C7;color:#D97706">📸</span> Odômetro — CHEGADA</div>
     <label class="cl" for="co_foto"><div class="cz" id="co_cz"><div id="co_ph"><div class="pi">📷</div><div class="pt">Fotografar painel</div></div><img id="co_pv" style="display:none"></div></label>
-    <input type="file" accept="image/*" capture="environment" id="co_foto" class="chi" onchange="capFoto(this,'co')">
+    <input type="file" accept="image/*" id="co_foto" class="chi" onchange="capFoto(this,'co')">
     <div class="cm" id="co_cm"><div class="mr"><span class="ml">⏱</span><span id="co_ts">—</span></div><div class="mr"><span class="ml">📍</span><span id="co_co">—</span></div></div>
   </div>
   <div class="card"><div class="ct"><span class="ic" style="background:#F0FDF4;color:#16A34A">🗺️</span> Prints do Maps por trecho</div>
@@ -485,7 +485,26 @@ function show(id){var s=document.querySelectorAll(".sec");for(var i=0;i<s.length
 function ld(m){document.getElementById("lt").textContent=m||"Enviando…";document.getElementById("ld").classList.add("s")}function hd(){document.getElementById("ld").classList.remove("s")}
 function reqGPS(s,t){var e=document.getElementById(s);e.className="gs p";document.getElementById(t).textContent="Obtendo…";if(!navigator.geolocation){e.className="gs e";document.getElementById(t).textContent="GPS indisponível";return}navigator.geolocation.getCurrentPosition(function(p){gps={lat:p.coords.latitude,lng:p.coords.longitude};e.className="gs a";document.getElementById(t).textContent=p.coords.latitude.toFixed(5)+", "+p.coords.longitude.toFixed(5)+" (±"+Math.round(p.coords.accuracy)+"m)"},function(){e.className="gs e";document.getElementById(t).textContent="Permita localização"},{enableHighAccuracy:true,timeout:15000})}
 function clock(id){var u=function(){document.getElementById(id).textContent=fmtD(new Date())};u();clk=setInterval(u,1000)}
-function compress(file){return new Promise(function(ok,no){if(!file||!file.type.startsWith("image/")){var r=new FileReader();r.onload=function(){ok(r.result)};r.onerror=function(){no(new Error("Erro"))};r.readAsDataURL(file);return}var r=new FileReader();r.onerror=function(){no(new Error("Erro"))};r.onload=function(){var img=new Image();img.onerror=function(){no(new Error("Erro"))};img.onload=function(){var c=document.createElement("canvas"),w=img.width,h=img.height;if(w>1280){h=Math.round(h*(1280/w));w=1280}c.width=w;c.height=h;c.getContext("2d").drawImage(img,0,0,w,h);ok(c.toDataURL("image/jpeg",.6));c.width=0;c.height=0};img.src=r.result};r.readAsDataURL(file)})}
+function compress(file){return new Promise(function(ok,no){
+  if(!file){no(new Error("Nenhum arquivo selecionado."));return}
+  if(file.type&&file.type.indexOf("image")!==0){no(new Error("O arquivo selecionado não é uma imagem. Escolha uma foto."));return}
+  function desenhar(src,w,h){var c=document.createElement("canvas");if(w>1280){h=Math.round(h*(1280/w));w=1280}c.width=w;c.height=h;c.getContext("2d").drawImage(src,0,0,w,h);var out=c.toDataURL("image/jpeg",.6);c.width=0;c.height=0;return out}
+  // Caminho 1: createImageBitmap — lida melhor com imagens grandes e orientação (EXIF)
+  function viaBitmap(){return new Promise(function(res,rej){
+    if(!window.createImageBitmap){rej();return}
+    var p;try{p=createImageBitmap(file,{imageOrientation:"from-image"})}catch(e){try{p=createImageBitmap(file)}catch(e2){rej();return}}
+    p.then(function(bmp){try{var out=desenhar(bmp,bmp.width,bmp.height);if(bmp.close)bmp.close();res(out)}catch(e){rej()}}).catch(function(){rej()});
+  })}
+  // Caminho 2 (fallback): FileReader + Image
+  function viaImage(){var r=new FileReader();
+    r.onerror=function(){no(new Error("Não foi possível ler o arquivo. Tente outra foto."))};
+    r.onload=function(){var img=new Image();
+      img.onerror=function(){no(new Error("Não foi possível abrir a imagem. O formato pode não ser suportado (ex.: HEIC) ou a foto é muito grande — tente tirar pela câmera ou escolher outra."))};
+      img.onload=function(){try{if(!img.width||!img.height){no(new Error("Imagem inválida. Tente outra foto."));return}ok(desenhar(img,img.width,img.height))}catch(e){no(new Error("Falha ao processar a imagem. Tente uma foto menor."))}};
+      img.src=r.result};
+    r.readAsDataURL(file)}
+  viaBitmap().then(ok).catch(viaImage);
+})}
 function post(p){return fetch(API,{method:"POST",redirect:"follow",headers:{"Content-Type":"text/plain"},body:JSON.stringify(p)}).then(function(r){return r.text()}).then(function(t){try{return JSON.parse(t)}catch(e){return{success:true}}})}
 document.addEventListener("input",function(e){if(e.target.id==="ci_cpf"||e.target.id==="busca_cpf"||e.target.id==="lp_cpf"||e.target.id==="pdg_cpf"){var v=e.target.value.replace(/\D/g,"").slice(0,11);if(v.length>9)v=v.replace(/(\d{3})(\d{3})(\d{3})(\d{1,2})/,"$1.$2.$3-$4");else if(v.length>6)v=v.replace(/(\d{3})(\d{3})(\d{1,3})/,"$1.$2.$3");else if(v.length>3)v=v.replace(/(\d{3})(\d{1,3})/,"$1.$2");e.target.value=v}if(e.target.id==="ci_tel"||e.target.id==="lp_tel"||e.target.id==="corr_tel"){var v=e.target.value.replace(/\D/g,"").slice(0,11);if(v.length>6)v=v.replace(/(\d{2})(\d{5})(\d{1,4})/,"($1) $2-$3");else if(v.length>2)v=v.replace(/(\d{2})(\d{1,5})/,"($1) $2");e.target.value=v}});
 function validarCPF(c){c=c.replace(/\D/g,"");if(c==="00000000000")return true;/* CPF fictício liberado para testes/tutorial */if(c.length!==11||/^(\d)\1{10}$/.test(c))return false;var s=0;for(var i=0;i<9;i++)s+=parseInt(c[i])*(10-i);var r=11-(s%11),d1=r>=10?0:r;if(parseInt(c[9])!==d1)return false;s=0;for(var i=0;i<10;i++)s+=parseInt(c[i])*(11-i);r=11-(s%11);return parseInt(c[10])===(r>=10?0:r)}
@@ -682,7 +701,7 @@ function corrRenderTrechos(fase,arr){var h="";for(var i=0;i<arr.length;i++)h+=co
 function corrAddTrecho(fase){var d=document.createElement("div");d.innerHTML=corrTrechoItem(fase,null);document.getElementById("corr_trecho_"+fase).appendChild(d.firstChild);corrRenumberTrechos(fase)}
 function corrRemoveTrecho(btn,fase){btn.parentElement.remove();corrRenumberTrechos(fase)}
 function corrColetarTrechos(fase){var out=[],els=document.querySelectorAll("#corr_trecho_"+fase+" .dyn-item");for(var i=0;i<els.length;i++){var fI=els[i].querySelector("input[type=file]");out.push({origem:(els[i].querySelector(".corr-orig").value||"").trim(),destino:(els[i].querySelector(".corr-dest").value||"").trim(),km:els[i].querySelector(".corr-km").value,maps:fI?fI.dataset.compressed||null:null})}return out}
-function corrOdoItem(id,label,link){var atual=link?'<a href="'+escAttr(link)+'" target="_blank" style="font-size:12px;color:var(--accent)">📸 Ver foto atual</a>':'<span style="font-size:12px;color:var(--text-muted)">Sem foto</span>';return '<div style="font-size:13px;font-weight:600;color:var(--text);margin-bottom:6px">'+label+'</div><div style="margin-bottom:6px">'+atual+'</div><label class="cl" for="'+id+'"><div class="cz" id="'+id+'_z" style="padding:12px 10px"><div id="'+id+'_p"><div class="ps">📷 Substituir foto (opcional)</div></div><img id="'+id+'_v" style="display:none"></div></label><input type="file" accept="image/*" capture="environment" id="'+id+'" class="chi" onchange="capFile(this,\''+id+'_v\',\''+id+'_p\',\''+id+'_z\')">'}
+function corrOdoItem(id,label,link){var atual=link?'<a href="'+escAttr(link)+'" target="_blank" style="font-size:12px;color:var(--accent)">📸 Ver foto atual</a>':'<span style="font-size:12px;color:var(--text-muted)">Sem foto</span>';return '<div style="font-size:13px;font-weight:600;color:var(--text);margin-bottom:6px">'+label+'</div><div style="margin-bottom:6px">'+atual+'</div><label class="cl" for="'+id+'"><div class="cz" id="'+id+'_z" style="padding:12px 10px"><div id="'+id+'_p"><div class="ps">📷 Substituir foto (opcional)</div></div><img id="'+id+'_v" style="display:none"></div></label><input type="file" accept="image/*" id="'+id+'" class="chi" onchange="capFile(this,\''+id+'_v\',\''+id+'_p\',\''+id+'_z\')">'}
 function corrParsePedagios(txt){var out=[];if(!txt)return out;var lines=String(txt).split("\n");for(var i=0;i<lines.length;i++){var l=lines[i].trim();if(!l)continue;var fase=/\[VOLTA\]/i.test(l)?"volta":"ida";var val=l.match(/R\$\s*([\d.]+)/);var lnk=l.match(/\|\s*(https?:\/\/\S+)/);out.push({fase:fase,valor:val?parseFloat(val[1])||0:0,foto_link:lnk?lnk[1]:""})}return out}
 function corrAddPed(fase,valor,fotoLink){fase=fase||"ida";corrPedN++;var n=corrPedN;var verLink=fotoLink?'<div style="font-size:11px;margin-bottom:6px"><a href="'+escAttr(fotoLink)+'" target="_blank" style="color:var(--accent)">🧾 Ver comprovante atual</a></div>':'';var d=document.createElement("div");d.className="dyn-item";d.dataset.fotoLink=fotoLink||"";d.innerHTML='<button class="rm" onclick="this.parentElement.remove()">×</button><div class="f" style="margin-bottom:8px"><label style="font-size:12px">Valor (R$)</label><input type="number" class="corr-ped-val" placeholder="15.40" inputmode="decimal" step="0.01" value="'+(valor!=null&&valor!==""?escAttr(valor):"")+'"></div>'+verLink+'<label class="cl" for="corr_pedf_'+n+'"><div class="cz" id="corr_pedz_'+n+'" style="padding:12px 10px"><div id="corr_pedp_'+n+'"><div class="ps">🧾 '+(fotoLink?"Substituir":"Anexar")+' comprovante</div></div><img id="corr_pedv_'+n+'" style="display:none"></div></label><input type="file" accept="image/*" id="corr_pedf_'+n+'" class="chi" onchange="capFile(this,\'corr_pedv_'+n+'\',\'corr_pedp_'+n+'\',\'corr_pedz_'+n+'\')">';document.getElementById("corr_ped_list_"+fase).appendChild(d)}
 function corrColetarPedagios(){var out=[];["ida","volta"].forEach(function(f){var els=document.querySelectorAll("#corr_ped_list_"+f+" .dyn-item");for(var i=0;i<els.length;i++){var fI=els[i].querySelector("input[type=file]");out.push({fase:f,valor:parseFloat(els[i].querySelector(".corr-ped-val").value)||0,foto:fI?fI.dataset.compressed||null:null,foto_link:els[i].dataset.fotoLink||""})}});return out}
