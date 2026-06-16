@@ -84,7 +84,18 @@ function setupPlanilha() {
     hist.getRange(1,1,1,h.length).setFontWeight("bold").setBackground("#4A5568").setFontColor("#FFF").setFontFamily("Arial").setFontSize(9).setHorizontalAlignment("center").setWrap(true);
     hist.setFrozenRows(1);
   }
-  Logger.log("OK v5.1");
+  // Aba "Controle" — visão para o administrativo: Data | Nome | Valor | Status
+  // (atualiza sozinha via QUERY; não mexe na ordem das colunas de Registros)
+  if (!ss.getSheetByName("Controle")) {
+    var ctrl = ss.insertSheet("Controle");
+    ctrl.getRange(1,1,1,4).setValues([["Data","Nome","Valor","Status"]]);
+    ctrl.getRange(1,1,1,4).setFontWeight("bold").setBackground("#1A3A5C").setFontColor("#FFF").setFontFamily("Arial").setFontSize(9).setHorizontalAlignment("center");
+    ctrl.setFrozenRows(1);
+    // C=CI DH (Data), L=Nome, AI=Val Total (Valor), B=Status
+    ctrl.getRange("A2").setFormula('=IFERROR(QUERY(' + ABA + '!A2:AP, "select C, L, AI, B where A is not null"), "")');
+    ctrl.setColumnWidth(1,160); ctrl.setColumnWidth(2,240); ctrl.setColumnWidth(3,110); ctrl.setColumnWidth(4,120);
+  }
+  Logger.log("OK v5.2");
 }
 
 // ══════════════════════════════════════════════════════════════
@@ -316,6 +327,7 @@ function doFinalizar(d) {
   if (vTot > 500) fl.push("Valor>R$500");
   if (!usouEstim && pReal > PRECO_BASE*1.3) fl.push("Preço/L 30%+ acima");
   var val = fl.length === 0 ? "✅ OK" : "⚠️ " + fl.join(" | ");
+  if (d.pedagios_depois === true) val += " | 🧾 Pedágios pendentes (serão lançados depois)";
 
   // ── BATCH: montar array com todas as colunas e gravar de uma vez ──
   // Atualizar colunas B(2) a AJ(36) = 35 células a partir da col 2
@@ -627,8 +639,9 @@ function doAdicionarPedagio(d) {
   var row = info.row, updated = info.data.slice();
   if (d.cpf && String(updated[12]).trim() !== String(d.cpf).trim())
     return jr({success: false, error: "CPF não confere com o protocolo."});
-  if (String(updated[1]).trim() === "PAGO")
-    return jr({success: false, error: "Esta solicitação já foi paga — não é possível adicionar pedágios."});
+  var stAtual = String(updated[1]).trim();
+  if (stAtual === "PAGO" || stAtual === "APROVADO")
+    return jr({success: false, error: "Esta solicitação já está " + (stAtual === "PAGO" ? "paga" : "aprovada") + " — não é possível adicionar pedágios."});
   var novos = d.pedagios || [];
   if (!novos.length) return jr({success: false, error: "Nenhum pedágio informado."});
 
