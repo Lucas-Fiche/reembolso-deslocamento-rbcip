@@ -501,7 +501,7 @@ function renderSituacao(s){
   var st=s.status||"",val=parseFloat(s.valor_total)||0;
   var map={
     "ABERTO":{bg:"var(--success-bg)",bd:"#86EFAC",fg:"#065F46",ic:"🚀",t:"Viagem em andamento",m:"Há uma viagem em andamento. Continue o registro pela tela inicial."},
-    "COMPLETO":{bg:"var(--warning-bg)",bd:"#FCD34D",fg:"#92400E",ic:"🕐",t:"Em análise",m:"Pedido enviado. Aguardando avaliação do gestor (até 5 dias úteis)."},
+    "COMPLETO":{bg:"var(--warning-bg)",bd:"#FCD34D",fg:"#92400E",ic:"🕐",t:"Aguardando análise",m:"Pedido enviado. Aguardando avaliação do gestor (até 5 dias úteis)."},
     "CORRIGIDO":{bg:"#EDE9FE",bd:"#C4B5FD",fg:"#5B21B6",ic:"🔄",t:"Correção enviada",m:"Sua correção foi recebida e está em reanálise pelo gestor."},
     "REVISÃO":{bg:"#E0E7FF",bd:"#A5B4FC",fg:"#3730A3",ic:"🔄",t:"Em revisão",m:"O gestor solicitou ajustes. Busque novamente para corrigir os dados."},
     "APROVADO":{bg:"#DBEAFE",bd:"#93C5FD",fg:"#1E40AF",ic:"✅",t:"Aprovado — pagamento em processamento",m:"Seu pedido foi aprovado! 💳 O pagamento está sendo processado e será concluído em até 5 dias úteis."},

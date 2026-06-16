@@ -267,7 +267,7 @@ tr.corr-row td:first-child::after{content:"REANALISAR";display:inline-block;marg
       <select id="fStatus" onchange="filtrar()">
         <option value="">Todos os status</option>
         <option value="ABERTO">Aberto</option>
-        <option value="COMPLETO">Completo</option>
+        <option value="COMPLETO">Aguardando Análise</option>
         <option value="CORRIGIDO">Corrigido (reanalisar)</option>
         <option value="APROVADO">Aprovado</option>
         <option value="PAGO">Pago</option>
@@ -446,7 +446,7 @@ function renderCards(){
   document.getElementById("cards").innerHTML=
     card("gray","Total",total,"")+
     card("amber","Abertos",abertos,"Em andamento")+
-    card("green","Completos",completos,"Aguardando análise")+
+    card("green","Aguardando Análise",completos,"Para analisar")+
     card("purple","Corrigidos",corrigidos,"Reanalisar")+
     card("blue","Aprovados",aprovados,"Aguardando pagamento")+
     card("green","Pagos",pagos,"R$ "+valPago.toFixed(2).replace(".",","))+
@@ -484,7 +484,7 @@ function renderTable(){
     var trClass=(sel&&sel.protocolo===d.protocolo?"sel":"")+(isCorr?" corr-row":(hasWarn?" warn-row":""));
     h+='<tr onclick="selecionar('+i+')" class="'+trClass.trim()+'">'+
       '<td>'+esc(d.protocolo)+'</td>'+
-      '<td><span class="'+stClass+'">'+esc(d.status)+'</span></td>'+
+      '<td><span class="'+stClass+'">'+esc(statusLabel(d.status))+'</span></td>'+
       '<td>'+esc(d.nome)+'</td>'+
       '<td>'+esc(d.veiculo)+'</td>'+
       '<td style="font-size:12px;color:var(--text3)">'+esc(formatDate(d.checkin_dh))+'</td>'+
@@ -498,6 +498,8 @@ function renderTable(){
 }
 
 function esc(s){return String(s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;")}
+// Rótulo exibido do status (valor interno continua "COMPLETO")
+function statusLabel(s){return String(s||"").trim()==="COMPLETO"?"Aguardando Análise":s;}
 
 // ── Notificação de correções recebidas (status CORRIGIDO) ──
 function showToast(msg){
@@ -609,7 +611,7 @@ function renderDetail(){
   h+='<div class="detail-section">';
   h+='<div class="detail-section-title">Identificação</div>';
   h+=drow("Protocolo",'<span style="font-family:\'Courier New\',monospace;font-size:12px;font-weight:600">'+esc(d.protocolo)+'</span>');
-  h+=drow("Status",'<span class="st st-'+esc(d.status)+'">'+esc(d.status)+'</span>');
+  h+=drow("Status",'<span class="st st-'+esc(d.status)+'">'+esc(statusLabel(d.status))+'</span>');
   h+=drow("Nome",esc(d.nome));
   h+=drow("CPF",esc(d.cpf));
   h+=drow("RG",esc(d.rg||"—")+(d.orgao?" "+esc(d.orgao):""));
