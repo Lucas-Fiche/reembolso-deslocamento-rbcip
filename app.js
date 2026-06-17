@@ -843,7 +843,13 @@ function doEditarAdmin(d) {
 
   var pbTrip = parseFloat(rowData[29]) || PRECO_BASE;  // preço da gasolina do período da viagem (já gravado)
   var usouEstim = String(updated[28]).trim() === "Sim";
-  if (d.preco_real) updated[30] = parseFloat(d.preco_real) || updated[30];
+  // Preço digitado pelo admin: aplica ao valor REALMENTE usado no cálculo —
+  // base (col 29) se o pedido é estimativa; preço real (col 30) caso contrário.
+  var precoEd = parseFloat(d.preco_real);
+  if (!isNaN(precoEd) && precoEd > 0) {
+    if (usouEstim) { pbTrip = precoEd; updated[29] = precoEd; }
+    else { updated[30] = precoEd; }
+  }
   var pR = usouEstim ? pbTrip : (parseFloat(updated[30]) || pbTrip);
   if (d.consumo !== undefined && parseFloat(d.consumo) > 0) updated[40] = parseFloat(d.consumo);
   if (d.caronas !== undefined) updated[39] = d.caronas || "";
