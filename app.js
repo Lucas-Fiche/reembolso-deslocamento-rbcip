@@ -854,7 +854,19 @@ function doEditarAdmin(d) {
   if (d.consumo !== undefined && parseFloat(d.consumo) > 0) updated[40] = parseFloat(d.consumo);
   if (d.caronas !== undefined) updated[39] = d.caronas || "";
   var con = (parseFloat(updated[40]) > 0) ? parseFloat(updated[40]) : (updated[15] === "Moto" ? 49 : 10);
-  var tP = parseFloat(rowData[26]) || 0;
+  // Pedágios: se enviados, substitui (mantém o comprovante de cada um pelo link)
+  var tP;
+  if (d.pedagios) {
+    var peds = d.pedagios, pTxt = "", pLnk = []; tP = 0;
+    for (var i = 0; i < peds.length; i++) {
+      var v = parseFloat(peds[i].valor) || 0; tP += v;
+      var pl = peds[i].foto_link || "";
+      var faseLbl = peds[i].fase ? "[" + String(peds[i].fase).toUpperCase() + "] " : "";
+      pLnk.push(pl);
+      pTxt += (i+1) + ". " + faseLbl + "R$ " + v.toFixed(2) + (pl ? " | " + pl : "") + "\n";
+    }
+    updated[24] = pTxt.trim(); updated[25] = peds.length; updated[26] = r2(tP); updated[27] = pLnk.join("\n");
+  } else { tP = parseFloat(rowData[26]) || 0; }
   var vE = (dist/con)*pbTrip, vR = (dist/con)*pR, vT = vR + tP;
   updated[32] = r2(vE); updated[33] = r2(vR); updated[34] = r2(vT);
 
