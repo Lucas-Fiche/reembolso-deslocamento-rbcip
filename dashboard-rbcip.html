@@ -239,6 +239,7 @@ tr.corr-row td:first-child::after{content:"REANALISAR";display:inline-block;marg
       <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
       Atualizar
     </button>
+    <button class="refresh-btn" onclick="abrirPrecos()" title="Definir o valor da gasolina por período">⛽ Valor da Gasolina</button>
     <span id="hdrUser" style="font-size:12px;font-weight:600;color:var(--text2)"></span>
     <button class="refresh-btn" onclick="logout()" title="Encerrar sessão">Sair</button>
   </div>
@@ -333,6 +334,28 @@ tr.corr-row td:first-child::after{content:"REANALISAR";display:inline-block;marg
     <div class="edit-foot">
       <button class="ed-cancel" onclick="fecharEdicao()">Cancelar</button>
       <button class="ed-save" onclick="salvarEdicao()">Salvar e recalcular</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: valor da gasolina por período -->
+<div class="edit-modal" id="precoModal" onclick="if(event.target===this)fecharPrecos()">
+  <div class="edit-box">
+    <div class="edit-head"><h3>⛽ Valor da Gasolina (estimativa)</h3><div style="font-size:12px;color:var(--text3);margin-top:4px">Vigente agora: <strong id="preco_atual_lbl">—</strong></div></div>
+    <div class="edit-body">
+      <div style="font-size:12px;color:var(--text2);background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px;line-height:1.5">Defina o valor por <strong>período</strong>. Cada viagem usa o valor vigente na <strong>data da viagem</strong>. Se houver sobreposição, vale o período cadastrado por último.</div>
+      <div class="ed-group-title">Novo período</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <div class="edit-field" style="flex:1;min-width:120px;margin-top:0"><label>Início</label><input type="date" id="preco_ini"></div>
+        <div class="edit-field" style="flex:1;min-width:120px;margin-top:0"><label>Fim</label><input type="date" id="preco_fim"></div>
+        <div class="edit-field" style="flex:0 0 110px;margin-top:0"><label>Valor (R$/L)</label><input type="number" id="preco_val" step="0.01" inputmode="decimal"></div>
+      </div>
+      <button class="ed-add" onclick="salvarPreco()" style="margin-top:8px">+ Adicionar período</button>
+      <div class="ed-group-title">Histórico</div>
+      <div id="precos_lista" style="font-size:13px"></div>
+    </div>
+    <div class="edit-foot">
+      <button class="ed-cancel" onclick="fecharPrecos()">Fechar</button>
     </div>
   </div>
 </div>
@@ -558,6 +581,34 @@ function salvarEdicao(){
     if(d&&d.auth===false){logout(true);return;}
     if(d&&d.success===false){alert(d.error);document.getElementById("ld").classList.add("h");return;}
     fecharEdicao();fecharDetalhe();document.querySelector(".loading p").textContent="Carregando registros…";carregar();
+  }).catch(function(e){document.getElementById("ld").classList.add("h");alert("Erro: "+e.message);});
+}
+// ── Valor da gasolina por período ──
+function abrirPrecos(){document.getElementById("preco_ini").value="";document.getElementById("preco_fim").value="";document.getElementById("preco_val").value="";document.getElementById("precos_lista").innerHTML='<span style="color:var(--text3)">Carregando…</span>';document.getElementById("precoModal").classList.add("show");carregarPrecos();}
+function fecharPrecos(){document.getElementById("precoModal").classList.remove("show");}
+function fmtData(s){var m=String(s||"").match(/^(\d{4})-(\d{2})-(\d{2})/);return m?m[3]+"/"+m[2]+"/"+m[1]:(s||"");}
+function carregarPrecos(){
+  apiPost({action:"precos_listar",token:ADMIN_TOKEN}).then(function(d){
+    if(d&&d.auth===false){logout(true);return;}
+    document.getElementById("preco_atual_lbl").textContent="R$ "+(parseFloat(d&&d.atual)||0).toFixed(2).replace(".",",")+"/L";
+    var lst=(d&&d.precos)||[];
+    if(!lst.length){document.getElementById("precos_lista").innerHTML='<span style="color:var(--text3)">Nenhum período cadastrado. Enquanto não houver, usa-se o valor padrão.</span>';return;}
+    var h="";for(var i=0;i<lst.length;i++){var p=lst[i];h+='<div class="segment"><strong>R$ '+(parseFloat(p.valor)||0).toFixed(2).replace(".",",")+'/L</strong> · '+esc(fmtData(p.inicio))+' a '+esc(fmtData(p.fim))+(p.por?' <span style="color:var(--text3)">('+esc(p.por)+')</span>':'')+'</div>';}
+    document.getElementById("precos_lista").innerHTML=h;
+  }).catch(function(e){document.getElementById("precos_lista").innerHTML='<span style="color:var(--danger)">Erro: '+e.message+'</span>';});
+}
+function salvarPreco(){
+  var ini=document.getElementById("preco_ini").value,fim=document.getElementById("preco_fim").value,val=parseFloat(document.getElementById("preco_val").value);
+  if(!ini||!fim){alert("Informe o período (início e fim).");return;}
+  if(ini>fim){alert("O início não pode ser depois do fim.");return;}
+  if(!val||val<=0){alert("Informe um valor válido.");return;}
+  document.getElementById("ld").classList.remove("h");document.querySelector(".loading p").textContent="Salvando valor…";
+  apiPost({action:"preco_adicionar",token:ADMIN_TOKEN,inicio:ini,fim:fim,valor:val}).then(function(d){
+    document.getElementById("ld").classList.add("h");
+    if(d&&d.auth===false){logout(true);return;}
+    if(d&&d.success===false){alert(d.error);return;}
+    document.getElementById("preco_ini").value="";document.getElementById("preco_fim").value="";document.getElementById("preco_val").value="";
+    carregarPrecos();
   }).catch(function(e){document.getElementById("ld").classList.add("h");alert("Erro: "+e.message);});
 }
 function gerarReciboNovamente(){
