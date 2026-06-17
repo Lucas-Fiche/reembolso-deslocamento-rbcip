@@ -95,6 +95,14 @@ function setupPlanilha() {
   // são da linguagem QUERY e permanecem. C=CI DH (Data), L=Nome, AI=Val Total, B=Status.
   ctrl.getRange("A2").setFormula('=IFERROR(QUERY(Registros!A2:AP; "select C, L, AI, B where A is not null"); "")');
   ctrl.setColumnWidth(1,160); ctrl.setColumnWidth(2,240); ctrl.setColumnWidth(3,110); ctrl.setColumnWidth(4,120);
+  // Aba de preços da gasolina por período
+  if (!ss.getSheetByName("Preços Gasolina")) {
+    var pg = ss.insertSheet("Preços Gasolina");
+    pg.getRange(1,1,1,5).setValues([["Início","Fim","Valor (R$/L)","Registrado por","Em"]]);
+    pg.getRange(1,1,1,5).setFontWeight("bold").setBackground("#1A3A5C").setFontColor("#FFF").setFontSize(9).setHorizontalAlignment("center");
+    pg.setFrozenRows(1);
+    pg.setColumnWidth(1,110); pg.setColumnWidth(2,110); pg.setColumnWidth(3,110); pg.setColumnWidth(4,140); pg.setColumnWidth(5,150);
+  }
   Logger.log("OK v5.2");
 }
 
@@ -165,6 +173,62 @@ function logAuditoria(updated, usuario, acao) {
   updated[42] = updated[42] ? (updated[42] + "\n" + linha) : linha;
 }
 
+// ── Preço da gasolina por período (aba "Preços Gasolina") ──
+// Converte vários formatos de data para "YYYY-MM-DD" (comparável por texto).
+function toYMD(x) {
+  if (x === "" || x === null || x === undefined) return "";
+  if (Object.prototype.toString.call(x) === "[object Date]" && !isNaN(x.getTime())) {
+    var p = function(n){return ("0"+n).slice(-2)};
+    return x.getFullYear()+"-"+p(x.getMonth()+1)+"-"+p(x.getDate());
+  }
+  var s = String(x).trim();
+  var m = s.match(/^(\d{4})-(\d{2})-(\d{2})/); if (m) return m[1]+"-"+m[2]+"-"+m[3];
+  var m2 = s.match(/^(\d{2})\/(\d{2})\/(\d{4})/); if (m2) return m2[3]+"-"+m2[2]+"-"+m2[1];
+  var d = new Date(s);
+  if (!isNaN(d.getTime())) { var q=function(n){return ("0"+n).slice(-2)}; return d.getFullYear()+"-"+q(d.getMonth()+1)+"-"+q(d.getDate()); }
+  return "";
+}
+// Valor da gasolina vigente na data da viagem; fallback para PRECO_BASE.
+function precoGasolina(dataViagem) {
+  var dStr = toYMD(dataViagem) || toYMD(new Date());
+  try {
+    var sh = SpreadsheetApp.openById(SPREADSHEET_ID).getSheetByName("Preços Gasolina");
+    if (!sh) return PRECO_BASE;
+    var data = sh.getDataRange().getValues(), melhor = null;
+    for (var i = 1; i < data.length; i++) {
+      var ini = toYMD(data[i][0]), fim = toYMD(data[i][1]);
+      var val = parseFloat(String(data[i][2]).replace(",", "."));
+      if (!ini || !fim || isNaN(val)) continue;
+      if (dStr >= ini && dStr <= fim) melhor = val;  // o último que casar vence
+    }
+    return melhor !== null ? melhor : PRECO_BASE;
+  } catch (e) { return PRECO_BASE; }
+}
+function precosListar() {
+  var sh = SpreadsheetApp.openById(SPREADSHEET_ID).getSheetByName("Preços Gasolina");
+  var out = [];
+  if (sh) {
+    var data = sh.getDataRange().getValues();
+    for (var i = 1; i < data.length; i++) {
+      if (!toYMD(data[i][0]) && !data[i][2]) continue;
+      out.push({ inicio: toYMD(data[i][0]), fim: toYMD(data[i][1]), valor: parseFloat(String(data[i][2]).replace(",", ".")) || 0, por: data[i][3]||"", em: data[i][4]||"" });
+    }
+  }
+  out.sort(function(a,b){ return a.inicio < b.inicio ? 1 : (a.inicio > b.inicio ? -1 : 0); });
+  return jr({success: true, precos: out, atual: precoGasolina(new Date())});
+}
+function precoAdicionar(d) {
+  var ini = toYMD(d.inicio), fim = toYMD(d.fim), val = parseFloat(String(d.valor).replace(",", "."));
+  if (!ini || !fim) return jr({success: false, error: "Informe o período (início e fim)."});
+  if (ini > fim) return jr({success: false, error: "O início não pode ser depois do fim."});
+  if (isNaN(val) || val <= 0) return jr({success: false, error: "Informe um valor válido."});
+  var ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+  var sh = ss.getSheetByName("Preços Gasolina");
+  if (!sh) { sh = ss.insertSheet("Preços Gasolina"); sh.getRange(1,1,1,5).setValues([["Início","Fim","Valor (R$/L)","Registrado por","Em"]]); sh.setFrozenRows(1); }
+  sh.appendRow([ini, fim, val, usuarioDoToken(d.token), fts(new Date().toISOString())]);
+  return jr({success: true, preco: val, inicio: ini, fim: fim});
+}
+
 // Arredonda para 2 casas e devolve NÚMERO (não texto) — para os valores na
 // planilha entrarem como número (somáveis no pt-BR), e não como "93.02".
 function r2(x) { return Math.round((Number(x) || 0) * 100) / 100; }
@@ -203,6 +267,14 @@ function doPost(e) {
       if (!authAdmin(d.token)) return jr({success: false, auth: false, error: "Não autorizado."});
       return withLock(function(){ return doGerarRecibo(d); });
     }
+    if (d.action === "precos_listar") {
+      if (!authAdmin(d.token)) return jr({success: false, auth: false, error: "Não autorizado."});
+      return precosListar();
+    }
+    if (d.action === "preco_adicionar") {
+      if (!authAdmin(d.token)) return jr({success: false, auth: false, error: "Não autorizado."});
+      return withLock(function(){ return precoAdicionar(d); });
+    }
     return jr({success: false, error: "Ação desconhecida"});
   } catch(err) { return jr({success: false, error: err.message}); }
 }
@@ -218,6 +290,7 @@ function doGet(e) {
     if (a === "buscar_situacao") return buscarSituacao(e.parameter.cpf || "");
     if (a === "listar_por_cpf") return listarPorCpf(e.parameter.cpf || "");
     if (a === "carregar_pedido") return carregarPedido(e.parameter.protocolo || "");
+    if (a === "preco_atual") return jr({success: true, preco: precoGasolina(new Date())});
     if (a === "listar") {
       // Endpoint sensível (retorna todos os dados): exige a senha do painel.
       if (!authAdmin(e.parameter.token)) return jr({success: false, auth: false, error: "Não autorizado."});
@@ -350,9 +423,10 @@ function doFinalizar(d) {
   var dTot = extrairKm(rowData[18]) + extrairKm(rowData[21]); // ida + volta textos
   // Consumo: usa o informado pelo motorista (km/L) se houver; senão o padrão do veículo
   var con = (parseFloat(d.consumo) > 0) ? parseFloat(d.consumo) : (d.veiculo === "Moto" ? 49 : 10);
+  var precoBase = precoGasolina(d.checkin_timestamp_iso);  // valor da gasolina vigente na data da viagem
   var usouEstim = d.usar_estimativa === true;
-  var pReal = usouEstim ? PRECO_BASE : (parseFloat(d.preco_real) || PRECO_BASE);
-  var vEst = (dTot/con) * PRECO_BASE, vReal = (dTot/con) * pReal, vTot = vReal + tPed;
+  var pReal = usouEstim ? precoBase : (parseFloat(d.preco_real) || precoBase);
+  var vEst = (dTot/con) * precoBase, vReal = (dTot/con) * pReal, vTot = vReal + tPed;
 
   var tempo = "";
   if (d.checkin_timestamp_iso && d.checkout_timestamp) {
@@ -371,7 +445,7 @@ function doFinalizar(d) {
   }
   if (d.checkin_timestamp_iso && d.checkout_timestamp && (new Date(d.checkout_timestamp)-new Date(d.checkin_timestamp_iso))/60000 < 15) fl.push("Tempo<15min");
   if (vTot > 500) fl.push("Valor>R$500");
-  if (!usouEstim && pReal > PRECO_BASE*1.3) fl.push("Preço/L 30%+ acima");
+  if (!usouEstim && pReal > precoBase*1.3) fl.push("Preço/L 30%+ acima");
   var val = fl.length === 0 ? "✅ OK" : "⚠️ " + fl.join(" | ");
   if (d.pedagios_depois === true) val += " | 🧾 Pedágios pendentes (serão lançados depois)";
 
@@ -392,7 +466,7 @@ function doFinalizar(d) {
   updated[26] = r2(tPed);                     // AA
   updated[27] = pLnk.join("\n");              // AB
   updated[28] = usouEstim ? "Sim" : "Não";    // AC
-  updated[29] = PRECO_BASE;                   // AD
+  updated[29] = precoBase;                    // AD (valor da gasolina usado nesta viagem)
   updated[30] = pReal;                        // AE
   updated[31] = lcup;                         // AF
   updated[32] = r2(vEst);                     // AG
@@ -461,9 +535,10 @@ function doLancamentoPosterior(d) {
   var dTot = dIda + dVolta;
 
   var con = (parseFloat(d.consumo) > 0) ? parseFloat(d.consumo) : (d.veiculo === "Moto" ? 49 : 10);
+  var precoBase = precoGasolina(d.checkin_timestamp);  // valor da gasolina vigente na data da viagem
   var usouEstim = d.usar_estimativa === true;
-  var pReal = usouEstim ? PRECO_BASE : (parseFloat(d.preco_real) || PRECO_BASE);
-  var vEst = (dTot/con) * PRECO_BASE, vReal = (dTot/con) * pReal;
+  var pReal = usouEstim ? precoBase : (parseFloat(d.preco_real) || precoBase);
+  var vEst = (dTot/con) * precoBase, vReal = (dTot/con) * pReal;
 
   var peds = d.pedagios || [], tPed = 0, pTxt = "", pLnk = [];
   for (var i = 0; i < peds.length; i++) {
@@ -485,7 +560,7 @@ function doLancamentoPosterior(d) {
   var fl = ["🕓 LANÇAMENTO POSTERIOR (GPS/horário informados manualmente)"];
   if (d.sem_odometro === true) fl.push("SEM foto do odômetro");
   if (vTot > 500) fl.push("Valor>R$500");
-  if (!usouEstim && pReal > PRECO_BASE*1.3) fl.push("Preço/L 30%+ acima");
+  if (!usouEstim && pReal > precoBase*1.3) fl.push("Preço/L 30%+ acima");
   var val = fl.join(" | ");
 
   var sub = getOrCreate(DriveApp.getFolderById(DRIVE_FOLDER_ID), d.protocolo);
@@ -498,7 +573,7 @@ function doLancamentoPosterior(d) {
     ida.length || 1, idaTxt, ida.length,
     volta.length || 0, voltaTxt, volta.length,
     dTot, pTxt.trim(), peds.length, r2(tPed), pLnk.join("\n"),
-    usouEstim ? "Sim" : "Não", PRECO_BASE, pReal, d.img_cupom_link||"",
+    usouEstim ? "Sim" : "Não", precoBase, pReal, d.img_cupom_link||"",
     r2(vEst), r2(vReal), r2(vTot), val,
     d.rg||"", d.orgao||"", "",   // RG, Órgão, Recibo
     (Array.isArray(d.caronas) ? d.caronas.filter(function(x){return x && String(x).trim();}).map(function(x){return String(x).trim();}).join(", ") : (d.caronas || "")), con, d.img_consumo_link||"", ""   // Caronas, Consumo, FotoConsumo, Auditoria
@@ -593,8 +668,9 @@ function doCorrigir(d) {
   } else { tP = parseFloat(rowData[26]) || 0; }
 
   // ── Combustível e totais ──
+  var pbTrip = parseFloat(rowData[29]) || PRECO_BASE;  // preço da gasolina do período da viagem (já gravado)
   var usouEstim = d.usar_estimativa === true;
-  var pR = usouEstim ? PRECO_BASE : (parseFloat(d.preco_real) || parseFloat(rowData[30]) || PRECO_BASE);
+  var pR = usouEstim ? pbTrip : (parseFloat(d.preco_real) || parseFloat(rowData[30]) || pbTrip);
   if (d.usar_estimativa === true) updated[28] = "Sim"; else if (d.usar_estimativa === false) updated[28] = "Não";
   updated[30] = pR;
   // Consumo: usa o informado na correção (se houver), senão o já armazenado, senão o padrão do veículo
@@ -602,7 +678,7 @@ function doCorrigir(d) {
   if (d.img_consumo_link) updated[41] = d.img_consumo_link;
   if (d.caronas !== undefined) updated[39] = Array.isArray(d.caronas) ? d.caronas.filter(function(x){return x && String(x).trim();}).map(function(x){return String(x).trim();}).join(", ") : (d.caronas || "");
   var con = (parseFloat(updated[40]) > 0) ? parseFloat(updated[40]) : (updated[15] === "Moto" ? 49 : 10);
-  var vE = (dist/con)*PRECO_BASE, vR = (dist/con)*pR, vT = vR + tP;
+  var vE = (dist/con)*pbTrip, vR = (dist/con)*pR, vT = vR + tP;
   updated[32] = r2(vE); updated[33] = r2(vR); updated[34] = r2(vT);
 
   var descTxt = d.descricao ? String(d.descricao) : "Pedido corrigido pelo pesquisador";
@@ -765,14 +841,15 @@ function doEditarAdmin(d) {
   else { dist += extrairKm(rowData[21]); }
   updated[23] = dist;
 
+  var pbTrip = parseFloat(rowData[29]) || PRECO_BASE;  // preço da gasolina do período da viagem (já gravado)
   var usouEstim = String(updated[28]).trim() === "Sim";
   if (d.preco_real) updated[30] = parseFloat(d.preco_real) || updated[30];
-  var pR = usouEstim ? PRECO_BASE : (parseFloat(updated[30]) || PRECO_BASE);
+  var pR = usouEstim ? pbTrip : (parseFloat(updated[30]) || pbTrip);
   if (d.consumo !== undefined && parseFloat(d.consumo) > 0) updated[40] = parseFloat(d.consumo);
   if (d.caronas !== undefined) updated[39] = d.caronas || "";
   var con = (parseFloat(updated[40]) > 0) ? parseFloat(updated[40]) : (updated[15] === "Moto" ? 49 : 10);
   var tP = parseFloat(rowData[26]) || 0;
-  var vE = (dist/con)*PRECO_BASE, vR = (dist/con)*pR, vT = vR + tP;
+  var vE = (dist/con)*pbTrip, vR = (dist/con)*pR, vT = vR + tP;
   updated[32] = r2(vE); updated[33] = r2(vR); updated[34] = r2(vT);
 
   var usuario = usuarioDoToken(d.token);

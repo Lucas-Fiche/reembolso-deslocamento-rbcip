@@ -257,7 +257,7 @@
     <div id="fuel_estim" style="display:none">
       <div style="padding:14px;background:var(--warning-bg);border-radius:var(--radius-sm);border:1px solid #FCD34D;text-align:center">
         <div style="font-size:13px;font-weight:600;color:#92400E;margin-bottom:4px">Valor estimado será utilizado</div>
-        <div style="font-size:20px;font-weight:700;color:#92400E">R$ 4,67/L</div>
+        <div class="pbtxt" style="font-size:20px;font-weight:700;color:#92400E">R$ 4,67/L</div>
         <p style="font-size:12px;color:#A16207;margin-top:6px">Sem cupom fiscal, o cálculo usará o valor base.</p>
       </div>
     </div>
@@ -351,7 +351,7 @@
     <div id="lp_fuel_estim" style="display:none">
       <div style="padding:14px;background:var(--warning-bg);border-radius:var(--radius-sm);border:1px solid #FCD34D;text-align:center">
         <div style="font-size:13px;font-weight:600;color:#92400E;margin-bottom:4px">Valor estimado será utilizado</div>
-        <div style="font-size:20px;font-weight:700;color:#92400E">R$ 4,67/L</div>
+        <div class="pbtxt" style="font-size:20px;font-weight:700;color:#92400E">R$ 4,67/L</div>
         <p style="font-size:12px;color:#A16207;margin-top:6px">Sem cupom fiscal, o cálculo usará o valor base.</p>
       </div>
     </div>
@@ -456,7 +456,7 @@
       <input type="file" accept="image/*" id="corr_cupom" class="chi" onchange="capFile(this,'corr_cupv','corr_cuph','corr_cupz')">
     </div>
     <div id="corr_fuel_estim" style="display:none">
-      <div style="padding:14px;background:var(--warning-bg);border-radius:var(--radius-sm);border:1px solid #FCD34D;text-align:center;font-size:13px;color:#92400E">Será usada a estimativa (R$ 4,67/L).</div>
+      <div style="padding:14px;background:var(--warning-bg);border-radius:var(--radius-sm);border:1px solid #FCD34D;text-align:center;font-size:13px;color:#92400E">Será usada a estimativa (<span class="pbtxt">R$ 4,67/L</span>).</div>
     </div>
   </div>
 
@@ -882,6 +882,10 @@ function enviarPedagios(){if(!pdgProto)return;var items=pdgColetar();if(!items.l
   ld("Enviando…");next()}
 var instrAberto=true;
 function toggleInstr(){instrAberto=!instrAberto;document.getElementById("instrBody").style.maxHeight=instrAberto?"2000px":"0";document.getElementById("instrArrow").style.transform=instrAberto?"":"rotate(-90deg)"}
+// Valor da gasolina vigente (vem do backend; cai no padrão se indisponível)
+function setPBTxt(){var t="R$ "+PB.toFixed(2).replace(".",",")+"/L";var els=document.querySelectorAll(".pbtxt");for(var i=0;i<els.length;i++)els[i].textContent=t}
+function carregarPB(){fetch(API+"?action=preco_atual").then(function(r){return r.text()}).then(function(t){try{var d=JSON.parse(t);if(d&&parseFloat(d.preco)>0)PB=parseFloat(d.preco)}catch(e){}setPBTxt()}).catch(function(){setPBTxt()})}
+carregarPB();
 sync();
 </script>
 </body>
