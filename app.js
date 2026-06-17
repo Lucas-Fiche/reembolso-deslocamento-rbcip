@@ -57,7 +57,7 @@ var EMAILS_RECIBO = propriedades.getProperty('EMAILS_RECIBO') || "lucas@rbcip.or
 // 3. As demais variáveis continuam iguais, pois não são informações sensíveis
 var ABA = "Registros";
 var ABA_HISTORICO = "Histórico";
-var PRECO_BASE = 6.79;
+var PRECO_BASE = 4.67;
 var LOCK_TIMEOUT = 15000; // 15s
 
 // 36 colunas: A..AJ
@@ -73,7 +73,7 @@ var LOCK_TIMEOUT = 15000; // 15s
 function setupPlanilha() {
   var ss = SpreadsheetApp.openById(SPREADSHEET_ID);
   var s = ss.getSheetByName(ABA); if (!s) s = ss.insertSheet(ABA);
-  var h = ["Protocolo","Status","CI DH","CI Lat","CI Lng","CI Foto","CO DH","CO Lat","CO Lng","CO Foto","Tempo","Nome","CPF","E-mail","Telefone","Veículo","Placa","Ida Plan","Ida Trechos","Ida Qtd","Volta Plan","Volta Trechos","Volta Qtd","Dist Total (km)","Pedágios","Qtd Ped","Val Pedágios","Comprov Ped","Usou Estimativa?","Preço Base","Preço Real","Cupom Comb","Val Estimado","Val Real","Val Total","Validação","RG","Órgão Emissor","Recibo","Caronas","Consumo (km/L)","Foto Consumo"];
+  var h = ["Protocolo","Status","CI DH","CI Lat","CI Lng","CI Foto","CO DH","CO Lat","CO Lng","CO Foto","Tempo","Nome","CPF","E-mail","Telefone","Veículo","Placa","Ida Plan","Ida Trechos","Ida Qtd","Volta Plan","Volta Trechos","Volta Qtd","Dist Total (km)","Pedágios","Qtd Ped","Val Pedágios","Comprov Ped","Usou Estimativa?","Preço Base","Preço Real","Cupom Comb","Val Estimado","Val Real","Val Total","Validação","RG","Órgão Emissor","Recibo","Caronas","Consumo (km/L)","Foto Consumo","Auditoria"];
   s.getRange(1,1,1,h.length).setValues([h]);
   s.getRange(1,1,1,h.length).setFontWeight("bold").setBackground("#1A3A5C").setFontColor("#FFF").setFontFamily("Arial").setFontSize(9).setHorizontalAlignment("center").setWrap(true);
   s.setFrozenRows(1);
@@ -137,8 +137,32 @@ function withLock(fn) {
 // a envia em cada requisição administrativa. Aqui validamos contra a
 // PAINEL_SENHA guardada nas Propriedades do script (lado servidor).
 // ══════════════════════════════════════════════════════════════
+// Usuários do painel — cada um com a sua senha (Propriedades do script):
+//   PAINEL_SENHA (admin), SENHA_DIORLAN, SENHA_ERNANE, SENHA_LUCAS, SENHA_FERNANDA
+function usuariosPainel() {
+  return {
+    "Admin": PAINEL_SENHA,
+    "Diorlan": propriedades.getProperty('SENHA_DIORLAN'),
+    "Ernane": propriedades.getProperty('SENHA_ERNANE'),
+    "Lucas": propriedades.getProperty('SENHA_LUCAS'),
+    "Fernanda": propriedades.getProperty('SENHA_FERNANDA')
+  };
+}
+// Identifica o usuário pela senha enviada (cada um tem senha única). "" se inválida.
+function usuarioDoToken(token) {
+  if (!token) return "";
+  var u = usuariosPainel();
+  for (var nome in u) { if (u[nome] && String(token) === String(u[nome])) return nome; }
+  return "";
+}
 function authAdmin(token) {
-  return !!PAINEL_SENHA && String(token || "") === String(PAINEL_SENHA);
+  return usuarioDoToken(token) !== "";
+}
+
+// Registra na coluna de Auditoria quem fez cada ação e quando.
+function logAuditoria(updated, usuario, acao) {
+  var linha = fts(new Date().toISOString()) + " — " + (usuario || "?") + ": " + acao;
+  updated[42] = updated[42] ? (updated[42] + "\n" + linha) : linha;
 }
 
 // Arredonda para 2 casas e devolve NÚMERO (não texto) — para os valores na
@@ -162,7 +186,7 @@ function doPost(e) {
     if (d.action === "adicionar_pedagio") return withLock(function(){ return doAdicionarPedagio(d); });
     if (d.action === "set_volta") return withLock(function(){ return doSetVolta(d); });
     // ── Ações ADMINISTRATIVAS: exigem a senha do painel (PAINEL_SENHA) ──
-    if (d.action === "login_admin") return jr({success: authAdmin(d.token), auth: authAdmin(d.token)});
+    if (d.action === "login_admin") { var _u = usuarioDoToken(d.token); return jr({success: !!_u, auth: !!_u, usuario: _u}); }
     if (d.action === "listar") {
       if (!authAdmin(d.token)) return jr({success: false, auth: false, error: "Não autorizado."});
       return listarRegistros(d.status || "");
@@ -220,7 +244,7 @@ function doCheckin(d) {
     "","","","","", d.nome, d.cpf, d.email, d.telefone, d.veiculo, d.placa,
     d.ida_paradas||1, "", 0, d.volta_paradas||0, "", 0,
     0, "", 0, "", "", "", PRECO_BASE, "", "", "", "", "", "",
-    d.rg||"", d.orgao||"", "", "", "", ""];   // RG, Órgão, Recibo, Caronas, Consumo, FotoConsumo
+    d.rg||"", d.orgao||"", "", "", "", "", ""];   // RG, Órgão, Recibo, Caronas, Consumo, FotoConsumo, Auditoria
   s.appendRow(row);
 
   // Formatar status — 1 chamada
@@ -477,7 +501,7 @@ function doLancamentoPosterior(d) {
     usouEstim ? "Sim" : "Não", PRECO_BASE, pReal, d.img_cupom_link||"",
     r2(vEst), r2(vReal), r2(vTot), val,
     d.rg||"", d.orgao||"", "",   // RG, Órgão, Recibo
-    (Array.isArray(d.caronas) ? d.caronas.filter(function(x){return x && String(x).trim();}).map(function(x){return String(x).trim();}).join(", ") : (d.caronas || "")), con, d.img_consumo_link||""   // Caronas, Consumo, FotoConsumo
+    (Array.isArray(d.caronas) ? d.caronas.filter(function(x){return x && String(x).trim();}).map(function(x){return String(x).trim();}).join(", ") : (d.caronas || "")), con, d.img_consumo_link||"", ""   // Caronas, Consumo, FotoConsumo, Auditoria
   ];
   s.appendRow(row);
   var lastRow = s.getLastRow();
@@ -751,7 +775,9 @@ function doEditarAdmin(d) {
   var vE = (dist/con)*PRECO_BASE, vR = (dist/con)*pR, vT = vR + tP;
   updated[32] = r2(vE); updated[33] = r2(vR); updated[34] = r2(vT);
 
-  updated[35] = (updated[35] ? updated[35] + " | " : "") + "✏️ Editado pelo admin" + (d.motivo ? ": " + d.motivo : "");
+  var usuario = usuarioDoToken(d.token);
+  updated[35] = (updated[35] ? updated[35] + " | " : "") + "✏️ Editado" + (usuario ? " por " + usuario : " pelo admin") + (d.motivo ? ": " + d.motivo : "");
+  logAuditoria(updated, usuario, "editou" + (d.motivo ? " (" + d.motivo + ")" : ""));
 
   s.getRange(row, 1, 1, updated.length).setValues([updated]);
   return jr({success: true, protocolo: d.protocolo, valor_total: vT.toFixed(2)});
@@ -772,6 +798,8 @@ function doGerarRecibo(d) {
   });
   if (!rec) return jr({success: false, error: "Recibo não configurado. Defina RECIBO_TEMPLATE_ID e RECIBOS_FOLDER_ID nas Propriedades do script."});
   s.getRange(info.row, 39).setValue(rec.link);  // coluna AM (Recibo)
+  logAuditoria(updated, usuarioDoToken(d.token), "gerou recibo " + rec.numero);
+  s.getRange(info.row, 43).setValue(updated[42]);  // coluna AQ (Auditoria)
   return jr({success: true, protocolo: d.protocolo, recibo_link: rec.link, numero: rec.numero});
 }
 
@@ -1215,7 +1243,8 @@ function listarRegistros(statusFiltro) {
       recibo_link: row[38] || "",
       caronas: row[39] || "",
       consumo: row[40] || "",
-      foto_consumo: row[41] || ""
+      foto_consumo: row[41] || "",
+      auditoria: row[42] || ""
     });
   }
 
@@ -1264,10 +1293,12 @@ function doAtualizarStatus(d) {
   var updated = info.data.slice();
   updated[1] = d.novo_status;
 
-  // Se há observação do admin, adicionar na validação
+  var usuario = usuarioDoToken(d.token);
+  // Se há observação do admin, adicionar na validação (com o usuário)
   if (d.observacao) {
-    updated[35] = (updated[35] ? updated[35] + " | " : "") + "ADMIN: " + d.observacao;
+    updated[35] = (updated[35] ? updated[35] + " | " : "") + "ADMIN" + (usuario ? " (" + usuario + ")" : "") + ": " + d.observacao;
   }
+  logAuditoria(updated, usuario, "status → " + d.novo_status + (d.observacao ? " (" + d.observacao + ")" : ""));
 
   // ── Recibo: gera ao marcar como PAGO (se ainda não houver um) ──
   // O recibo é enviado aos e-mails internos dentro de gerarRecibo (não vai ao solicitante).

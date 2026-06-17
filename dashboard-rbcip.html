@@ -239,6 +239,7 @@ tr.corr-row td:first-child::after{content:"REANALISAR";display:inline-block;marg
       <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
       Atualizar
     </button>
+    <span id="hdrUser" style="font-size:12px;font-weight:600;color:var(--text2)"></span>
     <button class="refresh-btn" onclick="logout()" title="Encerrar sessão">Sair</button>
   </div>
 </header>
@@ -342,6 +343,8 @@ var dados=[],filtrados=[],sel=null,map,markersGroup;
 var corrVistos={},primeiraCarga=true; // controle de notificação de correções
 // Token (senha) do admin — guardado só na sessão do navegador, nunca no código.
 var ADMIN_TOKEN=sessionStorage.getItem("rbcip_admin_token")||"";
+var ADMIN_USER=sessionStorage.getItem("rbcip_admin_user")||"";
+function mostrarUsuario(){document.getElementById("hdrUser").textContent=ADMIN_USER?("👤 "+ADMIN_USER):"";}
 
 // POST autenticado para a API (text/plain evita preflight CORS)
 function apiPost(payload){
@@ -351,7 +354,7 @@ function apiPost(payload){
 
 // ── Login / Logout ──
 function iniciar(){
-  if(ADMIN_TOKEN){document.getElementById("gate").classList.add("h");carregar();}
+  if(ADMIN_TOKEN){document.getElementById("gate").classList.add("h");mostrarUsuario();carregar();}
   else{document.getElementById("gate").classList.remove("h");document.getElementById("gate_pwd").focus();}
 }
 function fazerLogin(ev){
@@ -364,6 +367,7 @@ function fazerLogin(ev){
     btn.disabled=false;btn.textContent="Entrar";
     if(d&&d.auth){
       ADMIN_TOKEN=pwd;sessionStorage.setItem("rbcip_admin_token",pwd);
+      ADMIN_USER=d.usuario||"";sessionStorage.setItem("rbcip_admin_user",ADMIN_USER);mostrarUsuario();
       document.getElementById("gate_pwd").value="";
       document.getElementById("gate").classList.add("h");
       carregar();
@@ -379,6 +383,7 @@ function fazerLogin(ev){
 }
 function logout(expirou){
   ADMIN_TOKEN="";sessionStorage.removeItem("rbcip_admin_token");
+  ADMIN_USER="";sessionStorage.removeItem("rbcip_admin_user");mostrarUsuario();
   dados=[];filtrados=[];sel=null;
   document.getElementById("ld").classList.add("h");
   var err=document.getElementById("gate_err");
@@ -639,6 +644,13 @@ function renderDetail(){
   h+=drow("Total a Reembolsar",'<strong style="font-size:15px">R$ '+(parseFloat(d.val_total)||0).toFixed(2)+'</strong>');
   h+=drow("Validação automática",esc(d.validacao||"—"));
   h+='</div>';
+
+  if(d.auditoria){
+    h+='<div class="detail-section"><div class="detail-section-title">Auditoria (quem alterou)</div>';
+    var alog=String(d.auditoria).split("\n");
+    for(var i=0;i<alog.length;i++){if(alog[i].trim())h+='<div class="segment">'+esc(alog[i])+'</div>';}
+    h+='</div>';
+  }
 
   if(d.ida_gps&&d.ida_gps.length){
     h+='<div class="detail-section">';
