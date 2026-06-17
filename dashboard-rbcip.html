@@ -196,6 +196,11 @@ tr.corr-row td:first-child::after{content:"REANALISAR";display:inline-block;marg
 .ed-trecho input{flex:1;min-width:0;padding:7px 9px;background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-sm);font-family:inherit;font-size:13px;color:var(--text);outline:none}
 .ed-trecho input:focus{border-color:var(--primary);box-shadow:0 0 0 3px var(--primary-light)}
 .ed-trecho .ed-km{flex:0 0 72px}
+.ed-ped{display:flex;gap:6px;align-items:center;margin-bottom:6px}
+.ed-ped select,.ed-ped input{padding:7px 9px;background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-sm);font-family:inherit;font-size:13px;color:var(--text);outline:none}
+.ed-ped select{flex:0 0 84px}
+.ed-ped input{flex:1;min-width:0}
+.ed-ped a{flex:0 0 auto;color:var(--primary);font-size:16px;text-decoration:none}
 .ed-rm{flex:0 0 28px;height:30px;border:none;background:var(--danger-light);color:var(--danger);border-radius:6px;cursor:pointer;font-size:16px;line-height:1}
 .ed-add{margin-top:4px;padding:7px 12px;border:1px dashed var(--border);background:transparent;color:var(--primary);border-radius:var(--radius-sm);font-family:inherit;font-size:12px;font-weight:600;cursor:pointer}
 .edit-field{margin-top:14px}
@@ -319,6 +324,9 @@ tr.corr-row td:first-child::after{content:"REANALISAR";display:inline-block;marg
       <div class="ed-group-title">↩️ Trechos da VOLTA</div>
       <div id="ed_list_volta"></div>
       <button class="ed-add" onclick="edAdd('volta')">+ Adicionar trecho (Volta)</button>
+      <div class="ed-group-title">🧾 Pedágios</div>
+      <div id="ed_ped_list"></div>
+      <button class="ed-add" onclick="edAddPed()">+ Adicionar pedágio</button>
       <div class="ed-group-title">📄 Dados do recibo</div>
       <div style="display:flex;gap:8px">
         <div class="edit-field" style="flex:1;margin-top:0"><label>RG</label><input type="text" id="ed_rg" maxlength="20"></div>
@@ -568,15 +576,22 @@ function edTrechoRow(t){t=t||{origem:"",destino:"",km:""};return '<div class="ed
 function edRender(fase,arr){var h="";for(var i=0;i<arr.length;i++)h+=edTrechoRow(arr[i]);document.getElementById("ed_list_"+fase).innerHTML=h;}
 function edAdd(fase){var d=document.createElement("div");d.innerHTML=edTrechoRow(null);document.getElementById("ed_list_"+fase).appendChild(d.firstChild);}
 function edColetar(fase){var out=[],els=document.querySelectorAll("#ed_list_"+fase+" .ed-trecho");for(var i=0;i<els.length;i++){out.push({origem:(els[i].querySelector(".ed-orig").value||"").trim(),destino:(els[i].querySelector(".ed-dest").value||"").trim(),km:els[i].querySelector(".ed-km").value});}return out;}
-function abrirEdicao(){if(!sel)return;edRender("ida",sel.ida_gps||[]);edRender("volta",sel.volta_gps||[]);document.getElementById("ed_proto").textContent=sel.protocolo+" — "+sel.nome;document.getElementById("ed_rg").value=sel.rg||"";document.getElementById("ed_orgao").value=sel.orgao||"";document.getElementById("ed_preco").value=sel.preco_real||sel.preco_base||"";document.getElementById("ed_consumo").value=sel.consumo||"";document.getElementById("ed_caronas").value=sel.caronas||"";document.getElementById("ed_motivo").value="";document.getElementById("editModal").classList.add("show");}
+function edParsePed(txt){var out=[];if(!txt)return out;var ls=String(txt).split("\n");for(var i=0;i<ls.length;i++){var l=ls[i].trim();if(!l)continue;var fase=/\[VOLTA\]/i.test(l)?"volta":"ida";var val=l.match(/R\$\s*([\d.,]+)/);var lnk=l.match(/(https?:\/\/\S+)/);out.push({fase:fase,valor:val?parseFloat(val[1])||0:0,foto_link:lnk?lnk[1]:""});}return out;}
+function edPedRow(p){p=p||{fase:"ida",valor:"",foto_link:""};return '<div class="ed-ped" data-foto="'+edAttr(p.foto_link)+'"><button class="ed-rm" onclick="this.parentElement.remove()" title="Remover">×</button><select class="ed-ped-fase"><option value="ida"'+(p.fase==="ida"?" selected":"")+'>Ida</option><option value="volta"'+(p.fase==="volta"?" selected":"")+'>Volta</option></select><input class="ed-ped-val" type="number" step="0.01" placeholder="Valor (R$)" value="'+edAttr(p.valor)+'">'+(p.foto_link?'<a href="'+edAttr(p.foto_link)+'" target="_blank" title="Ver comprovante">🧾</a>':'<span style="flex:0 0 16px"></span>')+'</div>';}
+function edRenderPed(arr){var h="";for(var i=0;i<arr.length;i++)h+=edPedRow(arr[i]);document.getElementById("ed_ped_list").innerHTML=h;}
+function edAddPed(){var d=document.createElement("div");d.innerHTML=edPedRow(null);document.getElementById("ed_ped_list").appendChild(d.firstChild);}
+function edColetarPed(){var out=[],els=document.querySelectorAll("#ed_ped_list .ed-ped");for(var i=0;i<els.length;i++){out.push({fase:els[i].querySelector(".ed-ped-fase").value,valor:parseFloat(els[i].querySelector(".ed-ped-val").value)||0,foto_link:els[i].getAttribute("data-foto")||""});}return out;}
+function abrirEdicao(){if(!sel)return;edRender("ida",sel.ida_gps||[]);edRender("volta",sel.volta_gps||[]);edRenderPed(edParsePed(sel.pedagios));document.getElementById("ed_proto").textContent=sel.protocolo+" — "+sel.nome;document.getElementById("ed_rg").value=sel.rg||"";document.getElementById("ed_orgao").value=sel.orgao||"";document.getElementById("ed_preco").value=sel.preco_real||sel.preco_base||"";document.getElementById("ed_consumo").value=sel.consumo||"";document.getElementById("ed_caronas").value=sel.caronas||"";document.getElementById("ed_motivo").value="";document.getElementById("editModal").classList.add("show");}
 function fecharEdicao(){document.getElementById("editModal").classList.remove("show");}
 function salvarEdicao(){
   if(!sel)return;
   var ida=edColetar("ida"),volta=edColetar("volta");
   for(var i=0;i<ida.length;i++)if(!ida[i].origem||!ida[i].destino||!ida[i].km){alert("Preencha origem, destino e km do trecho IDA "+(i+1)+".");return;}
   for(var i=0;i<volta.length;i++)if(!volta[i].origem||!volta[i].destino||!volta[i].km){alert("Preencha origem, destino e km do trecho VOLTA "+(i+1)+".");return;}
+  var pedagios=edColetarPed();
+  for(var i=0;i<pedagios.length;i++)if(!pedagios[i].valor){alert("Informe o valor do pedágio "+(i+1)+".");return;}
   document.getElementById("ld").classList.remove("h");document.querySelector(".loading p").textContent="Salvando edição…";
-  apiPost({action:"editar_admin",token:ADMIN_TOKEN,protocolo:sel.protocolo,ida:ida,volta:volta,rg:document.getElementById("ed_rg").value.trim(),orgao:document.getElementById("ed_orgao").value.trim().toUpperCase(),preco_real:document.getElementById("ed_preco").value,consumo:document.getElementById("ed_consumo").value,caronas:document.getElementById("ed_caronas").value.trim(),motivo:document.getElementById("ed_motivo").value.trim()})
+  apiPost({action:"editar_admin",token:ADMIN_TOKEN,protocolo:sel.protocolo,ida:ida,volta:volta,pedagios:pedagios,rg:document.getElementById("ed_rg").value.trim(),orgao:document.getElementById("ed_orgao").value.trim().toUpperCase(),preco_real:document.getElementById("ed_preco").value,consumo:document.getElementById("ed_consumo").value,caronas:document.getElementById("ed_caronas").value.trim(),motivo:document.getElementById("ed_motivo").value.trim()})
   .then(function(d){
     if(d&&d.auth===false){logout(true);return;}
     if(d&&d.success===false){alert(d.error);document.getElementById("ld").classList.add("h");return;}
