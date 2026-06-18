@@ -249,6 +249,7 @@ function doPost(e) {
     if (d.action === "corrigir") return withLock(function(){ return doCorrigir(d); });
     if (d.action === "adicionar_pedagio") return withLock(function(){ return doAdicionarPedagio(d); });
     if (d.action === "set_volta") return withLock(function(){ return doSetVolta(d); });
+    if (d.action === "set_plano") return withLock(function(){ return doSetPlano(d); });
     // ── Ações ADMINISTRATIVAS: exigem a senha do painel (PAINEL_SENHA) ──
     if (d.action === "login_admin") { var _u = usuarioDoToken(d.token); return jr({success: !!_u, auth: !!_u, usuario: _u}); }
     if (d.action === "listar") {
@@ -387,6 +388,30 @@ function doSetVolta(d) {
   var info = findByProtoData(allData, d.protocolo);
   if (!info) return jr({success: false, error: "Protocolo não encontrado."});
   s.getRange(info.row, 21).setValue(parseInt(d.volta_paradas) || 1); // col U
+  return jr({success: true});
+}
+
+// Altera o nº de paradas planejadas durante a viagem (não pode ficar abaixo do já registrado)
+function doSetPlano(d) {
+  var s = getSheet();
+  var allData = s.getDataRange().getValues();
+  var info = findByProtoData(allData, d.protocolo);
+  if (!info) return jr({success: false, error: "Protocolo não encontrado."});
+  var rowData = info.data;
+  var idaCount = parseInt(rowData[19]) || 0;    // T (ida registradas)
+  var voltaCount = parseInt(rowData[22]) || 0;  // W (volta registradas)
+  if (d.ida_plan !== undefined && d.ida_plan !== null && d.ida_plan !== "") {
+    var ip = parseInt(d.ida_plan);
+    if (isNaN(ip) || ip < 1) return jr({success: false, error: "Nº de paradas da ida inválido."});
+    if (ip < idaCount) return jr({success: false, error: "A ida já tem " + idaCount + " parada(s) registrada(s)."});
+    s.getRange(info.row, 18).setValue(ip);   // R (ida plan)
+  }
+  if (d.volta_plan !== undefined && d.volta_plan !== null && d.volta_plan !== "") {
+    var vp = parseInt(d.volta_plan);
+    if (isNaN(vp) || vp < 0) return jr({success: false, error: "Nº de paradas da volta inválido."});
+    if (vp < voltaCount) return jr({success: false, error: "A volta já tem " + voltaCount + " parada(s) registrada(s)."});
+    s.getRange(info.row, 21).setValue(vp);   // U (volta plan)
+  }
   return jr({success: true});
 }
 
@@ -1193,7 +1218,8 @@ function gerarRecibo(dados) {
   try {
     var folder = DriveApp.getFolderById(RECIBOS_FOLDER_ID);
     var num = proximoNumeroRecibo();
-    var nomeArq = "Recibo_" + num + "_" + dados.protocolo;
+    var nomeLimpo = String(dados.nome || "Sem nome").replace(/[\\\/:*?"<>|]/g, " ").replace(/\s+/g, " ").trim();
+    var nomeArq = "Recibo " + num + " - " + nomeLimpo;
     var copia = DriveApp.getFileById(RECIBO_TEMPLATE_ID).makeCopy(nomeArq, folder);
     var doc = DocumentApp.openById(copia.getId());
     var body = doc.getBody();

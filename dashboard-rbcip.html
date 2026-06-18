@@ -281,6 +281,9 @@ tr.corr-row td:first-child::after{content:"REANALISAR";display:inline-block;marg
         <option value="REVISÃO">Em Revisão</option>
         <option value="REPROVADO">Reprovado</option>
       </select>
+      <input type="date" id="fDe" onchange="filtrar()" title="Data inicial (check-in)" style="flex:0 0 auto;min-width:0;max-width:160px">
+      <input type="date" id="fAte" onchange="filtrar()" title="Data final (check-in)" style="flex:0 0 auto;min-width:0;max-width:160px">
+      <button class="refresh-btn" onclick="limparData()" title="Limpar datas" style="flex:0 0 auto">✕ datas</button>
       <input type="text" id="fBusca" placeholder="Buscar por nome, CPF ou protocolo…" oninput="filtrar()">
     </div>
     <div class="tbl-wrap">
@@ -495,13 +498,17 @@ function card(accent,label,val,sub){
   return'<div class="card"><div class="card-accent '+accent+'"></div><div class="label">'+label+'</div><div class="val">'+val+"</div>"+(sub?'<div class="sub">'+sub+"</div>":"")+"</div>";
 }
 
+function ymdDH(s){if(!s)return"";var m=String(s).match(/^(\d{2})\/(\d{2})\/(\d{4})/);if(m)return m[3]+"-"+m[2]+"-"+m[1];var m2=String(s).match(/^(\d{4})-(\d{2})-(\d{2})/);if(m2)return m2[1]+"-"+m2[2]+"-"+m2[3];var d=new Date(s);if(!isNaN(d.getTime())){var p=function(n){return("0"+n).slice(-2)};return d.getFullYear()+"-"+p(d.getMonth()+1)+"-"+p(d.getDate())}return"";}
+function limparData(){document.getElementById("fDe").value="";document.getElementById("fAte").value="";filtrar();}
 function filtrar(){
   var st=document.getElementById("fStatus").value;
   var q=document.getElementById("fBusca").value.toLowerCase().trim();
+  var de=document.getElementById("fDe").value, ate=document.getElementById("fAte").value;
   filtrados=[];
   for(var i=0;i<dados.length;i++){
     var d=dados[i];
     if(st&&d.status!==st)continue;
+    if(de||ate){var dia=ymdDH(d.checkin_dh);if(de&&(!dia||dia<de))continue;if(ate&&(!dia||dia>ate))continue;}
     if(q){var txt=(d.protocolo+" "+d.nome+" "+d.cpf).toLowerCase();if(txt.indexOf(q)===-1)continue;}
     filtrados.push(d);
   }
