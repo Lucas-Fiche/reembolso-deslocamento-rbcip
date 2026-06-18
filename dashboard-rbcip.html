@@ -245,6 +245,7 @@ tr.corr-row td:first-child::after{content:"REANALISAR";display:inline-block;marg
       Atualizar
     </button>
     <button class="refresh-btn" onclick="abrirPrecos()" title="Definir o valor da gasolina por período">⛽ Valor da Gasolina</button>
+    <button class="refresh-btn" onclick="abrirKm()" title="Quilometragem total e por pessoa">📊 Km por pessoa</button>
     <span id="hdrUser" style="font-size:12px;font-weight:600;color:var(--text2)"></span>
     <button class="refresh-btn" onclick="logout()" title="Encerrar sessão">Sair</button>
   </div>
@@ -371,6 +372,15 @@ tr.corr-row td:first-child::after{content:"REANALISAR";display:inline-block;marg
   </div>
 </div>
 
+<!-- Modal: quilometragem por pessoa -->
+<div class="edit-modal" id="kmModal" onclick="if(event.target===this)fecharKm()">
+  <div class="edit-box">
+    <div class="edit-head"><h3>📊 Quilometragem por pessoa</h3><div id="km_total_lbl" style="font-size:13px;color:var(--text3);margin-top:4px"></div></div>
+    <div class="edit-body"><div id="km_lista"></div></div>
+    <div class="edit-foot"><button class="ed-cancel" onclick="fecharKm()">Fechar</button></div>
+  </div>
+</div>
+
 <script>
 var API="https://script.google.com/macros/s/AKfycbwaKl_Iglg_hVzG6_wS9GxTxZd8svu836zLxVJ45PAh7viqtxALlRfOdEAvebeisogx/exec";
 var dados=[],filtrados=[],sel=null,map,markersGroup;
@@ -470,7 +480,7 @@ setInterval(function(){
 },300000);
 
 function renderCards(){
-  var total=dados.length,abertos=0,completos=0,corrigidos=0,aprovados=0,pagos=0,revisao=0,reprovados=0,valTotal=0,valPago=0;
+  var total=dados.length,abertos=0,completos=0,corrigidos=0,aprovados=0,pagos=0,revisao=0,reprovados=0,valTotal=0,valPago=0,kmTotal=0;
   for(var i=0;i<dados.length;i++){
     var s=dados[i].status;
     if(s==="ABERTO")abertos++;
@@ -481,6 +491,7 @@ function renderCards(){
     else if(s==="REVISÃO")revisao++;
     else if(s==="REJEITADO"||s==="REPROVADO")reprovados++;
     valTotal+=parseFloat(dados[i].val_total)||0;
+    kmTotal+=parseFloat(dados[i].dist_total)||0;
   }
   document.getElementById("cards").innerHTML=
     card("gray","Total",total,"")+
@@ -491,8 +502,10 @@ function renderCards(){
     card("green","Pagos",pagos,"R$ "+valPago.toFixed(2).replace(".",","))+
     card("amber","Em Revisão",revisao,"")+
     card("red","Reprovados",reprovados,"")+
+    card("gray","Km Total",km1(kmTotal)+" km","Todos os deslocamentos")+
     card("green","Valor Total","R$ "+valTotal.toFixed(2).replace(".",","),"Todos os pedidos");
 }
+function km1(n){return (Math.round((Number(n)||0)*10)/10).toLocaleString("pt-BR");}
 
 function card(accent,label,val,sub){
   return'<div class="card"><div class="card-accent '+accent+'"></div><div class="label">'+label+'</div><div class="val">'+val+"</div>"+(sub?'<div class="sub">'+sub+"</div>":"")+"</div>";
@@ -608,6 +621,23 @@ function salvarEdicao(){
 // ── Valor da gasolina por período ──
 function abrirPrecos(){document.getElementById("preco_ini").value="";document.getElementById("preco_fim").value="";document.getElementById("preco_val").value="";document.getElementById("precos_lista").innerHTML='<span style="color:var(--text3)">Carregando…</span>';document.getElementById("precoModal").classList.add("show");carregarPrecos();}
 function fecharPrecos(){document.getElementById("precoModal").classList.remove("show");}
+// ── Quilometragem total e por pessoa ──
+function abrirKm(){
+  var map={},total=0;
+  for(var i=0;i<dados.length;i++){var d=dados[i],km=parseFloat(d.dist_total)||0;total+=km;var key=(d.cpf||d.nome||"?");if(!map[key])map[key]={nome:d.nome||"—",km:0,n:0};map[key].km+=km;map[key].n++;}
+  var arr=[];for(var k in map)arr.push(map[k]);
+  arr.sort(function(a,b){return b.km-a.km;});
+  document.getElementById("km_total_lbl").innerHTML="Total geral: <strong>"+km1(total)+" km</strong> · "+dados.length+" viagens · "+arr.length+" pessoas";
+  if(!arr.length){document.getElementById("km_lista").innerHTML='<span style="color:var(--text3)">Sem dados.</span>';}
+  else{
+    var h='<table style="width:100%;border-collapse:collapse;font-size:13px"><thead><tr><th style="text-align:left;padding:6px 8px;color:var(--text3);position:sticky;top:0;background:var(--surface)">Nome</th><th style="text-align:right;padding:6px 8px;color:var(--text3);position:sticky;top:0;background:var(--surface)">Viagens</th><th style="text-align:right;padding:6px 8px;color:var(--text3);position:sticky;top:0;background:var(--surface)">Total km</th></tr></thead><tbody>';
+    for(var i=0;i<arr.length;i++)h+='<tr style="border-top:1px solid var(--border)"><td style="padding:6px 8px">'+esc(arr[i].nome)+'</td><td style="text-align:right;padding:6px 8px;color:var(--text2)">'+arr[i].n+'</td><td style="text-align:right;padding:6px 8px;font-weight:600">'+km1(arr[i].km)+' km</td></tr>';
+    h+='</tbody></table>';
+    document.getElementById("km_lista").innerHTML=h;
+  }
+  document.getElementById("kmModal").classList.add("show");
+}
+function fecharKm(){document.getElementById("kmModal").classList.remove("show");}
 function fmtData(s){var m=String(s||"").match(/^(\d{4})-(\d{2})-(\d{2})/);return m?m[3]+"/"+m[2]+"/"+m[1]:(s||"");}
 function carregarPrecos(){
   apiPost({action:"precos_listar",token:ADMIN_TOKEN}).then(function(d){
