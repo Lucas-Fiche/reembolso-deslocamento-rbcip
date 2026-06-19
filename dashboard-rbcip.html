@@ -467,7 +467,7 @@ function carregar(silent){
     var now=new Date();
     var hh=String(now.getHours()).padStart(2,"0"),mi=String(now.getMinutes()).padStart(2,"0");
     document.getElementById("lastUpdate").textContent="Atualizado às "+hh+":"+mi;
-    renderCards();filtrar();checarCorrecoes();
+    filtrar();checarCorrecoes();
   }).catch(function(e){
     document.getElementById("ld").classList.add("h");
     alert("Erro ao carregar: "+e.message);
@@ -480,18 +480,19 @@ setInterval(function(){
 },300000);
 
 function renderCards(){
-  var total=dados.length,abertos=0,completos=0,corrigidos=0,aprovados=0,pagos=0,revisao=0,reprovados=0,valTotal=0,valPago=0,kmTotal=0;
-  for(var i=0;i<dados.length;i++){
-    var s=dados[i].status;
+  var base=filtrados;  // reflete os filtros aplicados (data/status/busca)
+  var total=base.length,abertos=0,completos=0,corrigidos=0,aprovados=0,pagos=0,revisao=0,reprovados=0,valTotal=0,valPago=0,kmTotal=0;
+  for(var i=0;i<base.length;i++){
+    var s=base[i].status;
     if(s==="ABERTO")abertos++;
     else if(s==="COMPLETO")completos++;
     else if(s==="CORRIGIDO")corrigidos++;
     else if(s==="APROVADO")aprovados++;
-    else if(s==="PAGO"){pagos++;valPago+=parseFloat(dados[i].val_total)||0;}
+    else if(s==="PAGO"){pagos++;valPago+=parseFloat(base[i].val_total)||0;}
     else if(s==="REVISÃO")revisao++;
     else if(s==="REJEITADO"||s==="REPROVADO")reprovados++;
-    valTotal+=parseFloat(dados[i].val_total)||0;
-    kmTotal+=parseFloat(dados[i].dist_total)||0;
+    // Agregados (km/valor) ignoram os reprovados
+    if(s!=="REPROVADO"&&s!=="REJEITADO"){valTotal+=parseFloat(base[i].val_total)||0;kmTotal+=parseFloat(base[i].dist_total)||0;}
   }
   document.getElementById("cards").innerHTML=
     card("gray","Total",total,"")+
@@ -502,8 +503,8 @@ function renderCards(){
     card("green","Pagos",pagos,"R$ "+valPago.toFixed(2).replace(".",","))+
     card("amber","Em Revisão",revisao,"")+
     card("red","Reprovados",reprovados,"")+
-    card("gray","Km Total",km1(kmTotal)+" km","Todos os deslocamentos")+
-    card("green","Valor Total","R$ "+valTotal.toFixed(2).replace(".",","),"Todos os pedidos");
+    card("gray","Km Total",km1(kmTotal)+" km","Sem reprovados")+
+    card("green","Valor Total","R$ "+valTotal.toFixed(2).replace(".",","),"Sem reprovados");
 }
 function km1(n){return (Math.round((Number(n)||0)*10)/10).toLocaleString("pt-BR");}
 
@@ -525,6 +526,7 @@ function filtrar(){
     if(q){var txt=(d.protocolo+" "+d.nome+" "+d.cpf).toLowerCase();if(txt.indexOf(q)===-1)continue;}
     filtrados.push(d);
   }
+  renderCards();
   renderTable();
 }
 
@@ -623,11 +625,11 @@ function abrirPrecos(){document.getElementById("preco_ini").value="";document.ge
 function fecharPrecos(){document.getElementById("precoModal").classList.remove("show");}
 // ── Quilometragem total e por pessoa ──
 function abrirKm(){
-  var map={},total=0;
-  for(var i=0;i<dados.length;i++){var d=dados[i],km=parseFloat(d.dist_total)||0;total+=km;var key=(d.cpf||d.nome||"?");if(!map[key])map[key]={nome:d.nome||"—",km:0,n:0};map[key].km+=km;map[key].n++;}
+  var map={},total=0,n=0;
+  for(var i=0;i<filtrados.length;i++){var d=filtrados[i];if(d.status==="REPROVADO"||d.status==="REJEITADO")continue;var km=parseFloat(d.dist_total)||0;total+=km;n++;var key=(d.cpf||d.nome||"?");if(!map[key])map[key]={nome:d.nome||"—",km:0,n:0};map[key].km+=km;map[key].n++;}
   var arr=[];for(var k in map)arr.push(map[k]);
   arr.sort(function(a,b){return b.km-a.km;});
-  document.getElementById("km_total_lbl").innerHTML="Total geral: <strong>"+km1(total)+" km</strong> · "+dados.length+" viagens · "+arr.length+" pessoas";
+  document.getElementById("km_total_lbl").innerHTML="Total geral: <strong>"+km1(total)+" km</strong> · "+n+" viagens · "+arr.length+" pessoas <span style=\"color:var(--text3)\">(filtro atual, sem reprovados)</span>";
   if(!arr.length){document.getElementById("km_lista").innerHTML='<span style="color:var(--text3)">Sem dados.</span>';}
   else{
     var h='<table style="width:100%;border-collapse:collapse;font-size:13px"><thead><tr><th style="text-align:left;padding:6px 8px;color:var(--text3);position:sticky;top:0;background:var(--surface)">Nome</th><th style="text-align:right;padding:6px 8px;color:var(--text3);position:sticky;top:0;background:var(--surface)">Viagens</th><th style="text-align:right;padding:6px 8px;color:var(--text3);position:sticky;top:0;background:var(--surface)">Total km</th></tr></thead><tbody>';
