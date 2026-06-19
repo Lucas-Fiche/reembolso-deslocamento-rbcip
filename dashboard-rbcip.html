@@ -190,6 +190,8 @@ tr.corr-row td:first-child::after{content:"REANALISAR";display:inline-block;marg
 .edit-head{padding:16px 20px;border-bottom:1px solid var(--border)}
 .edit-head h3{font-size:16px;font-weight:600;margin:0;color:var(--text)}
 .edit-body{padding:16px 20px;overflow-y:auto;flex:1}
+#kmModal .edit-box{width:min(920px,97vw);height:88vh;max-height:94vh}
+#km_lista table th,#km_lista table td{white-space:nowrap}
 .edit-foot{padding:12px 20px;border-top:1px solid var(--border);display:flex;gap:8px;justify-content:flex-end}
 .ed-group-title{font-size:12px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;margin:14px 0 8px}
 .ed-trecho{display:flex;gap:6px;align-items:center;margin-bottom:6px}
@@ -286,6 +288,7 @@ tr.corr-row td:first-child::after{content:"REANALISAR";display:inline-block;marg
       <input type="date" id="fAte" onchange="filtrar()" title="Data final (check-in)" style="flex:0 0 auto;min-width:0;max-width:160px">
       <button class="refresh-btn" onclick="limparData()" title="Limpar datas" style="flex:0 0 auto">✕ datas</button>
       <input type="text" id="fBusca" placeholder="Buscar por nome, CPF ou protocolo…" oninput="filtrar()">
+      <div id="filtroAtivo" style="flex-basis:100%;font-size:12px;color:var(--warning);font-weight:600;display:none;padding:2px 2px 0"></div>
     </div>
     <div class="tbl-wrap">
       <table>
@@ -526,6 +529,13 @@ function filtrar(){
     if(q){var txt=(d.protocolo+" "+d.nome+" "+d.cpf).toLowerCase();if(txt.indexOf(q)===-1)continue;}
     filtrados.push(d);
   }
+  var partes=[];
+  if(st){var opt=document.querySelector('#fStatus option[value="'+st+'"]');partes.push("Status: "+(opt?opt.textContent:st));}
+  if(de||ate){if(de&&ate)partes.push("Período: "+fmtData(de)+" a "+fmtData(ate));else if(de)partes.push("A partir de "+fmtData(de));else partes.push("Até "+fmtData(ate));}
+  if(q)partes.push('Busca: "'+document.getElementById("fBusca").value.trim()+'"');
+  var fa=document.getElementById("filtroAtivo");
+  if(partes.length){fa.style.display="block";fa.innerHTML="🔎 Filtro ativo — "+partes.join(" · ")+" · "+filtrados.length+" resultado(s)";}
+  else fa.style.display="none";
   renderCards();
   renderTable();
 }
