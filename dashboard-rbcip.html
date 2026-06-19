@@ -247,7 +247,7 @@ tr.corr-row td:first-child::after{content:"REANALISAR";display:inline-block;marg
       Atualizar
     </button>
     <button class="refresh-btn" onclick="abrirPrecos()" title="Definir o valor da gasolina por período">⛽ Valor da Gasolina</button>
-    <button class="refresh-btn" onclick="abrirKm()" title="Quilometragem total e por pessoa">📊 Km por pessoa</button>
+    <button class="refresh-btn" onclick="abrirKm()" title="Estatísticas: totais e médias (km e valor)">📊 Estatísticas</button>
     <span id="hdrUser" style="font-size:12px;font-weight:600;color:var(--text2)"></span>
     <button class="refresh-btn" onclick="logout()" title="Encerrar sessão">Sair</button>
   </div>
@@ -378,8 +378,12 @@ tr.corr-row td:first-child::after{content:"REANALISAR";display:inline-block;marg
 <!-- Modal: quilometragem por pessoa -->
 <div class="edit-modal" id="kmModal" onclick="if(event.target===this)fecharKm()">
   <div class="edit-box">
-    <div class="edit-head"><h3>📊 Quilometragem por pessoa</h3><div id="km_total_lbl" style="font-size:13px;color:var(--text3);margin-top:4px"></div></div>
-    <div class="edit-body"><div id="km_lista"></div></div>
+    <div class="edit-head"><h3>📊 Estatísticas</h3><div id="km_total_lbl" style="font-size:13px;color:var(--text3);margin-top:4px"></div></div>
+    <div class="edit-body">
+      <div id="km_resumo" style="display:flex;flex-wrap:wrap;gap:10px;margin-bottom:16px"></div>
+      <div class="ed-group-title">Por pessoa</div>
+      <div id="km_lista"></div>
+    </div>
     <div class="edit-foot"><button class="ed-cancel" onclick="fecharKm()">Fechar</button></div>
   </div>
 </div>
@@ -634,16 +638,32 @@ function salvarEdicao(){
 function abrirPrecos(){document.getElementById("preco_ini").value="";document.getElementById("preco_fim").value="";document.getElementById("preco_val").value="";document.getElementById("precos_lista").innerHTML='<span style="color:var(--text3)">Carregando…</span>';document.getElementById("precoModal").classList.add("show");carregarPrecos();}
 function fecharPrecos(){document.getElementById("precoModal").classList.remove("show");}
 // ── Quilometragem total e por pessoa ──
+function brl(n){return (Number(n)||0).toLocaleString("pt-BR",{minimumFractionDigits:2,maximumFractionDigits:2});}
 function abrirKm(){
-  var map={},total=0,n=0;
-  for(var i=0;i<filtrados.length;i++){var d=filtrados[i];if(d.status==="REPROVADO"||d.status==="REJEITADO")continue;var km=parseFloat(d.dist_total)||0;total+=km;n++;var key=(d.cpf||d.nome||"?");if(!map[key])map[key]={nome:d.nome||"—",km:0,n:0};map[key].km+=km;map[key].n++;}
+  var map={},totalKm=0,totalVal=0,n=0,dias={};
+  for(var i=0;i<filtrados.length;i++){var d=filtrados[i];if(d.status==="REPROVADO"||d.status==="REJEITADO")continue;
+    var km=parseFloat(d.dist_total)||0,val=parseFloat(d.val_total)||0;totalKm+=km;totalVal+=val;n++;
+    var dia=ymdDH(d.checkin_dh);if(dia)dias[dia]=1;
+    var key=(d.cpf||d.nome||"?");if(!map[key])map[key]={nome:d.nome||"—",km:0,val:0,n:0};map[key].km+=km;map[key].val+=val;map[key].n++;}
+  var nDias=0;for(var k in dias)nDias++;
   var arr=[];for(var k in map)arr.push(map[k]);
   arr.sort(function(a,b){return b.km-a.km;});
-  document.getElementById("km_total_lbl").innerHTML="Total geral: <strong>"+km1(total)+" km</strong> · "+n+" viagens · "+arr.length+" pessoas <span style=\"color:var(--text3)\">(filtro atual, sem reprovados)</span>";
+  document.getElementById("km_total_lbl").innerHTML="Filtro atual, sem reprovados · "+arr.length+" pessoas";
+  function box(lbl,v){return '<div style="flex:1 1 140px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:10px 12px"><div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;font-weight:600">'+lbl+'</div><div style="font-size:17px;font-weight:700;color:var(--text);margin-top:3px">'+v+'</div></div>';}
+  document.getElementById("km_resumo").innerHTML=
+    box("Km total",km1(totalKm)+" km")+
+    box("Valor total","R$ "+brl(totalVal))+
+    box("Viagens",n)+
+    box("Dias com viagem",nDias)+
+    box("Km média/dia",(nDias?km1(totalKm/nDias):"0")+" km")+
+    box("Valor médio/dia","R$ "+brl(nDias?totalVal/nDias:0))+
+    box("Km média/viagem",(n?km1(totalKm/n):"0")+" km")+
+    box("Valor médio/viagem","R$ "+brl(n?totalVal/n:0));
   if(!arr.length){document.getElementById("km_lista").innerHTML='<span style="color:var(--text3)">Sem dados.</span>';}
   else{
-    var h='<table style="width:100%;border-collapse:collapse;font-size:13px"><thead><tr><th style="text-align:left;padding:6px 8px;color:var(--text3);position:sticky;top:0;background:var(--surface)">Nome</th><th style="text-align:right;padding:6px 8px;color:var(--text3);position:sticky;top:0;background:var(--surface)">Viagens</th><th style="text-align:right;padding:6px 8px;color:var(--text3);position:sticky;top:0;background:var(--surface)">Total km</th></tr></thead><tbody>';
-    for(var i=0;i<arr.length;i++)h+='<tr style="border-top:1px solid var(--border)"><td style="padding:6px 8px">'+esc(arr[i].nome)+'</td><td style="text-align:right;padding:6px 8px;color:var(--text2)">'+arr[i].n+'</td><td style="text-align:right;padding:6px 8px;font-weight:600">'+km1(arr[i].km)+' km</td></tr>';
+    var th='style="text-align:right;padding:6px 8px;color:var(--text3);position:sticky;top:0;background:var(--surface)"';
+    var h='<table style="width:100%;border-collapse:collapse;font-size:13px"><thead><tr><th style="text-align:left;padding:6px 8px;color:var(--text3);position:sticky;top:0;background:var(--surface)">Nome</th><th '+th+'>Viagens</th><th '+th+'>Total km</th><th '+th+'>Valor</th></tr></thead><tbody>';
+    for(var i=0;i<arr.length;i++)h+='<tr style="border-top:1px solid var(--border)"><td style="padding:6px 8px">'+esc(arr[i].nome)+'</td><td style="text-align:right;padding:6px 8px;color:var(--text2)">'+arr[i].n+'</td><td style="text-align:right;padding:6px 8px;font-weight:600">'+km1(arr[i].km)+' km</td><td style="text-align:right;padding:6px 8px">R$ '+brl(arr[i].val)+'</td></tr>';
     h+='</tbody></table>';
     document.getElementById("km_lista").innerHTML=h;
   }
