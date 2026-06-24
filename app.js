@@ -124,6 +124,36 @@ function corrigirValoresNumericos() {
   Logger.log("Valores convertidos para número.");
 }
 
+// Ressincroniza a coluna "Val Pedágios" (AA=26) e a quantidade (Z=25) a partir
+// do TEXTO das cobranças (Y=24) — a fonte que o editor mostra — e recalcula o
+// total (AI=34 = Val Real + pedágios). Corrige linhas em que o número gravado
+// ficou "travado"/dessincronizado do valor realmente usado no total.
+// Rodar uma vez no editor de scripts após a viagem desincronizar.
+function ressincronizarPedagios() {
+  var s = getSheet();
+  var data = s.getDataRange().getValues();
+  var corrigidas = 0;
+  for (var i = 1; i < data.length; i++) {
+    var txt = String(data[i][24] || "");
+    if (!txt.trim()) continue;                 // sem cobranças → nada a sincronizar
+    var ls = txt.split("\n"), soma = 0, qtd = 0;
+    for (var j = 0; j < ls.length; j++) {
+      var m = ls[j].match(/R\$\s*([\d.,]+)/);   // texto gravado usa ponto decimal (v.toFixed(2))
+      if (m) { soma += parseFloat(m[1].replace(/\.(?=\d{3}(\D|$))/g, "").replace(",", ".")) || 0; qtd++; }
+    }
+    var pedNovo = r2(soma);
+    var vReal = parseFloat(data[i][33]) || 0;
+    var totalNovo = r2(vReal + soma);
+    var mudou = false;
+    if ((parseFloat(data[i][25]) || 0) !== qtd) { s.getRange(i+1, 26).setValue(qtd); mudou = true; }      // Z
+    if ((parseFloat(data[i][26]) || 0) !== pedNovo) { s.getRange(i+1, 27).setValue(pedNovo); mudou = true; } // AA
+    if ((parseFloat(data[i][34]) || 0) !== totalNovo) { s.getRange(i+1, 35).setValue(totalNovo); mudou = true; } // AI
+    if (mudou) corrigidas++;
+  }
+  Logger.log("Pedágios ressincronizados em " + corrigidas + " linha(s).");
+  return corrigidas;
+}
+
 // ══════════════════════════════════════════════════════════════
 // LOCK HELPER — garante que apenas 1 escrita por vez
 // ══════════════════════════════════════════════════════════════
@@ -485,7 +515,7 @@ function doFinalizar(d) {
   updated[10] = tempo;                        // K
   updated[18] = idaTxt;                       // S (trechos ida + links Maps)
   updated[21] = voltaTxt;                     // V (trechos volta + links Maps)
-  updated[23] = dTot;                         // X
+  updated[23] = Math.round(dTot*10)/10;       // X (1 casa — evita 152.8999…)
   updated[24] = pTxt.trim();                  // Y
   updated[25] = peds.length;                  // Z
   updated[26] = r2(tPed);                     // AA
@@ -557,7 +587,7 @@ function doLancamentoPosterior(d) {
 
   var dIda = 0; for (var i = 0; i < ida.length; i++) dIda += parseFloat(ida[i].km) || 0;
   var dVolta = 0; for (var i = 0; i < volta.length; i++) dVolta += parseFloat(volta[i].km) || 0;
-  var dTot = dIda + dVolta;
+  var dTot = Math.round((dIda + dVolta)*10)/10;
 
   var con = (parseFloat(d.consumo) > 0) ? parseFloat(d.consumo) : (d.veiculo === "Moto" ? 49 : 10);
   var precoBase = precoGasolina(d.checkin_timestamp);  // valor da gasolina vigente na data da viagem
@@ -671,7 +701,7 @@ function doCorrigir(d) {
   else { dist += extrairKm(rowData[18]); }
   if (d.volta) { updated[21] = montarTrechosCorr(d.volta, origVolta); updated[22] = d.volta.length; for (var i=0;i<d.volta.length;i++) dist += parseFloat(d.volta[i].km)||0; }
   else { dist += extrairKm(rowData[21]); }
-  updated[23] = dist;
+  updated[23] = Math.round(dist*10)/10;
 
   // ── Fotos: substitui só quando veio um link novo ──
   if (d.odo_saida_link) updated[5] = d.odo_saida_link;
@@ -864,7 +894,7 @@ function doEditarAdmin(d) {
   else { dist += extrairKm(rowData[18]); }
   if (d.volta) { updated[21] = montarTrechosCorr(d.volta, origVolta); updated[22] = d.volta.length; for (var i=0;i<d.volta.length;i++) dist += parseFloat(d.volta[i].km)||0; }
   else { dist += extrairKm(rowData[21]); }
-  updated[23] = dist;
+  updated[23] = Math.round(dist*10)/10;
 
   var pbTrip = parseFloat(rowData[29]) || PRECO_BASE;  // preço da gasolina do período da viagem (já gravado)
   var usouEstim = String(updated[28]).trim() === "Sim";
