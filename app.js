@@ -57,7 +57,7 @@ var EMAILS_RECIBO = propriedades.getProperty('EMAILS_RECIBO') || "lucas@rbcip.or
 // 3. As demais variáveis continuam iguais, pois não são informações sensíveis
 var ABA = "Registros";
 var ABA_HISTORICO = "Histórico";
-var PRECO_BASE = 4.67;
+var PRECO_BASE = 6.47;
 var LOCK_TIMEOUT = 15000; // 15s
 
 // 36 colunas: A..AJ
