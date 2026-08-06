@@ -236,7 +236,8 @@ async function loadDetail(id){
 
   // ── Ações do admin (Camada A: grava status no Supabase; e-mail vem depois) ──
   h+='<h4>Ações do admin</h4>';
-  h+='<div class="line" style="font-size:12px;color:var(--text3)">Status atual: <b>'+esc(reg.status)+'</b>. As ações gravam no Supabase (ambiente de validação). O envio de e-mail será ligado no próximo passo.</div>';
+  var emailAtivo = !!(window.RBCIP_CONFIG && window.RBCIP_CONFIG.CARTEIRO_URL);
+  h+='<div class="line" style="font-size:12px;color:'+(emailAtivo?'var(--warning)':'var(--text3)')+'">Status atual: <b>'+esc(reg.status)+'</b>. As ações gravam no Supabase'+(emailAtivo?' e <b>enviam e-mail</b> ao pesquisador deste registro ✉️':' (sem enviar e-mail)')+'.</div>';
   h+='<textarea id="obs-'+id+'" placeholder="Observação (opcional) — fica registrada na validação" style="width:100%;margin:8px 0;padding:8px;border:1px solid var(--border);border-radius:6px;font-family:inherit;font-size:13px;resize:vertical;min-height:42px"></textarea>';
   h+='<div style="display:flex;gap:8px;flex-wrap:wrap">';
   [["APROVADO","#DBEAFE","#1E40AF","Aprovar"],["PAGO","#CCFBF1","#0F766E","Marcar pago"],["REVISÃO","#FEF3C7","#92400E","Pedir revisão"],["REPROVADO","#FEE2E2","#991B1B","Reprovar"]].forEach(function(b){
