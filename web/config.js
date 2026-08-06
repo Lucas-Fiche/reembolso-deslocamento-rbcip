@@ -12,6 +12,7 @@
 // ══════════════════════════════════════════════════════════════════════════
 
 window.RBCIP_CONFIG = {
-  SUPABASE_URL: "COLE_AQUI_A_PROJECT_URL",              // ex.: https://abcd1234.supabase.co
-  SUPABASE_PUBLISHABLE_KEY: "COLE_AQUI_A_PUBLISHABLE_KEY" // ex.: sb_publishable_xxxxxxxx
+  // URL base do projeto (SEM o /rest/v1/ — o supabase-js acrescenta sozinho)
+  SUPABASE_URL: "https://oharmunvmkrtlfpgsgww.supabase.co",
+  SUPABASE_PUBLISHABLE_KEY: "sb_publishable_kDWEzxNW7OpZB4VzqgcJ8g_QcEIWH7W"
 };
