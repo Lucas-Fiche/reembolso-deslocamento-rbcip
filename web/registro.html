@@ -95,12 +95,63 @@
     <div id="msgCI" class="msg"></div>
   </div>
 
+  <!-- FINAL: paradas + check-out + cálculo -->
+  <div id="secFinal" class="hide">
+    <div class="card">
+      <h2>🗺️ Paradas — IDA</h2>
+      <p class="muted">Cada parada é um trecho com origem, destino e km.</p>
+      <div id="ida_list"></div>
+      <button class="ghost sm" style="width:auto" onclick="addParada('ida')">+ parada ida</button>
+    </div>
+    <div class="card">
+      <h2>🗺️ Paradas — VOLTA</h2>
+      <p class="muted">Sem volta? Deixe vazio.</p>
+      <div id="volta_list"></div>
+      <button class="ghost sm" style="width:auto" onclick="addParada('volta')">+ parada volta</button>
+    </div>
+    <div class="card">
+      <h2>⛽ Combustível</h2>
+      <div id="preco_base_txt" class="muted"></div>
+      <label>Modo de cálculo</label>
+      <select id="fuelMode" onchange="onFuel()">
+        <option value="estim">Estimativa (usa o preço base)</option>
+        <option value="real">Valor real (informar preço do litro)</option>
+      </select>
+      <div id="realBox" class="hide"><label>Preço do litro (R$)</label><input id="fuel_preco" inputmode="decimal" placeholder="Ex: 6,29"></div>
+      <label>Consumo do veículo (km/L)</label>
+      <input id="fuel_con" inputmode="decimal" placeholder="Padrão: 10">
+    </div>
+    <div class="card">
+      <h2>🧾 Pedágios</h2>
+      <div id="ped_list"></div>
+      <button class="ghost sm" style="width:auto" onclick="addPedagio()">+ pedágio</button>
+    </div>
+    <div class="card">
+      <h2>👥 Caronas (opcional)</h2>
+      <div id="carona_list"></div>
+      <button class="ghost sm" style="width:auto" onclick="addCarona()">+ carona</button>
+    </div>
+    <div class="card">
+      <h2>📍 Check-out (localização)</h2>
+      <div class="gs" id="co_gs"><span class="gd"></span><span id="co_gt">Obtendo…</span></div>
+      <button class="ghost sm" style="width:auto;margin-top:12px" onclick="reqGPS2()">↻ Atualizar GPS</button>
+    </div>
+
+    <button onclick="calcular()">🧮 Calcular total</button>
+    <div id="resumoCard" class="card hide" style="margin-top:16px">
+      <div id="resumo"></div>
+      <button onclick="enviarFinal()">✅ Enviar solicitação</button>
+    </div>
+    <button class="ghost" onclick="show('secHome')">← Voltar ao início</button>
+    <div id="msgFinal" class="msg"></div>
+  </div>
+
   <!-- OK -->
   <div id="secOk" class="card hide">
     <div class="ss">
-      <div class="si">🚀</div>
-      <h2>Check-in registrado!</h2>
-      <p class="muted">Sua viagem foi aberta. Ao chegar em cada destino, você registrará as paradas (em breve nesta tela).</p>
+      <div class="si" id="ok_icone">🚀</div>
+      <h2 id="ok_titulo">Check-in registrado!</h2>
+      <p class="muted" id="ok_texto">Sua viagem foi aberta.</p>
       <div class="sid" id="ok_proto"></div>
     </div>
     <button onclick="location.reload()">← Início</button>
@@ -111,9 +162,9 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="config.js"></script>
 <script>
-var sb=null, SESSION=null, PERFIL=null, gps=null, clk=null;
+var sb=null, SESSION=null, PERFIL=null, gps=null, gps2=null, clk=null, TRIP=null, PB=6.47, _calc=null;
 function el(id){return document.getElementById(id);}
-function show(id){["carregando","secLogin","secHome","secCI","secOk"].forEach(function(s){el(s).classList.add("hide");});el(id).classList.remove("hide");}
+function show(id){["carregando","secLogin","secHome","secCI","secFinal","secOk"].forEach(function(s){el(s).classList.add("hide");});el(id).classList.remove("hide");window.scrollTo(0,0);}
 function msg(box,tipo,txt){var m=el(box);m.className="msg show "+tipo;m.textContent=txt;}
 function limpaMsg(box){var m=el(box);m.className="msg";m.textContent="";}
 function pad(n){return n<10?"0"+n:""+n;}
@@ -207,17 +258,128 @@ async function enviarCI(){
     checkin_em:new Date().toISOString(), checkin_lat:gps.lat, checkin_lng:gps.lng
   });
   if(error){ msg("msgCI","err","Erro ao registrar: "+error.message); return; }
+  el("ok_icone").textContent="🚀"; el("ok_titulo").textContent="Check-in registrado!";
+  el("ok_texto").textContent="Sua viagem foi aberta. Ao chegar, registre as paradas e o check-out.";
   el("ok_proto").textContent="Protocolo: "+proto;
+  show("secOk");
+}
+
+// ═══════════════════ 3c — PARADAS / CHECK-OUT / CÁLCULO ═══════════════════
+async function goFinal(id, protocolo){
+  TRIP={id:id, protocolo:protocolo}; _calc=null;
+  show("secFinal");
+  el("resumoCard").classList.add("hide"); limpaMsg("msgFinal");
+  if(!el("ida_list").children.length) addParada("ida");
+  await fetchPreco();
+  el("preco_base_txt").textContent="Preço base atual: R$ "+PB.toFixed(2)+"/L";
+  reqGPS2();
+}
+
+function addParada(fase){
+  var d=document.createElement("div");
+  d.className="parada-row"; d.style.cssText="border:1px solid var(--border);border-radius:10px;padding:10px;margin-bottom:8px";
+  d.innerHTML='<div class="fr"><div><label>Origem</label><input class="p-orig"></div><div><label>Destino</label><input class="p-dest"></div></div>'
+    +'<label>Distância (km)</label><input class="p-km" inputmode="decimal">'
+    +'<button class="link" onclick="this.parentNode.remove()">remover</button>';
+  el(fase+"_list").appendChild(d);
+}
+function coletarParadas(fase){
+  var out=[], rows=el(fase+"_list").querySelectorAll(".parada-row");
+  Array.prototype.forEach.call(rows,function(r){
+    var o=r.querySelector(".p-orig").value.trim(), de=r.querySelector(".p-dest").value.trim(), km=parseFloat(String(r.querySelector(".p-km").value).replace(",","."))||0;
+    if(o||de||km) out.push({fase:fase, origem:o, destino:de, km:km});
+  });
+  out.forEach(function(p,i){ p.ordem=i+1; });
+  return out;
+}
+function onFuel(){ el("realBox").classList.toggle("hide", el("fuelMode").value!=="real"); }
+function addPedagio(){
+  var d=document.createElement("div");
+  d.className="ped-row"; d.style.cssText="border:1px solid var(--border);border-radius:10px;padding:10px;margin-bottom:8px";
+  d.innerHTML='<div class="fr"><div><label>Fase</label><select class="pd-fase"><option value="ida">Ida</option><option value="volta">Volta</option></select></div>'
+    +'<div><label>Valor (R$)</label><input class="pd-val" inputmode="decimal"></div></div>'
+    +'<button class="link" onclick="this.parentNode.remove()">remover</button>';
+  el("ped_list").appendChild(d);
+}
+function coletarPedagios(){
+  var out=[], rows=el("ped_list").querySelectorAll(".ped-row");
+  Array.prototype.forEach.call(rows,function(r){
+    var v=parseFloat(String(r.querySelector(".pd-val").value).replace(",","."))||0;
+    if(v>0) out.push({fase:r.querySelector(".pd-fase").value, valor:v});
+  });
+  out.forEach(function(p,i){ p.ordem=i+1; });
+  return out;
+}
+function addCarona(){
+  var d=document.createElement("div");
+  d.innerHTML='<input class="cr-nome" placeholder="Nome da carona" style="margin-top:6px">';
+  el("carona_list").appendChild(d);
+}
+function coletarCaronas(){
+  var out=[]; Array.prototype.forEach.call(el("carona_list").querySelectorAll(".cr-nome"),function(i){ if(i.value.trim())out.push(i.value.trim()); });
+  return out;
+}
+function reqGPS2(){
+  var box=el("co_gs"), txt=el("co_gt"); box.className="gs"; txt.textContent="Obtendo…"; gps2=null;
+  if(!navigator.geolocation){box.className="gs e";txt.textContent="GPS indisponível";return;}
+  navigator.geolocation.getCurrentPosition(function(p){
+    gps2={lat:p.coords.latitude,lng:p.coords.longitude};
+    box.className="gs a"; txt.textContent=p.coords.latitude.toFixed(5)+", "+p.coords.longitude.toFixed(5)+" (±"+Math.round(p.coords.accuracy)+"m)";
+  },function(){ box.className="gs e"; txt.textContent="Permita a localização e toque em Atualizar GPS"; },{enableHighAccuracy:true,timeout:15000});
+}
+async function fetchPreco(){
+  var today=new Date().toISOString().slice(0,10);
+  var { data }=await sb.from("precos_gasolina").select("valor,inicio,fim").lte("inicio",today).order("inicio",{ascending:false}).limit(10);
+  if(data && data.length){
+    for(var i=0;i<data.length;i++){ if(!data[i].fim || data[i].fim>=today){ PB=Number(data[i].valor); return; } }
+    PB=Number(data[0].valor);
+  }
+}
+function calcular(){
+  limpaMsg("msgFinal");
+  var ida=coletarParadas("ida"), volta=coletarParadas("volta");
+  var dist=0; ida.concat(volta).forEach(function(p){ dist+=p.km; });
+  if(dist<=0){ msg("msgFinal","err","Informe ao menos uma parada com distância (km)."); return; }
+  var con=parseFloat(String(el("fuel_con").value).replace(",","."))||10;
+  var usarEstim=el("fuelMode").value!=="real", precoReal=PB;
+  if(!usarEstim){ precoReal=parseFloat(String(el("fuel_preco").value).replace(",",".")); if(!precoReal||precoReal<=0){ msg("msgFinal","err","Informe o preço do litro."); return; } }
+  var peds=coletarPedagios(), tPed=0; peds.forEach(function(p){ tPed+=p.valor; });
+  var vReal=dist/con*precoReal, vTot=vReal+tPed;
+  _calc={dist:dist,con:con,usarEstim:usarEstim,precoReal:precoReal,ida:ida,volta:volta,peds:peds,vReal:vReal,vTot:vTot};
+  el("resumo").innerHTML='<div style="font-weight:700;color:var(--navy);margin-bottom:6px">📊 Resumo</div>'
+    +'Distância: <b>'+dist.toFixed(1)+' km</b> (ida '+ida.reduce(function(a,p){return a+p.km;},0).toFixed(1)+' + volta '+volta.reduce(function(a,p){return a+p.km;},0).toFixed(1)+')<br>'
+    +'Combustível ('+con+' km/L @ R$ '+(usarEstim?PB:precoReal).toFixed(2)+'/L): R$ '+vReal.toFixed(2)+(tPed?'<br>Pedágios: R$ '+tPed.toFixed(2):'')
+    +'<div style="font-size:18px;font-weight:700;color:var(--navy);margin-top:8px;padding-top:8px;border-top:2px solid var(--navy)">Total: R$ '+vTot.toFixed(2)+'</div>';
+  el("resumoCard").classList.remove("hide");
+  el("resumoCard").scrollIntoView({behavior:"smooth"});
+}
+async function enviarFinal(){
+  if(!_calc){ msg("msgFinal","err","Toque em Calcular primeiro."); return; }
+  if(!gps2){ msg("msgFinal","err","Capture o GPS do check-out."); return; }
+  var c=_calc;
+  el("msgFinal").className="msg show info"; el("msgFinal").textContent="Enviando…";
+  var upd={ status:"COMPLETO", checkout_em:new Date().toISOString(), checkout_lat:gps2.lat, checkout_lng:gps2.lng,
+    dist_total:c.dist, consumo:c.con, usou_estimativa:c.usarEstim, preco_base:PB,
+    preco_real:c.usarEstim?null:c.precoReal, caronas:coletarCaronas().join(", ")||null };
+  var r1=await sb.from("reembolsos").update(upd).eq("id",TRIP.id);
+  if(r1.error){ msg("msgFinal","err","Erro ao finalizar: "+r1.error.message); return; }
+  var paradas=c.ida.concat(c.volta).map(function(p){ return {reembolso_id:TRIP.id, fase:p.fase, ordem:p.ordem, origem:p.origem, destino:p.destino, km:p.km}; });
+  if(paradas.length){ var r2=await sb.from("paradas").insert(paradas); if(r2.error){ msg("msgFinal","err","Erro ao salvar paradas: "+r2.error.message); return; } }
+  if(c.peds.length){ var peds=c.peds.map(function(p){ return {reembolso_id:TRIP.id, fase:p.fase, ordem:p.ordem, valor:p.valor}; }); var r3=await sb.from("pedagios").insert(peds); if(r3.error){ msg("msgFinal","err","Erro ao salvar pedágios: "+r3.error.message); return; } }
+  el("ok_icone").textContent="✅"; el("ok_titulo").textContent="Solicitação enviada!";
+  el("ok_texto").textContent="Seu reembolso foi registrado e já aparece para análise.";
+  el("ok_proto").textContent="Protocolo: "+TRIP.protocolo+" · Total: R$ "+c.vTot.toFixed(2);
   show("secOk");
 }
 
 // ── Viagem em andamento (ABERTO) do motorista ──
 async function checarViagemAberta(){
-  var { data }=await sb.from("reembolsos").select("protocolo,checkin_em").eq("motorista_id",SESSION.user.id).eq("status","ABERTO").order("checkin_em",{ascending:false}).limit(1);
+  var { data }=await sb.from("reembolsos").select("id,protocolo,checkin_em").eq("motorista_id",SESSION.user.id).eq("status","ABERTO").order("checkin_em",{ascending:false}).limit(1);
   var box=el("hm_aberta");
   if(data && data.length){
     var v=data[0];
-    box.innerHTML='<div class="viagem-aberta"><b>🚗 Você tem uma viagem em andamento</b><br><span class="muted">Protocolo '+v.protocolo+'. As paradas e o check-out entram nesta tela em breve.</span></div>';
+    box.innerHTML='<div class="viagem-aberta"><b>🚗 Você tem uma viagem em andamento</b><br><span class="muted">Protocolo '+v.protocolo+'.</span>'
+      +'<button class="sm" style="width:auto;margin-top:10px" onclick="goFinal(\''+v.id+'\',\''+v.protocolo+'\')">Registrar paradas e check-out →</button></div>';
   } else { box.innerHTML=""; }
 }
 
