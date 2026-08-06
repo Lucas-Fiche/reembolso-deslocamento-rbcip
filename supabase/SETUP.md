@@ -29,11 +29,30 @@ Em **Authentication → Sign In / Providers** (seção CONFIGURATION):
     **código/OTP** (motoristas e Van). Não precisa de provedor separado.
   - Ajustes finos de OTP ficam para a Fase 1.
 
-## 4. E-mail confiável para os códigos (grátis)
-O e-mail nativo do Supabase é limitado (só teste). Para o código chegar sempre:
-1. Crie conta grátis no [Resend](https://resend.com) (100 e-mails/dia grátis).
-2. Verifique um remetente (ex.: `no-reply@rbcip.org`).
-3. Em **Authentication → Emails** (seção NOTIFICATIONS) → aba **SMTP**, preencha o SMTP do Resend.
+## 4. E-mail para os códigos — SMTP do próprio `@rbcip.org` (Google Workspace)
+O e-mail nativo do Supabase é limitado (só teste). Usamos o SMTP do próprio
+domínio da RBCIP — **sem outro serviço**. Em **Authentication → Emails**
+(NOTIFICATIONS) → **Enable custom SMTP**:
+
+| Campo | Valor |
+|---|---|
+| Sender email address | `lucas@rbcip.org` (ou um endereço de função, ex. `sistema@rbcip.org`) |
+| Sender name | `RBCIP Reembolso` |
+| Host | `smtp.gmail.com` |
+| Port | `465` |
+| Username | `lucas@rbcip.org` |
+| Password | **Senha de app** do Google (não a senha normal) |
+
+- Gere a senha de app em [myaccount.google.com/apppasswords](https://myaccount.google.com/apppasswords)
+  (precisa de verificação em 2 etapas ativa).
+- O aviso amarelo "Check your SMTP provider" é **informativo** — o Gmail é feito
+  para e-mail pessoal, mas para o baixo volume de códigos de login funciona bem.
+- **Sempre teste a entrega real** (criar/convidar um usuário e ver se o e-mail
+  chega). SMTP errado falha em silêncio.
+- Limites: Custom SMTP libera 30 e-mails/hora por padrão (ajustável em
+  **Authentication → Rate Limits**); Workspace envia ~2.000/dia.
+- _Alternativa futura, se o volume crescer ou cair em spam:_ um provedor
+  transacional como o Resend (plano grátis).
 
 ## 5. Ativar a "porta" da lista de autorizados
 O arquivo `0002_seguranca.sql` já cria o gatilho que **bloqueia quem não está
