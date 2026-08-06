@@ -23,22 +23,23 @@ conta seguindo os passos abaixo.
    - Se aparecer erro, **pare e me mande a mensagem** — corrijo antes de seguir.
 
 ## 3. Ligar o login por e-mail
-Em **Authentication → Providers**:
-- **Email** habilitado.
-  - Ative **"Confirm email" / OTP** (código) — usado pelos motoristas e Van.
-  - Mantenha **senha** habilitada — usada pelos admins.
+Em **Authentication → Sign In / Providers** (seção CONFIGURATION):
+- Abra **Email** e deixe **Enabled**.
+  - O mesmo provedor Email cobre os dois logins: **senha** (admins) e
+    **código/OTP** (motoristas e Van). Não precisa de provedor separado.
+  - Ajustes finos de OTP ficam para a Fase 1.
 
 ## 4. E-mail confiável para os códigos (grátis)
 O e-mail nativo do Supabase é limitado (só teste). Para o código chegar sempre:
 1. Crie conta grátis no [Resend](https://resend.com) (100 e-mails/dia grátis).
 2. Verifique um remetente (ex.: `no-reply@rbcip.org`).
-3. Em **Authentication → Emails / SMTP settings** do Supabase, preencha o SMTP do Resend.
+3. Em **Authentication → Emails** (seção NOTIFICATIONS) → aba **SMTP**, preencha o SMTP do Resend.
 
 ## 5. Ativar a "porta" da lista de autorizados
 O arquivo `0002_seguranca.sql` já cria o gatilho que **bloqueia quem não está
 na lista**. Para também não *enviar* código a quem é de fora (ideal):
-- **Authentication → Hooks → Before User Created** → aponte para a função
-  do banco (eu forneço a versão exata do hook na Fase 1, junto do login).
+- **Authentication → Auth Hooks** (BETA) → **Before User Created** → aponte
+  para a função do banco (eu forneço a versão exata do hook na Fase 1).
 
 ## 6. Cadastrar o primeiro admin (você)
 No **SQL Editor**, rode (troque pelo seu e-mail real):
