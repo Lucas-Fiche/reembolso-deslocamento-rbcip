@@ -1,0 +1,247 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Painel (Supabase) — Reembolsos RBCIP</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#F1F5F9;--surface:#FFF;--surface2:#F8FAFC;--primary:#2563EB;--primary-light:#DBEAFE;
+  --success:#16A34A;--warning:#B45309;--warning-bg:#FEF3C7;--danger:#DC2626;
+  --text:#0F172A;--text2:#475569;--text3:#94A3B8;--border:#E2E8F0;
+  --radius:8px;--radius-sm:6px;--shadow-sm:0 1px 2px rgba(0,0,0,.06);
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--text);font-size:14px}
+.hide{display:none!important}
+
+/* Header */
+.hdr{background:var(--surface);border-bottom:1px solid var(--border);padding:0 20px;min-height:56px;display:flex;align-items:center;justify-content:space-between;gap:12px;position:sticky;top:0;z-index:100;box-shadow:var(--shadow-sm);flex-wrap:wrap}
+.hdr-left{display:flex;align-items:center;gap:10px}
+.hdr h1{font-size:15px;font-weight:600;letter-spacing:-.2px}
+.hdr-badge{font-size:11px;font-weight:600;color:var(--warning);background:var(--warning-bg);padding:2px 8px;border-radius:20px}
+.hdr-right{display:flex;align-items:center;gap:10px;font-size:12px;color:var(--text2)}
+.btn{background:var(--surface);border:1px solid var(--border);color:var(--text2);padding:7px 12px;border-radius:var(--radius-sm);font-family:inherit;font-size:13px;font-weight:500;cursor:pointer}
+.btn:hover{background:var(--bg);color:var(--text)}
+
+/* Cards */
+.cards{display:flex;gap:10px;padding:14px 20px;overflow-x:auto;background:var(--surface);border-bottom:1px solid var(--border)}
+.card{border:1px solid var(--border);border-radius:var(--radius);padding:12px 16px;min-width:130px;flex-shrink:0;box-shadow:var(--shadow-sm);position:relative;overflow:hidden}
+.card .acc{position:absolute;left:0;top:0;bottom:0;width:3px}
+.card .label{font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.6px;margin-bottom:6px;font-weight:600}
+.card .val{font-size:20px;font-weight:700;letter-spacing:-.5px}
+
+/* Filters */
+.filters{display:flex;gap:10px;padding:10px 20px;background:var(--surface);border-bottom:1px solid var(--border);flex-wrap:wrap;align-items:center}
+.filters select,.filters input{background:var(--bg);border:1px solid var(--border);color:var(--text);padding:7px 12px;border-radius:var(--radius-sm);font-family:inherit;font-size:13px;outline:none}
+.filters input{flex:1;min-width:180px}
+.filters select:focus,.filters input:focus{border-color:var(--primary);box-shadow:0 0 0 3px var(--primary-light)}
+
+/* Table */
+.wrap{padding:16px 20px}
+table{width:100%;border-collapse:collapse;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden}
+thead th{background:var(--surface2);text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:var(--text3);font-weight:600;padding:10px 12px;border-bottom:1px solid var(--border)}
+tbody td{padding:10px 12px;border-bottom:1px solid var(--border);font-size:13px;vertical-align:middle}
+tbody tr{cursor:pointer}
+tbody tr:hover{background:var(--surface2)}
+.mono{font-variant-numeric:tabular-nums}
+.right{text-align:right}
+.proto{font-weight:600;color:var(--primary)}
+.total{font-weight:700}
+
+/* Status badges */
+.st{display:inline-block;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:600;white-space:nowrap}
+.st-ABERTO{background:#E2E8F0;color:#475569}
+.st-COMPLETO{background:#DCFCE7;color:#166534}
+.st-REVISÃO,.st-REVISAO{background:#FEF3C7;color:#92400E}
+.st-CORRIGIDO{background:#E0E7FF;color:#3730A3}
+.st-APROVADO{background:#DBEAFE;color:#1E40AF}
+.st-PAGO{background:#CCFBF1;color:#0F766E}
+.st-REPROVADO{background:#FEE2E2;color:#991B1B}
+
+/* Detail */
+.detail{margin-top:8px;background:var(--surface2);border:1px dashed var(--border);border-radius:var(--radius);padding:14px}
+.detail h4{font-size:12px;text-transform:uppercase;letter-spacing:.5px;color:var(--text3);margin:10px 0 6px}
+.detail .line{font-size:13px;padding:3px 0;color:var(--text2)}
+.detail a{color:var(--primary)}
+
+/* Gate / mensagens */
+.center{min-height:70vh;display:flex;align-items:center;justify-content:center;padding:20px}
+.msgbox{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:28px;max-width:420px;text-align:center;box-shadow:var(--shadow-sm)}
+.msgbox h2{font-size:18px;margin-bottom:10px}
+.msgbox p{color:var(--text2);margin-bottom:16px;font-size:14px;line-height:1.5}
+.msgbox a.cta{display:inline-block;background:var(--primary);color:#fff;text-decoration:none;padding:10px 18px;border-radius:var(--radius-sm);font-weight:600}
+.loading{color:var(--text3);text-align:center;padding:40px}
+</style>
+</head>
+<body>
+
+<!-- Estados de acesso -->
+<div id="carregando" class="center"><div class="loading">Carregando…</div></div>
+
+<div id="semAcesso" class="center hide"><div class="msgbox">
+  <h2>🔒 Acesso restrito</h2>
+  <p id="semAcessoMsg">Esta página é só para administradores. Faça login para continuar.</p>
+  <a class="cta" href="login.html">Ir para o login</a>
+</div></div>
+
+<!-- Painel -->
+<div id="painel" class="hide">
+  <div class="hdr">
+    <div class="hdr-left">
+      <h1>RBCIP · Painel de Reembolsos</h1>
+      <span class="hdr-badge">Supabase · somente leitura</span>
+    </div>
+    <div class="hdr-right">
+      <span id="quem"></span>
+      <button class="btn" onclick="carregar()">↻ Atualizar</button>
+      <button class="btn" onclick="sair()">Sair</button>
+    </div>
+  </div>
+
+  <div class="cards" id="cards"></div>
+
+  <div class="filters">
+    <select id="fStatus" onchange="render()">
+      <option value="">Todos os status</option>
+      <option value="ABERTO">Aberto (em andamento)</option>
+      <option value="COMPLETO">Aguardando análise</option>
+      <option value="REVISÃO">Em revisão</option>
+      <option value="CORRIGIDO">Corrigido</option>
+      <option value="APROVADO">Aprovado</option>
+      <option value="PAGO">Pago</option>
+      <option value="REPROVADO">Reprovado</option>
+    </select>
+    <input id="fBusca" type="text" placeholder="Buscar por protocolo, nome ou CPF…" oninput="render()">
+  </div>
+
+  <div class="wrap">
+    <table>
+      <thead><tr>
+        <th>Protocolo</th><th>Status</th><th>Nome</th><th>Veículo</th>
+        <th>Check-in</th><th class="right">Dist.</th><th class="right">Total</th>
+      </tr></thead>
+      <tbody id="tbody"></tbody>
+    </table>
+    <div id="vazio" class="loading hide">Nenhum registro encontrado com esse filtro.</div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="config.js"></script>
+<script>
+var sb=null, DADOS=[], abertoId=null;
+function el(id){return document.getElementById(id);}
+function show(id){["carregando","semAcesso","painel"].forEach(function(s){el(s).classList.add("hide");});el(id).classList.remove("hide");}
+
+function brl(v){ if(v==null||v==="")return "—"; return "R$ "+Number(v).toLocaleString("pt-BR",{minimumFractionDigits:2,maximumFractionDigits:2}); }
+function km(v){ if(v==null||v==="")return "—"; return Number(v).toLocaleString("pt-BR",{maximumFractionDigits:1})+" km"; }
+function dt(v){ if(!v)return "—"; var d=new Date(v); if(isNaN(d))return String(v); return d.toLocaleString("pt-BR",{day:"2-digit",month:"2-digit",year:"numeric",hour:"2-digit",minute:"2-digit"}); }
+function esc(s){ return String(s==null?"":s).replace(/[&<>"]/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c];}); }
+
+// ── Carregar dados do Supabase ──
+async function carregar(){
+  var { data, error } = await sb.from("vw_reembolsos")
+    .select("id,protocolo,status,nome,cpf,veiculo,placa,checkin_em,dist_total,val_real,val_pedagios,val_total,qtd_paradas,qtd_pedagios,criado_em")
+    .order("criado_em",{ascending:false});
+  if(error){ alert("Erro ao carregar: "+error.message); return; }
+  DADOS = data||[];
+  render();
+}
+
+function contarCards(){
+  var c={ABERTO:0,COMPLETO:0,"REVISÃO":0,CORRIGIDO:0,APROVADO:0,PAGO:0,REPROVADO:0};
+  var soma=0;
+  DADOS.forEach(function(r){ if(c[r.status]!=null)c[r.status]++; if(r.val_total)soma+=Number(r.val_total); });
+  var defs=[
+    {k:"TOTAL",v:DADOS.length,acc:"var(--primary)"},
+    {k:"Aguardando",v:c.COMPLETO,acc:"var(--success)"},
+    {k:"Em revisão",v:c["REVISÃO"],acc:"#D97706"},
+    {k:"Aprovados",v:c.APROVADO,acc:"var(--primary)"},
+    {k:"Pagos",v:c.PAGO,acc:"#0F766E"},
+    {k:"Reprovados",v:c.REPROVADO,acc:"var(--danger)"},
+    {k:"Soma R$",v:brl(soma),acc:"#7C3AED"}
+  ];
+  el("cards").innerHTML = defs.map(function(d){
+    return '<div class="card"><div class="acc" style="background:'+d.acc+'"></div><div class="label">'+d.k+'</div><div class="val">'+d.v+'</div></div>';
+  }).join("");
+}
+
+function render(){
+  contarCards();
+  var st=el("fStatus").value, q=el("fBusca").value.trim().toLowerCase();
+  var rows=DADOS.filter(function(r){
+    if(st && r.status!==st) return false;
+    if(q){ var hay=((r.protocolo||"")+" "+(r.nome||"")+" "+(r.cpf||"")).toLowerCase(); if(hay.indexOf(q)<0) return false; }
+    return true;
+  });
+  el("vazio").classList.toggle("hide", rows.length>0);
+  el("tbody").innerHTML = rows.map(function(r){
+    var tr='<tr onclick="toggle(\''+r.id+'\')">'
+      +'<td class="proto">'+esc(r.protocolo)+'</td>'
+      +'<td><span class="st st-'+esc(r.status)+'">'+esc(r.status)+'</span></td>'
+      +'<td>'+esc(r.nome||"—")+'</td>'
+      +'<td>'+esc(r.veiculo||"—")+(r.placa?" · "+esc(r.placa):"")+'</td>'
+      +'<td class="mono">'+dt(r.checkin_em)+'</td>'
+      +'<td class="right mono">'+km(r.dist_total)+'</td>'
+      +'<td class="right mono total">'+brl(r.val_total)+'</td></tr>';
+    if(abertoId===r.id){
+      tr+='<tr><td colspan="7"><div class="detail" id="det-'+r.id+'"><div class="loading">Carregando detalhes…</div></div></td></tr>';
+    }
+    return tr;
+  }).join("");
+}
+
+async function toggle(id){
+  abertoId = (abertoId===id? null : id);
+  render();
+  if(!abertoId) return;
+  var box=el("det-"+id); if(!box) return;
+  var reg=DADOS.filter(function(x){return x.id===id;})[0]||{};
+  var par = await sb.from("paradas").select("fase,ordem,origem,destino,km,horario,maps_link").eq("reembolso_id",id).order("fase").order("ordem");
+  var ped = await sb.from("pedagios").select("fase,ordem,valor,comprovante_link").eq("reembolso_id",id).order("ordem");
+  var origq = await sb.from("reembolsos").select("val_total_planilha").eq("id",id).maybeSingle();
+  var origPlan = origq && origq.data ? origq.data.val_total_planilha : null;
+  var h="";
+  h+='<h4>Resumo</h4>';
+  h+='<div class="line">CPF: '+esc(reg.cpf||"—")+' &nbsp;·&nbsp; Combustível: '+brl(reg.val_real)+' &nbsp;·&nbsp; Pedágios: '+brl(reg.val_pedagios)+' &nbsp;·&nbsp; <b>Total: '+brl(reg.val_total)+'</b></div>';
+  if(origPlan!=null){
+    var dif=Math.abs(Number(reg.val_total)-Number(origPlan));
+    h+='<div class="line" style="font-size:12px;color:var(--text3)">Total original da planilha: '+brl(origPlan)+(dif>0.005?' (dif. R$ '+dif.toFixed(2)+' — arredondamento)':' ✓ confere')+'</div>';
+  }
+  h+='<h4>Paradas</h4>';
+  h+=((par.data||[]).map(function(p){
+    return '<div class="line">['+esc(p.fase)+'] '+p.ordem+'. '+esc(p.origem||"?")+' → '+esc(p.destino||"?")+' · '+km(p.km)+' · '+dt(p.horario)+(p.maps_link?' · <a href="'+esc(p.maps_link)+'" target="_blank">mapa</a>':'')+'</div>';
+  }).join("")) || '<div class="line">—</div>';
+  h+='<h4>Pedágios</h4>';
+  h+=((ped.data||[]).map(function(p){
+    return '<div class="line">'+(p.fase?'['+esc(p.fase)+'] ':'')+p.ordem+'. '+brl(p.valor)+(p.comprovante_link?' · <a href="'+esc(p.comprovante_link)+'" target="_blank">comprovante</a>':'')+'</div>';
+  }).join("")) || '<div class="line">— sem pedágios —</div>';
+  box.innerHTML=h;
+}
+
+async function sair(){ await sb.auth.signOut(); location.href="login.html"; }
+
+// ── Início: valida sessão + papel admin ──
+(async function(){
+  var c=window.RBCIP_CONFIG||{};
+  if(!c.SUPABASE_URL || String(c.SUPABASE_URL).indexOf("http")!==0){
+    show("semAcesso"); el("semAcessoMsg").textContent="Configuração ausente (web/config.js)."; return;
+  }
+  sb = window.supabase.createClient(c.SUPABASE_URL, c.SUPABASE_PUBLISHABLE_KEY);
+  var { data:{ session } } = await sb.auth.getSession();
+  if(!session){ show("semAcesso"); return; }
+  var { data:perfil } = await sb.from("perfis").select("nome,papel").eq("id",session.user.id).maybeSingle();
+  if(!perfil || perfil.papel!=="admin"){
+    el("semAcessoMsg").textContent="Você está logado, mas esta página é só para administradores.";
+    show("semAcesso"); return;
+  }
+  el("quem").textContent = (perfil.nome||session.user.email)+" · admin";
+  show("painel");
+  await carregar();
+})();
+</script>
+</body>
+</html>
