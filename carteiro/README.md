@@ -15,9 +15,12 @@ e-mail — **idêntico** ao do sistema atual. **Não toca no sistema de produç�
 2. Apague o conteúdo padrão e **cole todo o `carteiro.gs`**. Dê um nome ao
    projeto (ex.: `RBCIP Carteiro`).
 3. **Configurações do projeto** (engrenagem) → role até **Propriedades do
-   script** → adicione duas:
+   script** → adicione:
    - `SUPABASE_URL` = `https://oharmunvmkrtlfpgsgww.supabase.co`
    - `SUPABASE_PUBLISHABLE_KEY` = `sb_publishable_...` (a mesma do `web/config.js`)
+   - `DRIVE_FOLDER_ID` = ID de uma pasta do Google Drive onde as fotos serão
+     salvas. Crie uma pasta (ex.: "RBCIP Fotos"), abra-a e copie o ID da URL
+     (`drive.google.com/drive/folders/{ESTE_ID}`).
 4. **Implantar** → **Nova implantação** → tipo **App da Web**:
    - Executar como: **Eu**
    - Quem tem acesso: **Qualquer pessoa**

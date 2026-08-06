@@ -29,8 +29,32 @@ function doPost(e){
   try{
     var d = JSON.parse(e.postData.contents);
     if(d.action === "enviar_aviso_status") return enviarAvisoStatus(d);
+    if(d.action === "upload_imagem") return uploadImagem(d);
     return _jr({success:false, error:"Ação desconhecida"});
   }catch(err){ return _jr({success:false, error:String(err && err.message || err)}); }
+}
+
+// ── Upload de imagem ao Drive (para o formulário do motorista) ──
+// Segurança: exige um token de usuário AUTENTICADO no Supabase (a RLS de
+// 'perfis' só devolve linha para quem está logado). Salva numa pasta do Drive
+// e devolve o link público de visualização (para o painel exibir a foto).
+function uploadImagem(d){
+  if(!d.jwt || !d.base64) return _jr({success:false, error:"Dados incompletos."});
+  var perfil = _sbGet("perfis?select=papel", d.jwt);
+  if(!perfil || !perfil.length) return _jr({success:false, error:"Não autorizado."});
+  var folderId = _props().getProperty("DRIVE_FOLDER_ID");
+  if(!folderId) return _jr({success:false, error:"DRIVE_FOLDER_ID não configurado no carteiro."});
+  try{
+    var b64 = String(d.base64).replace(/^data:[^;]+;base64,/, "");
+    var bytes = Utilities.base64Decode(b64);
+    var nome = (d.protocolo?d.protocolo+"_":"") + (d.name||"foto") + ".jpg";
+    var blob = Utilities.newBlob(bytes, "image/jpeg", nome);
+    var file = DriveApp.getFolderById(folderId).createFile(blob);
+    file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+    return _jr({success:true, link:file.getUrl()});
+  }catch(err){
+    return _jr({success:false, error:"Falha no upload: " + String(err && err.message || err)});
+  }
 }
 
 function doGet(){ return _jr({status:"ok", carteiro:"rbcip", v:"1.0"}); }
