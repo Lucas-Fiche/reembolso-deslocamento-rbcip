@@ -455,8 +455,16 @@ async function enviarFinal(){
   var paradas=todas.map(function(p){ return {reembolso_id:TRIP.id, fase:p.fase, ordem:p.ordem, origem:p.origem, destino:p.destino, km:p.km, maps_link:p._link||null}; });
   if(paradas.length){ var r2=await sb.from("paradas").insert(paradas); if(r2.error){ msg("msgFinal","err","Erro ao salvar paradas: "+r2.error.message); return; } }
   if(c.peds.length){ var peds=c.peds.map(function(p){ return {reembolso_id:TRIP.id, fase:p.fase, ordem:p.ordem, valor:p.valor, comprovante_link:p._link||null}; }); var r3=await sb.from("pedagios").insert(peds); if(r3.error){ msg("msgFinal","err","Erro ao salvar pedágios: "+r3.error.message); return; } }
+  // E-mail de confirmação ao motorista (best-effort, via carteiro)
+  var cfg=window.RBCIP_CONFIG||{};
+  if(cfg.CARTEIRO_URL){
+    try{ var s2=await sb.auth.getSession();
+      await fetch(cfg.CARTEIRO_URL,{method:"POST",redirect:"follow",headers:{"Content-Type":"text/plain"},
+        body:JSON.stringify({action:"enviar_confirmacao_registro", jwt:s2.data.session.access_token, protocolo:TRIP.protocolo})});
+    }catch(e){}
+  }
   el("ok_icone").textContent="✅"; el("ok_titulo").textContent="Solicitação enviada!";
-  el("ok_texto").textContent="Seu reembolso foi registrado e já aparece para análise.";
+  el("ok_texto").textContent="Seu reembolso foi registrado e você recebeu um e-mail de confirmação.";
   el("ok_proto").textContent="Protocolo: "+TRIP.protocolo+" · Total: R$ "+c.vTot.toFixed(2);
   show("secOk");
 }
