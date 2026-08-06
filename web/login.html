@@ -111,7 +111,12 @@ async function enviarCodigo(){
   el("btnEnviar").disabled = true; el("btnEnviar").textContent = "Enviando…";
   var { error } = await sb.auth.signInWithOtp({ email: email });
   el("btnEnviar").disabled = false; el("btnEnviar").textContent = "Enviar código";
-  if(error){ msg("msgCodigo","err", error.message); return; }
+  if(error){
+    var t = /autoriz|Database error|saving new user/i.test(error.message)
+      ? "Este e-mail não está autorizado a acessar o sistema. Fale com o administrador."
+      : error.message;
+    msg("msgCodigo","err", t); return;
+  }
   el("passoEmail").classList.add("hide");
   el("passoCodigo").classList.remove("hide");
   msg("msgCodigo","info","Código enviado para "+email+". Verifique também o spam.");
