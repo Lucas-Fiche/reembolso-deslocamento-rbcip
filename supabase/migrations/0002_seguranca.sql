@@ -83,6 +83,12 @@ create policy van_pax_by_parent on van_passageiros for all
 -- ── AUDITORIA: admin lê; gravação é feita pelo servidor (service role) ────
 create policy auditoria_admin_read on auditoria for select using (fn_is_admin());
 
+-- ── VIEWS respeitam a RLS de quem consulta (não a de quem criou) ──────────
+-- Sem isto, uma view "vaza" as linhas das tabelas por baixo, ignorando a RLS.
+-- Idempotente: garante a proteção mesmo se o 0001 rodou sem esta opção.
+alter view vw_reembolsos   set (security_invoker = on);
+alter view vw_van_viagens  set (security_invoker = on);
+
 
 -- ══════════════════════════════════════════════════════════════════════════
 -- PORTA DE ACESSO — só entra quem está na lista de autorizados

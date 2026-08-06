@@ -195,7 +195,7 @@ create index idx_van_passageiros_viagem on van_passageiros(viagem_id);
 
 -- Reembolso com total de pedágios e TOTAL GERAL somados na hora, a partir
 -- das cobranças reais. É esta view que o painel/recibo devem ler.
-create view vw_reembolsos as
+create view vw_reembolsos with (security_invoker = true) as
 select
   r.*,
   coalesce(p.qtd_pedagios, 0)          as qtd_pedagios,
@@ -213,7 +213,7 @@ left join (
 ) pr on pr.reembolso_id = r.id;
 
 -- Viagem da Van com a contagem automática de passageiros e de pontos.
-create view vw_van_viagens as
+create view vw_van_viagens with (security_invoker = true) as
 select
   v.*,
   coalesce(pax.qtd_passageiros, 0) as qtd_passageiros,
