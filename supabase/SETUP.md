@@ -69,12 +69,18 @@ values ('voce@rbcip.org', 'admin', 'Seu Nome', true);
 Depois, em **Authentication → Users → Add user**, crie seu usuário admin com
 e-mail + senha. O perfil admin é montado automaticamente pelo gatilho.
 
-## 7. Guardar as chaves (para a Fase 2, no frontend)
-Em **Project Settings → API**, copie e me envie de forma segura quando for a hora:
-- **Project URL**
-- **anon public key** (pode ir no frontend; a proteção real é a RLS)
-- ⚠️ A **service_role key** é secreta — **nunca** vai no frontend. Fica só no
-  servidor (Vercel). Não cole em lugar público.
+## 7. Guardar as chaves (só serão usadas na Fase 2)
+O Supabase renomeou as chaves. Você vai precisar de três coisas:
+- **Project URL** — em **Settings → Data API** (ou botão **Connect** no topo).
+  Ex.: `https://xxxx.supabase.co`. **Seguro compartilhar.**
+- **Publishable key** (`sb_publishable_...`) — em **Settings → API Keys**.
+  Substitui a antiga "anon". Vai no frontend; a proteção real é a RLS.
+  **Seguro compartilhar.**
+- **Secret key** (`sb_secret_...`) — mesma tela. Substitui a antiga
+  "service_role". **PRIVILEGIADA:** nunca no frontend, nunca colada em chat.
+  Entra só no servidor (Vercel), e você mesmo cola lá.
+
+(Ignore a aba "Legacy anon, service_role API keys" — use as novas chaves.)
 
 ---
 
