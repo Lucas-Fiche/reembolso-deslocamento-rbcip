@@ -124,9 +124,15 @@
         <option value="estim">Estimativa (usa o preço base)</option>
         <option value="real">Valor real (informar preço do litro)</option>
       </select>
-      <div id="realBox" class="hide"><label>Preço do litro (R$)</label><input id="fuel_preco" inputmode="decimal" placeholder="Ex: 6,29"></div>
+      <div id="realBox" class="hide">
+        <label>Preço do litro (R$)</label><input id="fuel_preco" inputmode="decimal" placeholder="Ex: 6,29">
+        <label>Cupom fiscal do combustível</label>
+        <input type="file" accept="image/*" id="cupom_foto" onchange="capFoto(this,'cupom')"><div id="cupom_prev" class="muted"></div>
+      </div>
       <label>Consumo do veículo (km/L)</label>
       <input id="fuel_con" inputmode="decimal" placeholder="Padrão: 10">
+      <label>Foto do painel com o consumo (opcional)</label>
+      <input type="file" accept="image/*" id="con_foto" onchange="capFoto(this,'con')"><div id="con_prev" class="muted"></div>
     </div>
     <div class="card">
       <h2>🧾 Pedágios</h2>
@@ -176,7 +182,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="config.js"></script>
 <script>
-var sb=null, SESSION=null, PERFIL=null, gps=null, gps2=null, clk=null, TRIP=null, PB=6.47, _calc=null, CI_FOTO=null, CO_FOTO=null;
+var sb=null, SESSION=null, PERFIL=null, gps=null, gps2=null, clk=null, TRIP=null, PB=6.47, _calc=null, CI_FOTO=null, CO_FOTO=null, CUPOM_FOTO=null, CON_FOTO=null;
 function el(id){return document.getElementById(id);}
 
 // ── Fotos: compressão (canvas) + captura + upload ao Drive (via carteiro) ──
@@ -197,9 +203,18 @@ function compress(file){
 function capFoto(input, which){
   var f=input.files&&input.files[0]; if(!f)return;
   compress(f).then(function(b64){
+    if(which==="ci")CI_FOTO=b64; else if(which==="co")CO_FOTO=b64; else if(which==="cupom")CUPOM_FOTO=b64; else if(which==="con")CON_FOTO=b64;
     var prev=el(which+"_prev");
-    if(which==="ci") CI_FOTO=b64; else CO_FOTO=b64;
-    prev.innerHTML='<img src="'+b64+'" style="max-width:140px;border-radius:8px;margin-top:8px;display:block"><span class="muted">✓ foto pronta</span>';
+    if(prev) prev.innerHTML='<img src="'+b64+'" style="max-width:140px;border-radius:8px;margin-top:8px;display:block"><span class="muted">✓ foto pronta</span>';
+  }).catch(function(){ alert("Não consegui processar a foto. Tente outra."); });
+}
+// Foto anexada a uma LINHA dinâmica (parada / pedágio): guarda o base64 no elemento
+function capRowFoto(input, rowClass){
+  var f=input.files&&input.files[0]; if(!f)return;
+  var row=input.closest("."+rowClass); if(!row)return;
+  compress(f).then(function(b64){
+    row._foto=b64;
+    var p=row.querySelector(".rowfprev"); if(p)p.innerHTML=' <span class="muted">✓ foto anexada</span>';
   }).catch(function(){ alert("Não consegui processar a foto. Tente outra."); });
 }
 async function uploadFoto(b64, name, proto){
@@ -321,7 +336,10 @@ async function enviarCI(){
 // ═══════════════════ 3c — PARADAS / CHECK-OUT / CÁLCULO ═══════════════════
 async function goFinal(id, protocolo){
   TRIP={id:id, protocolo:protocolo}; _calc=null;
-  CO_FOTO=null; if(el("co_foto"))el("co_foto").value=""; if(el("co_prev"))el("co_prev").textContent="Nenhuma foto ainda.";
+  CO_FOTO=null; CUPOM_FOTO=null; CON_FOTO=null;
+  if(el("co_foto"))el("co_foto").value=""; if(el("co_prev"))el("co_prev").textContent="Nenhuma foto ainda.";
+  if(el("cupom_foto"))el("cupom_foto").value=""; if(el("cupom_prev"))el("cupom_prev").innerHTML="";
+  if(el("con_foto"))el("con_foto").value=""; if(el("con_prev"))el("con_prev").innerHTML="";
   show("secFinal");
   el("resumoCard").classList.add("hide"); limpaMsg("msgFinal");
   if(!el("ida_list").children.length) addParada("ida");
@@ -335,14 +353,15 @@ function addParada(fase){
   d.className="parada-row"; d.style.cssText="border:1px solid var(--border);border-radius:10px;padding:10px;margin-bottom:8px";
   d.innerHTML='<div class="fr"><div><label>Origem</label><input class="p-orig"></div><div><label>Destino</label><input class="p-dest"></div></div>'
     +'<label>Distância (km)</label><input class="p-km" inputmode="decimal">'
-    +'<button class="link" onclick="this.parentNode.remove()">remover</button>';
+    +'<label>Print do Google Maps do trecho</label><input type="file" accept="image/*" class="p-foto" onchange="capRowFoto(this,\'parada-row\')"><span class="rowfprev"></span>'
+    +'<div style="margin-top:8px"><button class="link" onclick="this.closest(\'.parada-row\').remove()">remover parada</button></div>';
   el(fase+"_list").appendChild(d);
 }
 function coletarParadas(fase){
   var out=[], rows=el(fase+"_list").querySelectorAll(".parada-row");
   Array.prototype.forEach.call(rows,function(r){
     var o=r.querySelector(".p-orig").value.trim(), de=r.querySelector(".p-dest").value.trim(), km=parseFloat(String(r.querySelector(".p-km").value).replace(",","."))||0;
-    if(o||de||km) out.push({fase:fase, origem:o, destino:de, km:km});
+    if(o||de||km) out.push({fase:fase, origem:o, destino:de, km:km, foto:r._foto||null});
   });
   out.forEach(function(p,i){ p.ordem=i+1; });
   return out;
@@ -353,14 +372,15 @@ function addPedagio(){
   d.className="ped-row"; d.style.cssText="border:1px solid var(--border);border-radius:10px;padding:10px;margin-bottom:8px";
   d.innerHTML='<div class="fr"><div><label>Fase</label><select class="pd-fase"><option value="ida">Ida</option><option value="volta">Volta</option></select></div>'
     +'<div><label>Valor (R$)</label><input class="pd-val" inputmode="decimal"></div></div>'
-    +'<button class="link" onclick="this.parentNode.remove()">remover</button>';
+    +'<label>Comprovante (opcional)</label><input type="file" accept="image/*" class="pd-foto" onchange="capRowFoto(this,\'ped-row\')"><span class="rowfprev"></span>'
+    +'<div style="margin-top:8px"><button class="link" onclick="this.closest(\'.ped-row\').remove()">remover pedágio</button></div>';
   el("ped_list").appendChild(d);
 }
 function coletarPedagios(){
   var out=[], rows=el("ped_list").querySelectorAll(".ped-row");
   Array.prototype.forEach.call(rows,function(r){
     var v=parseFloat(String(r.querySelector(".pd-val").value).replace(",","."))||0;
-    if(v>0) out.push({fase:r.querySelector(".pd-fase").value, valor:v});
+    if(v>0) out.push({fase:r.querySelector(".pd-fase").value, valor:v, foto:r._foto||null});
   });
   out.forEach(function(p,i){ p.ordem=i+1; });
   return out;
@@ -412,21 +432,29 @@ async function enviarFinal(){
   if(!_calc){ msg("msgFinal","err","Toque em Calcular primeiro."); return; }
   if(!gps2){ msg("msgFinal","err","Capture o GPS do check-out."); return; }
   if(!CO_FOTO){ msg("msgFinal","err","Fotografe o odômetro de chegada."); return; }
-  var c=_calc;
-  el("msgFinal").className="msg show info"; el("msgFinal").textContent="Enviando foto do odômetro…";
-  var coLink="";
-  try{ coLink=await uploadFoto(CO_FOTO,"odometro_chegada",TRIP.protocolo); }
-  catch(e){ msg("msgFinal","err","Erro ao enviar a foto: "+e.message); return; }
-  el("msgFinal").textContent="Enviando…";
+  var c=_calc, todas=c.ida.concat(c.volta);
+  for(var i=0;i<todas.length;i++){ if(!todas[i].foto){ msg("msgFinal","err","Anexe o print do Maps da parada "+(i+1)+" ("+todas[i].fase+")."); return; } }
+  if(!c.usarEstim && !CUPOM_FOTO){ msg("msgFinal","err","Anexe o cupom fiscal do combustível."); return; }
+  function setMsg(t){ el("msgFinal").className="msg show info"; el("msgFinal").textContent=t; }
+  var coLink, cupomLink=null, conLink=null;
+  try{
+    setMsg("Enviando foto do odômetro…");
+    coLink=await uploadFoto(CO_FOTO,"odometro_chegada",TRIP.protocolo);
+    if(!c.usarEstim){ setMsg("Enviando cupom…"); cupomLink=await uploadFoto(CUPOM_FOTO,"cupom",TRIP.protocolo); }
+    if(CON_FOTO){ setMsg("Enviando foto do consumo…"); conLink=await uploadFoto(CON_FOTO,"consumo",TRIP.protocolo); }
+    for(var i=0;i<todas.length;i++){ setMsg("Enviando print do Maps "+(i+1)+" de "+todas.length+"…"); todas[i]._link=await uploadFoto(todas[i].foto, todas[i].fase+"_maps_"+(i+1), TRIP.protocolo); }
+    for(var i=0;i<c.peds.length;i++){ if(c.peds[i].foto){ setMsg("Enviando comprovante de pedágio "+(i+1)+"…"); c.peds[i]._link=await uploadFoto(c.peds[i].foto, "pedagio_"+(i+1), TRIP.protocolo); } }
+  }catch(e){ msg("msgFinal","err","Erro ao enviar uma foto: "+e.message+" — verifique o sinal e tente de novo."); return; }
+  setMsg("Salvando…");
   var upd={ status:"COMPLETO", checkout_em:new Date().toISOString(), checkout_lat:gps2.lat, checkout_lng:gps2.lng,
-    checkout_foto:coLink,
+    checkout_foto:coLink, cupom_foto:cupomLink, foto_consumo:conLink,
     dist_total:c.dist, consumo:c.con, usou_estimativa:c.usarEstim, preco_base:PB,
     preco_real:c.usarEstim?null:c.precoReal, caronas:coletarCaronas().join(", ")||null };
   var r1=await sb.from("reembolsos").update(upd).eq("id",TRIP.id);
   if(r1.error){ msg("msgFinal","err","Erro ao finalizar: "+r1.error.message); return; }
-  var paradas=c.ida.concat(c.volta).map(function(p){ return {reembolso_id:TRIP.id, fase:p.fase, ordem:p.ordem, origem:p.origem, destino:p.destino, km:p.km}; });
+  var paradas=todas.map(function(p){ return {reembolso_id:TRIP.id, fase:p.fase, ordem:p.ordem, origem:p.origem, destino:p.destino, km:p.km, maps_link:p._link||null}; });
   if(paradas.length){ var r2=await sb.from("paradas").insert(paradas); if(r2.error){ msg("msgFinal","err","Erro ao salvar paradas: "+r2.error.message); return; } }
-  if(c.peds.length){ var peds=c.peds.map(function(p){ return {reembolso_id:TRIP.id, fase:p.fase, ordem:p.ordem, valor:p.valor}; }); var r3=await sb.from("pedagios").insert(peds); if(r3.error){ msg("msgFinal","err","Erro ao salvar pedágios: "+r3.error.message); return; } }
+  if(c.peds.length){ var peds=c.peds.map(function(p){ return {reembolso_id:TRIP.id, fase:p.fase, ordem:p.ordem, valor:p.valor, comprovante_link:p._link||null}; }); var r3=await sb.from("pedagios").insert(peds); if(r3.error){ msg("msgFinal","err","Erro ao salvar pedágios: "+r3.error.message); return; } }
   el("ok_icone").textContent="✅"; el("ok_titulo").textContent="Solicitação enviada!";
   el("ok_texto").textContent="Seu reembolso foi registrado e já aparece para análise.";
   el("ok_proto").textContent="Protocolo: "+TRIP.protocolo+" · Total: R$ "+c.vTot.toFixed(2);
