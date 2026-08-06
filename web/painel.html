@@ -74,9 +74,13 @@ tbody tr:hover{background:var(--surface2)}
 .msgbox p{color:var(--text2);margin-bottom:16px;font-size:14px;line-height:1.5}
 .msgbox a.cta{display:inline-block;background:var(--primary);color:#fff;text-decoration:none;padding:10px 18px;border-radius:var(--radius-sm);font-weight:600}
 .loading{color:var(--text3);text-align:center;padding:40px}
+#toast{position:fixed;left:50%;bottom:22px;transform:translateX(-50%);background:#0F172A;color:#fff;padding:11px 18px;border-radius:8px;font-size:13px;font-weight:500;box-shadow:0 6px 20px rgba(0,0,0,.25);z-index:200;max-width:90vw;text-align:center}
+#toast.err{background:#991B1B}
 </style>
 </head>
 <body>
+
+<div id="toast" class="hide"></div>
 
 <!-- Estados de acesso -->
 <div id="carregando" class="center"><div class="loading">Carregando…</div></div>
@@ -140,6 +144,13 @@ function brl(v){ if(v==null||v==="")return "—"; return "R$ "+Number(v).toLocal
 function km(v){ if(v==null||v==="")return "—"; return Number(v).toLocaleString("pt-BR",{maximumFractionDigits:1})+" km"; }
 function dt(v){ if(!v)return "—"; var d=new Date(v); if(isNaN(d))return String(v); return d.toLocaleString("pt-BR",{day:"2-digit",month:"2-digit",year:"numeric",hour:"2-digit",minute:"2-digit"}); }
 function esc(s){ return String(s==null?"":s).replace(/[&<>"]/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c];}); }
+var _toastT=null;
+function msgTopo(txt, err){
+  var t=el("toast"); if(!t) return;
+  t.textContent=txt; t.className=(err?"err":"");
+  if(_toastT) clearTimeout(_toastT);
+  _toastT=setTimeout(function(){ t.classList.add("hide"); }, 4500);
+}
 
 // ── Carregar dados do Supabase ──
 async function carregar(){
@@ -225,7 +236,8 @@ async function loadDetail(id){
 
   // ── Ações do admin (Camada A: grava status no Supabase; e-mail vem depois) ──
   h+='<h4>Ações do admin</h4>';
-  h+='<div class="line" style="font-size:12px;color:var(--text3)">Status atual: <b>'+esc(reg.status)+'</b>. As ações gravam no Supabase (ambiente de validação). O envio de e-mail será ligado no próximo passo.</div>';
+  var emailAtivo = !!(window.RBCIP_CONFIG && window.RBCIP_CONFIG.CARTEIRO_URL);
+  h+='<div class="line" style="font-size:12px;color:'+(emailAtivo?'var(--warning)':'var(--text3)')+'">Status atual: <b>'+esc(reg.status)+'</b>. As ações gravam no Supabase'+(emailAtivo?' e <b>enviam e-mail</b> ao pesquisador deste registro ✉️':' (sem enviar e-mail)')+'.</div>';
   h+='<textarea id="obs-'+id+'" placeholder="Observação (opcional) — fica registrada na validação" style="width:100%;margin:8px 0;padding:8px;border:1px solid var(--border);border-radius:6px;font-family:inherit;font-size:13px;resize:vertical;min-height:42px"></textarea>';
   h+='<div style="display:flex;gap:8px;flex-wrap:wrap">';
   [["APROVADO","#DBEAFE","#1E40AF","Aprovar"],["PAGO","#CCFBF1","#0F766E","Marcar pago"],["REVISÃO","#FEF3C7","#92400E","Pedir revisão"],["REPROVADO","#FEE2E2","#991B1B","Reprovar"]].forEach(function(b){
@@ -248,6 +260,26 @@ async function mudarStatus(id, novo){
   }
   var { error }=await sb.from("reembolsos").update(upd).eq("id",id);
   if(error){ alert("Erro ao atualizar: "+error.message); return; }
+
+  // ── Camada B: pede ao "carteiro" (Google) para enviar o e-mail — best-effort ──
+  var cfg=window.RBCIP_CONFIG||{};
+  if(cfg.CARTEIRO_URL && novo!=="COMPLETO"){
+    try{
+      var { data:{ session } } = await sb.auth.getSession();
+      var resp = await fetch(cfg.CARTEIRO_URL, {
+        method:"POST", redirect:"follow",
+        headers:{"Content-Type":"text/plain"},
+        body: JSON.stringify({action:"enviar_aviso_status", jwt: session.access_token, protocolo: reg.protocolo, novo_status: novo, observacao: obs})
+      });
+      var out={}; try{ out=JSON.parse(await resp.text()); }catch(_){}
+      if(out.enviado) msgTopo("Status salvo e e-mail enviado ao pesquisador ✉️");
+      else if(out.success) msgTopo("Status salvo. (Sem e-mail: "+(out.motivo||"—")+")");
+      else msgTopo("Status salvo, mas o e-mail pode não ter saído: "+(out.error||"erro"), true);
+    }catch(e){ msgTopo("Status salvo, mas não consegui falar com o carteiro.", true); }
+  } else {
+    msgTopo("Status salvo ✓");
+  }
+
   await carregar();
   abertoId=id; render(); await loadDetail(id);
 }
