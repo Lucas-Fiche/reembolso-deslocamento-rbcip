@@ -92,7 +92,7 @@ tbody tr:hover{background:var(--surface2)}
   <div class="hdr">
     <div class="hdr-left">
       <h1>RBCIP · Painel de Reembolsos</h1>
-      <span class="hdr-badge">Supabase · somente leitura</span>
+      <span class="hdr-badge">Supabase · ambiente de validação</span>
     </div>
     <div class="hdr-right">
       <span id="quem"></span>
@@ -132,7 +132,7 @@ tbody tr:hover{background:var(--surface2)}
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="config.js"></script>
 <script>
-var sb=null, DADOS=[], abertoId=null;
+var sb=null, DADOS=[], abertoId=null, QUEM="";
 function el(id){return document.getElementById(id);}
 function show(id){["carregando","semAcesso","painel"].forEach(function(s){el(s).classList.add("hide");});el(id).classList.remove("hide");}
 
@@ -197,7 +197,10 @@ function render(){
 async function toggle(id){
   abertoId = (abertoId===id? null : id);
   render();
-  if(!abertoId) return;
+  if(abertoId) await loadDetail(id);
+}
+
+async function loadDetail(id){
   var box=el("det-"+id); if(!box) return;
   var reg=DADOS.filter(function(x){return x.id===id;})[0]||{};
   var par = await sb.from("paradas").select("fase,ordem,origem,destino,km,horario,maps_link").eq("reembolso_id",id).order("fase").order("ordem");
@@ -219,7 +222,34 @@ async function toggle(id){
   h+=((ped.data||[]).map(function(p){
     return '<div class="line">'+(p.fase?'['+esc(p.fase)+'] ':'')+p.ordem+'. '+brl(p.valor)+(p.comprovante_link?' · <a href="'+esc(p.comprovante_link)+'" target="_blank">comprovante</a>':'')+'</div>';
   }).join("")) || '<div class="line">— sem pedágios —</div>';
+
+  // ── Ações do admin (Camada A: grava status no Supabase; e-mail vem depois) ──
+  h+='<h4>Ações do admin</h4>';
+  h+='<div class="line" style="font-size:12px;color:var(--text3)">Status atual: <b>'+esc(reg.status)+'</b>. As ações gravam no Supabase (ambiente de validação). O envio de e-mail será ligado no próximo passo.</div>';
+  h+='<textarea id="obs-'+id+'" placeholder="Observação (opcional) — fica registrada na validação" style="width:100%;margin:8px 0;padding:8px;border:1px solid var(--border);border-radius:6px;font-family:inherit;font-size:13px;resize:vertical;min-height:42px"></textarea>';
+  h+='<div style="display:flex;gap:8px;flex-wrap:wrap">';
+  [["APROVADO","#DBEAFE","#1E40AF","Aprovar"],["PAGO","#CCFBF1","#0F766E","Marcar pago"],["REVISÃO","#FEF3C7","#92400E","Pedir revisão"],["REPROVADO","#FEE2E2","#991B1B","Reprovar"]].forEach(function(b){
+    h+='<button onclick="mudarStatus(\''+id+'\',\''+b[0]+'\')" style="background:'+b[1]+';color:'+b[2]+';border:none;padding:8px 14px;border-radius:6px;font-family:inherit;font-size:13px;font-weight:600;cursor:pointer">'+b[3]+'</button>';
+  });
+  h+='</div>';
+
   box.innerHTML=h;
+}
+
+async function mudarStatus(id, novo){
+  var reg=DADOS.filter(function(x){return x.id===id;})[0]||{};
+  var obsEl=el("obs-"+id); var obs=obsEl?obsEl.value.trim():"";
+  if(!confirm('Confirmar: mudar '+reg.protocolo+' para "'+novo+'"?'+(obs?'\n\nObservação: '+obs:''))) return;
+  var upd={status:novo};
+  if(obs){
+    var cur=await sb.from("reembolsos").select("validacao").eq("id",id).maybeSingle();
+    var base=(cur && cur.data && cur.data.validacao)?cur.data.validacao+" | ":"";
+    upd.validacao=base+"ADMIN ("+(QUEM||"admin")+"): "+obs;
+  }
+  var { error }=await sb.from("reembolsos").update(upd).eq("id",id);
+  if(error){ alert("Erro ao atualizar: "+error.message); return; }
+  await carregar();
+  abertoId=id; render(); await loadDetail(id);
 }
 
 async function sair(){ await sb.auth.signOut(); location.href="login.html"; }
@@ -238,7 +268,8 @@ async function sair(){ await sb.auth.signOut(); location.href="login.html"; }
     el("semAcessoMsg").textContent="Você está logado, mas esta página é só para administradores.";
     show("semAcesso"); return;
   }
-  el("quem").textContent = (perfil.nome||session.user.email)+" · admin";
+  QUEM = (perfil.nome||session.user.email);
+  el("quem").textContent = QUEM+" · admin";
   show("painel");
   await carregar();
 })();
