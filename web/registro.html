@@ -53,7 +53,7 @@
       </div>
     </div>
     <div id="hm_aberta"></div>
-    <div class="card">
+    <div class="card" id="hm_nova">
       <h2>Nova viagem</h2>
       <p class="muted">Faça o check-in ao iniciar o deslocamento (identificação, GPS e — em breve — foto do odômetro).</p>
       <button onclick="goCheckin()">🚀 Iniciar check-in</button>
@@ -375,12 +375,14 @@ async function enviarFinal(){
 // ── Viagem em andamento (ABERTO) do motorista ──
 async function checarViagemAberta(){
   var { data }=await sb.from("reembolsos").select("id,protocolo,checkin_em").eq("motorista_id",SESSION.user.id).eq("status","ABERTO").order("checkin_em",{ascending:false}).limit(1);
-  var box=el("hm_aberta");
-  if(data && data.length){
+  var box=el("hm_aberta"), temAberta=!!(data && data.length);
+  if(temAberta){
     var v=data[0];
-    box.innerHTML='<div class="viagem-aberta"><b>🚗 Você tem uma viagem em andamento</b><br><span class="muted">Protocolo '+v.protocolo+'.</span>'
+    box.innerHTML='<div class="viagem-aberta"><b>🚗 Você tem uma viagem em andamento</b><br><span class="muted">Protocolo '+v.protocolo+'. Finalize-a antes de iniciar outra.</span>'
       +'<button class="sm" style="width:auto;margin-top:10px" onclick="goFinal(\''+v.id+'\',\''+v.protocolo+'\')">Registrar paradas e check-out →</button></div>';
   } else { box.innerHTML=""; }
+  // Não deixa iniciar uma nova viagem enquanto houver uma em andamento
+  el("hm_nova").classList.toggle("hide", temAberta);
 }
 
 // ── Início ──
