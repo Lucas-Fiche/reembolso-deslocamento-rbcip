@@ -216,8 +216,9 @@ async function loadDetail(id){
   var reg=DADOS.filter(function(x){return x.id===id;})[0]||{};
   var par = await sb.from("paradas").select("fase,ordem,origem,destino,km,horario,maps_link").eq("reembolso_id",id).order("fase").order("ordem");
   var ped = await sb.from("pedagios").select("fase,ordem,valor,comprovante_link").eq("reembolso_id",id).order("ordem");
-  var origq = await sb.from("reembolsos").select("val_total_planilha").eq("id",id).maybeSingle();
-  var origPlan = origq && origq.data ? origq.data.val_total_planilha : null;
+  var origq = await sb.from("reembolsos").select("val_total_planilha,checkin_foto,checkout_foto,cupom_foto,foto_consumo").eq("id",id).maybeSingle();
+  var od = (origq && origq.data) || {};
+  var origPlan = (od.val_total_planilha!=null) ? od.val_total_planilha : null;
   var h="";
   h+='<h4>Resumo</h4>';
   h+='<div class="line">CPF: '+esc(reg.cpf||"—")+' &nbsp;·&nbsp; Combustível: '+brl(reg.val_real)+' &nbsp;·&nbsp; Pedágios: '+brl(reg.val_pedagios)+' &nbsp;·&nbsp; <b>Total: '+brl(reg.val_total)+'</b></div>';
@@ -233,6 +234,11 @@ async function loadDetail(id){
   h+=((ped.data||[]).map(function(p){
     return '<div class="line">'+(p.fase?'['+esc(p.fase)+'] ':'')+p.ordem+'. '+brl(p.valor)+(p.comprovante_link?' · <a href="'+esc(p.comprovante_link)+'" target="_blank">comprovante</a>':'')+'</div>';
   }).join("")) || '<div class="line">— sem pedágios —</div>';
+
+  var fotos=[["Odômetro saída",od.checkin_foto],["Odômetro chegada",od.checkout_foto],["Cupom",od.cupom_foto],["Foto consumo",od.foto_consumo]].filter(function(x){return x[1];});
+  if(fotos.length){
+    h+='<h4>Fotos</h4><div class="line">'+fotos.map(function(f){return '<a href="'+esc(f[1])+'" target="_blank">'+f[0]+'</a>';}).join(' · ')+'</div>';
+  }
 
   // ── Ações do admin (Camada A: grava status no Supabase; e-mail vem depois) ──
   h+='<h4>Ações do admin</h4>';
