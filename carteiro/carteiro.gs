@@ -57,7 +57,10 @@ function uploadImagem(d){
   }
 }
 
-function doGet(){ return _jr({status:"ok", carteiro:"rbcip", v:"1.0"}); }
+function doGet(){ return _jr({status:"ok", carteiro:"rbcip", v:"1.1"}); }
+
+// Rode UMA vez no editor (menu ▶ Executar) para autorizar o acesso ao Drive.
+function autorizar(){ DriveApp.getRootFolder().getName(); return "Drive autorizado."; }
 
 // Faz um GET no PostgREST do Supabase usando o token do usuário (respeita a RLS)
 function _sbGet(path, jwt){
