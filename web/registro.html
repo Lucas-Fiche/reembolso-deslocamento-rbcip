@@ -1,0 +1,245 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>RBCIP — Registro de Deslocamento</title>
+<link rel="stylesheet" href="estilo.css">
+<style>
+  .gs{display:flex;align-items:center;gap:8px;font-size:13px;padding:10px 12px;border-radius:10px;background:var(--bg);border:1px solid var(--border);color:var(--text-2)}
+  .gs .gd{width:10px;height:10px;border-radius:50%;background:var(--text-3);flex:0 0 auto}
+  .gs.a{background:var(--ok-bg);color:#065F46;border-color:#A7F3D0} .gs.a .gd{background:var(--ok)}
+  .gs.e{background:var(--danger-bg);color:#991B1B;border-color:#FECACA} .gs.e .gd{background:var(--danger)}
+  .clock{font-variant-numeric:tabular-nums;font-weight:700;color:var(--navy);text-align:center;margin-top:8px;font-size:15px}
+  .fr{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  @media(max-width:460px){.fr{grid-template-columns:1fr}}
+  .rq{color:var(--danger)}
+  .ss{text-align:center;padding:20px 0}
+  .ss .si{font-size:40px} .ss h2{margin:8px 0 4px}
+  .sid{display:inline-block;background:#EFF6FF;color:var(--navy-2);font-weight:700;padding:6px 12px;border-radius:999px;margin-top:8px;font-size:14px}
+  .viagem-aberta{background:var(--warn-bg);border:1px solid #FDE68A;border-radius:12px;padding:14px;margin-bottom:14px}
+</style>
+</head>
+<body>
+<div class="hdr"><h1>RBCIP · Reembolso</h1><p>Registro de deslocamento</p></div>
+<div class="wrap">
+
+  <div id="carregando" class="card"><p class="muted">Carregando…</p></div>
+
+  <!-- LOGIN POR CÓDIGO -->
+  <div id="secLogin" class="card hide">
+    <h2>Entrar</h2>
+    <p class="muted">Use o código de 6 dígitos enviado ao seu e-mail.</p>
+    <div id="passoEmail">
+      <label>E-mail</label>
+      <input id="lg_email" type="email" placeholder="voce@exemplo.com" autocomplete="email">
+      <button id="btnEnviar" onclick="enviarCodigo()">Enviar código</button>
+    </div>
+    <div id="passoCodigo" class="hide">
+      <label>Código recebido</label>
+      <input id="lg_codigo" type="text" inputmode="numeric" maxlength="6" placeholder="000000">
+      <button id="btnConfirmar" onclick="confirmarCodigo()">Entrar</button>
+      <button class="link" onclick="voltarEmail()">← usar outro e-mail</button>
+    </div>
+    <div id="msgLogin" class="msg"></div>
+  </div>
+
+  <!-- HOME -->
+  <div id="secHome" class="hide">
+    <div class="card">
+      <div class="who">
+        <div><h2 id="hm_nome">—</h2><span class="pill" id="hm_papel">—</span></div>
+        <button class="link" onclick="sair()">Sair</button>
+      </div>
+    </div>
+    <div id="hm_aberta"></div>
+    <div class="card">
+      <h2>Nova viagem</h2>
+      <p class="muted">Faça o check-in ao iniciar o deslocamento (identificação, GPS e — em breve — foto do odômetro).</p>
+      <button onclick="goCheckin()">🚀 Iniciar check-in</button>
+    </div>
+  </div>
+
+  <!-- CHECK-IN -->
+  <div id="secCI" class="hide">
+    <div class="card">
+      <h2>👤 Identificação</h2>
+      <label>Nome completo <span class="rq">*</span></label>
+      <input type="text" id="ci_nome" autocomplete="name">
+      <label>CPF <span class="rq">*</span></label>
+      <input type="text" id="ci_cpf" inputmode="numeric" maxlength="14" placeholder="000.000.000-00">
+      <div class="fr">
+        <div><label>RG <span class="rq">*</span></label><input type="text" id="ci_rg" maxlength="20"></div>
+        <div><label>Órgão emissor <span class="rq">*</span></label><input type="text" id="ci_orgao" placeholder="Ex: SSP/SP" maxlength="20"></div>
+      </div>
+      <div class="fr">
+        <div><label>E-mail <span class="rq">*</span></label><input type="email" id="ci_email"></div>
+        <div><label>Telefone <span class="rq">*</span></label><input type="tel" id="ci_tel" maxlength="15"></div>
+      </div>
+      <div class="fr">
+        <div><label>Veículo <span class="rq">*</span></label><select id="ci_veic"><option value="">Selecione</option><option>Carro</option><option>Moto</option></select></div>
+        <div><label>Placa <span class="rq">*</span></label><input type="text" id="ci_placa" maxlength="8" style="text-transform:uppercase"></div>
+      </div>
+      <p class="muted" style="margin-top:6px">RG e órgão emissor são usados no recibo de reembolso.</p>
+    </div>
+
+    <div class="card">
+      <h2>📍 Localização</h2>
+      <div class="gs" id="ci_gs"><span class="gd"></span><span id="ci_gt">Obtendo…</span></div>
+      <div class="clock" id="ci_ck">--:--:--</div>
+      <button class="ghost sm" style="width:auto;margin-top:12px" onclick="reqGPS()">↻ Atualizar GPS</button>
+    </div>
+
+    <button onclick="enviarCI()">✅ Confirmar check-in</button>
+    <button class="ghost" onclick="show('secHome')">← Voltar</button>
+    <div id="msgCI" class="msg"></div>
+  </div>
+
+  <!-- OK -->
+  <div id="secOk" class="card hide">
+    <div class="ss">
+      <div class="si">🚀</div>
+      <h2>Check-in registrado!</h2>
+      <p class="muted">Sua viagem foi aberta. Ao chegar em cada destino, você registrará as paradas (em breve nesta tela).</p>
+      <div class="sid" id="ok_proto"></div>
+    </div>
+    <button onclick="location.reload()">← Início</button>
+  </div>
+
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="config.js"></script>
+<script>
+var sb=null, SESSION=null, PERFIL=null, gps=null, clk=null;
+function el(id){return document.getElementById(id);}
+function show(id){["carregando","secLogin","secHome","secCI","secOk"].forEach(function(s){el(s).classList.add("hide");});el(id).classList.remove("hide");}
+function msg(box,tipo,txt){var m=el(box);m.className="msg show "+tipo;m.textContent=txt;}
+function limpaMsg(box){var m=el(box);m.className="msg";m.textContent="";}
+function pad(n){return n<10?"0"+n:""+n;}
+function fmtHora(d){return pad(d.getHours())+":"+pad(d.getMinutes())+":"+pad(d.getSeconds());}
+
+// ── Validações ──
+function validarEmail(e){return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e);}
+function validarTel(t){return t.replace(/\D/g,"").length>=10;}
+function validarCPF(cpf){
+  cpf=String(cpf).replace(/\D/g,""); if(cpf.length!==11||/^(\d)\1{10}$/.test(cpf))return false;
+  var s=0,i,r; for(i=0;i<9;i++)s+=parseInt(cpf[i])*(10-i); r=(s*10)%11; if(r===10)r=0; if(r!==parseInt(cpf[9]))return false;
+  s=0; for(i=0;i<10;i++)s+=parseInt(cpf[i])*(11-i); r=(s*10)%11; if(r===10)r=0; return r===parseInt(cpf[10]);
+}
+
+// ── Login por código ──
+async function enviarCodigo(){
+  limpaMsg("msgLogin");
+  var email=el("lg_email").value.trim();
+  if(!email){msg("msgLogin","err","Informe o e-mail.");return;}
+  el("btnEnviar").disabled=true; el("btnEnviar").textContent="Enviando…";
+  var { error }=await sb.auth.signInWithOtp({email:email});
+  el("btnEnviar").disabled=false; el("btnEnviar").textContent="Enviar código";
+  if(error){
+    var t=/autoriz|Database error|saving new user/i.test(error.message)
+      ? "Este e-mail não está autorizado a acessar o sistema. Fale com o administrador." : error.message;
+    msg("msgLogin","err",t); return;
+  }
+  el("passoEmail").classList.add("hide"); el("passoCodigo").classList.remove("hide");
+  msg("msgLogin","info","Código enviado para "+email+". Verifique também o spam.");
+}
+async function confirmarCodigo(){
+  limpaMsg("msgLogin");
+  var email=el("lg_email").value.trim(), token=el("lg_codigo").value.trim();
+  if(token.length<6){msg("msgLogin","err","Digite os 6 dígitos.");return;}
+  el("btnConfirmar").disabled=true; el("btnConfirmar").textContent="Entrando…";
+  var { error }=await sb.auth.verifyOtp({email:email,token:token,type:"email"});
+  el("btnConfirmar").disabled=false; el("btnConfirmar").textContent="Entrar";
+  if(error){
+    var t=/autoriz|Database error|saving new user/i.test(error.message)
+      ? "Este e-mail não está autorizado a acessar o sistema. Fale com o administrador." : error.message;
+    msg("msgLogin","err",t); return;
+  }
+  await iniciar();
+}
+function voltarEmail(){el("passoCodigo").classList.add("hide");el("passoEmail").classList.remove("hide");limpaMsg("msgLogin");}
+async function sair(){ await sb.auth.signOut(); location.reload(); }
+
+// ── GPS ──
+function reqGPS(){
+  var box=el("ci_gs"), txt=el("ci_gt"); box.className="gs"; txt.textContent="Obtendo…"; gps=null;
+  if(!navigator.geolocation){box.className="gs e";txt.textContent="GPS indisponível neste aparelho";return;}
+  navigator.geolocation.getCurrentPosition(function(p){
+    gps={lat:p.coords.latitude,lng:p.coords.longitude};
+    box.className="gs a"; txt.textContent=p.coords.latitude.toFixed(5)+", "+p.coords.longitude.toFixed(5)+" (±"+Math.round(p.coords.accuracy)+"m)";
+  },function(){ box.className="gs e"; txt.textContent="Permita a localização e toque em Atualizar GPS"; },{enableHighAccuracy:true,timeout:15000});
+}
+
+// ── Check-in ──
+function goCheckin(){
+  show("secCI");
+  // pré-preenche com o perfil
+  if(PERFIL && PERFIL.nome && !el("ci_nome").value) el("ci_nome").value=PERFIL.nome;
+  if(SESSION && !el("ci_email").value) el("ci_email").value=SESSION.user.email;
+  reqGPS();
+  if(clk) clearInterval(clk);
+  var upd=function(){ el("ci_ck").textContent=fmtHora(new Date()); }; upd(); clk=setInterval(upd,1000);
+}
+
+async function enviarCI(){
+  limpaMsg("msgCI");
+  var erros=[];
+  var nome=el("ci_nome").value.trim(), cpf=el("ci_cpf").value.trim(), rg=el("ci_rg").value.trim(),
+      orgao=el("ci_orgao").value.trim(), email=el("ci_email").value.trim(), tel=el("ci_tel").value.trim(),
+      veic=el("ci_veic").value, placa=el("ci_placa").value.trim().toUpperCase();
+  if(!nome)erros.push("Nome");
+  if(!cpf||!validarCPF(cpf))erros.push("CPF válido");
+  if(!rg)erros.push("RG");
+  if(!orgao)erros.push("Órgão emissor");
+  if(!email||!validarEmail(email))erros.push("E-mail válido");
+  if(!tel||!validarTel(tel))erros.push("Telefone válido");
+  if(!veic)erros.push("Veículo");
+  if(!placa)erros.push("Placa");
+  if(!gps)erros.push("Localização (GPS)");
+  if(erros.length){msg("msgCI","err","Corrija: "+erros.join(", ")+".");return;}
+
+  var proto="RB-"+Date.now().toString(36).toUpperCase();
+  el("msgCI").className="msg show info"; el("msgCI").textContent="Registrando check-in…";
+  var { error }=await sb.from("reembolsos").insert({
+    protocolo:proto, status:"ABERTO", motorista_id:SESSION.user.id,
+    nome:nome, cpf:cpf, rg:rg, orgao:orgao, email:email, telefone:tel, veiculo:veic, placa:placa,
+    checkin_em:new Date().toISOString(), checkin_lat:gps.lat, checkin_lng:gps.lng
+  });
+  if(error){ msg("msgCI","err","Erro ao registrar: "+error.message); return; }
+  el("ok_proto").textContent="Protocolo: "+proto;
+  show("secOk");
+}
+
+// ── Viagem em andamento (ABERTO) do motorista ──
+async function checarViagemAberta(){
+  var { data }=await sb.from("reembolsos").select("protocolo,checkin_em").eq("motorista_id",SESSION.user.id).eq("status","ABERTO").order("checkin_em",{ascending:false}).limit(1);
+  var box=el("hm_aberta");
+  if(data && data.length){
+    var v=data[0];
+    box.innerHTML='<div class="viagem-aberta"><b>🚗 Você tem uma viagem em andamento</b><br><span class="muted">Protocolo '+v.protocolo+'. As paradas e o check-out entram nesta tela em breve.</span></div>';
+  } else { box.innerHTML=""; }
+}
+
+// ── Início ──
+async function iniciar(){
+  var { data:{ session } }=await sb.auth.getSession();
+  if(!session){ show("secLogin"); return; }
+  SESSION=session;
+  var { data:perfil }=await sb.from("perfis").select("nome,papel").eq("id",session.user.id).maybeSingle();
+  PERFIL=perfil||{};
+  el("hm_nome").textContent=(PERFIL.nome)||session.user.email;
+  el("hm_papel").textContent=(PERFIL.papel)||"—";
+  await checarViagemAberta();
+  show("secHome");
+}
+
+(function(){
+  var c=window.RBCIP_CONFIG||{};
+  if(!c.SUPABASE_URL || String(c.SUPABASE_URL).indexOf("http")!==0){ show("secLogin"); msg("msgLogin","err","Configuração ausente (web/config.js)."); return; }
+  sb=window.supabase.createClient(c.SUPABASE_URL,c.SUPABASE_PUBLISHABLE_KEY);
+  iniciar();
+})();
+</script>
+</body>
+</html>
