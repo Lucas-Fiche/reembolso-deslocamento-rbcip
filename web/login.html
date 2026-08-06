@@ -1,0 +1,167 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>RBCIP — Entrar</title>
+<link rel="stylesheet" href="estilo.css">
+</head>
+<body>
+<div class="hdr"><h1>RBCIP · Reembolso</h1><p>Acesso ao sistema</p></div>
+<div class="wrap">
+
+  <!-- Aviso de configuração ausente -->
+  <div id="cfgWarn" class="card hide">
+    <h2>⚙️ Falta configurar</h2>
+    <p class="muted">Abra <code>web/config.js</code> e preencha a <b>Project URL</b> e a
+    <b>Publishable key</b> do seu projeto Supabase.</p>
+  </div>
+
+  <!-- JÁ LOGADO -->
+  <div id="logado" class="card hide">
+    <div class="who">
+      <div>
+        <h2 id="lg_nome">—</h2>
+        <span class="pill" id="lg_papel">—</span>
+        <div class="muted" id="lg_email" style="margin-top:6px"></div>
+      </div>
+    </div>
+    <a id="lg_admin" class="hide" href="autorizados.html"><button class="ghost" style="margin-top:16px">Gerir e-mails autorizados →</button></a>
+    <button class="ghost" onclick="sair()">Sair</button>
+  </div>
+
+  <!-- LOGIN POR CÓDIGO (motorista / van) -->
+  <div id="loginCodigo" class="card hide">
+    <h2>Entrar com código</h2>
+    <p class="muted">Enviamos um código de 6 dígitos para o seu e-mail.</p>
+
+    <div id="passoEmail">
+      <label>E-mail</label>
+      <input id="oc_email" type="email" placeholder="voce@rbcip.org" autocomplete="email">
+      <button id="btnEnviar" onclick="enviarCodigo()">Enviar código</button>
+    </div>
+
+    <div id="passoCodigo" class="hide">
+      <label>Código recebido</label>
+      <input id="oc_codigo" type="text" inputmode="numeric" maxlength="6" placeholder="000000">
+      <button id="btnConfirmar" onclick="confirmarCodigo()">Confirmar</button>
+      <button class="link" onclick="voltarEmail()">← usar outro e-mail</button>
+    </div>
+
+    <button class="link" onclick="mostrar('loginSenha')">Sou administrador (entrar com senha)</button>
+    <div id="msgCodigo" class="msg"></div>
+  </div>
+
+  <!-- LOGIN POR SENHA (admin) -->
+  <div id="loginSenha" class="card hide">
+    <h2>Entrar com senha</h2>
+    <p class="muted">Acesso administrativo.</p>
+    <label>E-mail</label>
+    <input id="sn_email" type="email" placeholder="voce@rbcip.org" autocomplete="email">
+    <label>Senha</label>
+    <input id="sn_senha" type="password" autocomplete="current-password">
+    <button id="btnSenha" onclick="entrarSenha()">Entrar</button>
+    <button class="link" onclick="mostrar('loginCodigo')">← voltar para código por e-mail</button>
+    <div id="msgSenha" class="msg"></div>
+  </div>
+
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="config.js"></script>
+<script>
+var sb = null;
+
+function el(id){return document.getElementById(id);}
+function mostrar(id){
+  ["logado","loginCodigo","loginSenha"].forEach(function(s){el(s).classList.add("hide");});
+  el(id).classList.remove("hide");
+}
+function msg(box, tipo, texto){
+  var m = el(box); m.className = "msg show " + tipo; m.textContent = texto;
+}
+function limpaMsg(box){ var m = el(box); m.className = "msg"; m.textContent=""; }
+
+function configOk(){
+  var c = window.RBCIP_CONFIG || {};
+  return c.SUPABASE_URL && c.SUPABASE_URL.indexOf("http") === 0 &&
+         c.SUPABASE_PUBLISHABLE_KEY && c.SUPABASE_PUBLISHABLE_KEY.indexOf("COLE_") !== 0;
+}
+
+async function refreshUI(){
+  var { data: { session } } = await sb.auth.getSession();
+  if(!session){ mostrar("loginCodigo"); return; }
+
+  // Lê o próprio perfil (a RLS permite ler a própria linha)
+  var { data: perfil } = await sb
+    .from("perfis").select("nome,email,papel").eq("id", session.user.id).maybeSingle();
+
+  el("lg_nome").textContent  = (perfil && perfil.nome) || session.user.email;
+  el("lg_email").textContent = session.user.email;
+  el("lg_papel").textContent = (perfil && perfil.papel) || "—";
+  el("lg_admin").classList.toggle("hide", !(perfil && perfil.papel === "admin"));
+  mostrar("logado");
+}
+
+// ── Login por código ──
+async function enviarCodigo(){
+  limpaMsg("msgCodigo");
+  var email = el("oc_email").value.trim();
+  if(!email){ msg("msgCodigo","err","Informe o e-mail."); return; }
+  el("btnEnviar").disabled = true; el("btnEnviar").textContent = "Enviando…";
+  var { error } = await sb.auth.signInWithOtp({ email: email });
+  el("btnEnviar").disabled = false; el("btnEnviar").textContent = "Enviar código";
+  if(error){ msg("msgCodigo","err", error.message); return; }
+  el("passoEmail").classList.add("hide");
+  el("passoCodigo").classList.remove("hide");
+  msg("msgCodigo","info","Código enviado para "+email+". Verifique também o spam.");
+}
+
+async function confirmarCodigo(){
+  limpaMsg("msgCodigo");
+  var email = el("oc_email").value.trim();
+  var token = el("oc_codigo").value.trim();
+  if(token.length < 6){ msg("msgCodigo","err","Digite os 6 dígitos."); return; }
+  el("btnConfirmar").disabled = true; el("btnConfirmar").textContent = "Confirmando…";
+  var { error } = await sb.auth.verifyOtp({ email: email, token: token, type: "email" });
+  el("btnConfirmar").disabled = false; el("btnConfirmar").textContent = "Confirmar";
+  if(error){
+    var t = /autoriz|Database error|saving new user/i.test(error.message)
+      ? "Este e-mail não está autorizado a acessar o sistema. Fale com o administrador."
+      : error.message;
+    msg("msgCodigo","err", t); return;
+  }
+  await refreshUI();
+}
+
+function voltarEmail(){
+  el("passoCodigo").classList.add("hide");
+  el("passoEmail").classList.remove("hide");
+  limpaMsg("msgCodigo");
+}
+
+// ── Login por senha (admin) ──
+async function entrarSenha(){
+  limpaMsg("msgSenha");
+  var email = el("sn_email").value.trim(), senha = el("sn_senha").value;
+  if(!email || !senha){ msg("msgSenha","err","Preencha e-mail e senha."); return; }
+  el("btnSenha").disabled = true; el("btnSenha").textContent = "Entrando…";
+  var { error } = await sb.auth.signInWithPassword({ email: email, password: senha });
+  el("btnSenha").disabled = false; el("btnSenha").textContent = "Entrar";
+  if(error){ msg("msgSenha","err","E-mail ou senha inválidos."); return; }
+  await refreshUI();
+}
+
+async function sair(){ await sb.auth.signOut(); mostrar("loginCodigo"); }
+
+// ── Início ──
+(function(){
+  if(!configOk()){ el("cfgWarn").classList.remove("hide"); return; }
+  var c = window.RBCIP_CONFIG;
+  sb = window.supabase.createClient(c.SUPABASE_URL, c.SUPABASE_PUBLISHABLE_KEY);
+  window._sb = sb;
+  refreshUI();
+})();
+</script>
+</body>
+</html>

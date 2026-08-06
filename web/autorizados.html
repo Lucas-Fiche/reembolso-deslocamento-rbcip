@@ -1,0 +1,132 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>RBCIP — E-mails autorizados</title>
+<link rel="stylesheet" href="estilo.css">
+</head>
+<body>
+<div class="hdr"><h1>RBCIP · E-mails autorizados</h1><p>Quem pode acessar o sistema</p></div>
+<div class="wrap wide">
+
+  <div id="bloqueio" class="card hide">
+    <h2>Acesso restrito</h2>
+    <p class="muted">Esta página é só para administradores.
+      <a class="link" href="login.html" style="display:inline">Entrar</a>.</p>
+  </div>
+
+  <div id="painel" class="hide">
+    <div class="card">
+      <div class="who">
+        <div><h2>Cadastrar acesso</h2><p class="muted">O e-mail passa a poder entrar com o papel escolhido.</p></div>
+        <a class="link" href="login.html" style="display:inline">← voltar</a>
+      </div>
+      <div class="addgrid">
+        <div>
+          <label>E-mail</label>
+          <input id="a_email" type="email" placeholder="pessoa@rbcip.org">
+        </div>
+        <div>
+          <label>Papel</label>
+          <select id="a_papel">
+            <option value="motorista">Motorista</option>
+            <option value="van">Van</option>
+            <option value="admin">Admin</option>
+          </select>
+        </div>
+      </div>
+      <label>Nome (opcional)</label>
+      <input id="a_nome" type="text" placeholder="Nome da pessoa">
+      <button id="btnAdd" onclick="adicionar()">Adicionar à lista</button>
+      <div id="msg" class="msg"></div>
+    </div>
+
+    <div class="card">
+      <h2>Autorizados <span class="muted" id="contagem"></span></h2>
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th>E-mail</th><th>Papel</th><th>Nome</th><th>Situação</th><th></th></tr></thead>
+          <tbody id="lista"><tr><td colspan="5" class="muted">Carregando…</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="config.js"></script>
+<script>
+var sb = null;
+function el(id){return document.getElementById(id);}
+function msg(tipo,texto){var m=el("msg");m.className="msg show "+tipo;m.textContent=texto;}
+function esc(s){return String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");}
+
+async function carregar(){
+  var { data, error } = await sb.from("emails_autorizados")
+    .select("*").order("criado_em",{ascending:false});
+  if(error){ el("lista").innerHTML='<tr><td colspan="5" class="muted">Erro ao carregar: '+esc(error.message)+'</td></tr>'; return; }
+  el("contagem").textContent = "· "+data.length;
+  if(!data.length){ el("lista").innerHTML='<tr><td colspan="5" class="muted">Ninguém cadastrado ainda.</td></tr>'; return; }
+  var h="";
+  data.forEach(function(r){
+    h+='<tr>'+
+      '<td>'+esc(r.email)+'</td>'+
+      '<td><span class="pill">'+esc(r.papel)+'</span></td>'+
+      '<td>'+esc(r.nome||"—")+'</td>'+
+      '<td>'+(r.ativo?'<span class="status-on">ativo</span>':'<span class="status-off">inativo</span>')+'</td>'+
+      '<td><div class="row-actions">'+
+        '<button class="sm ghost" onclick="alternar(\''+r.id+'\','+(!r.ativo)+')">'+(r.ativo?'Desativar':'Ativar')+'</button>'+
+        '<button class="sm danger" onclick="remover(\''+r.id+'\',\''+esc(r.email)+'\')">Excluir</button>'+
+      '</div></td></tr>';
+  });
+  el("lista").innerHTML = h;
+}
+
+async function adicionar(){
+  var email=el("a_email").value.trim().toLowerCase();
+  var papel=el("a_papel").value, nome=el("a_nome").value.trim();
+  if(!email){ msg("err","Informe o e-mail."); return; }
+  el("btnAdd").disabled=true;
+  var { error } = await sb.from("emails_autorizados").insert({email:email,papel:papel,nome:nome||null,ativo:true});
+  el("btnAdd").disabled=false;
+  if(error){
+    msg("err", /duplicate|unique/i.test(error.message) ? "Este e-mail já está na lista." : error.message);
+    return;
+  }
+  el("a_email").value=""; el("a_nome").value="";
+  msg("ok","Adicionado."); carregar();
+}
+
+async function alternar(id, novo){
+  var { error } = await sb.from("emails_autorizados").update({ativo:novo}).eq("id",id);
+  if(error){ msg("err",error.message); return; }
+  carregar();
+}
+
+async function remover(id, email){
+  if(!confirm("Remover "+email+" da lista? A pessoa perderá o acesso a novos logins.")) return;
+  var { error } = await sb.from("emails_autorizados").delete().eq("id",id);
+  if(error){ msg("err",error.message); return; }
+  carregar();
+}
+
+(async function(){
+  var c = window.RBCIP_CONFIG || {};
+  if(!c.SUPABASE_URL || c.SUPABASE_URL.indexOf("http")!==0 || String(c.SUPABASE_PUBLISHABLE_KEY).indexOf("COLE_")===0){
+    el("bloqueio").classList.remove("hide");
+    el("bloqueio").querySelector("p").innerHTML='Falta preencher <code>web/config.js</code> com a Project URL e a Publishable key.';
+    return;
+  }
+  sb = window.supabase.createClient(c.SUPABASE_URL, c.SUPABASE_PUBLISHABLE_KEY);
+  var { data:{ session } } = await sb.auth.getSession();
+  if(!session){ el("bloqueio").classList.remove("hide"); return; }
+  var { data: perfil } = await sb.from("perfis").select("papel").eq("id",session.user.id).maybeSingle();
+  if(!perfil || perfil.papel !== "admin"){ el("bloqueio").classList.remove("hide"); return; }
+  el("painel").classList.remove("hide");
+  carregar();
+})();
+</script>
+</body>
+</html>
