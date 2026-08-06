@@ -91,6 +91,24 @@ alter view vw_van_viagens  set (security_invoker = on);
 
 
 -- ══════════════════════════════════════════════════════════════════════════
+-- PERMISSÕES DE TABELA (GRANTs) — a camada ANTES da RLS
+-- ══════════════════════════════════════════════════════════════════════════
+-- A RLS acima decide QUAIS LINHAS cada papel enxerga. Mas, antes disso, o
+-- Postgres exige uma permissão de tabela para o papel sequer tocar nela.
+-- Sem estes GRANTs, o site (que acessa como "authenticated") recebe
+-- "permission denied for table ..." — falha ANTES de a RLS ser avaliada.
+-- Os GRANTs abrem só o acesso base; a RLS continua sendo a proteção real.
+grant usage on schema public to anon, authenticated;
+
+grant select, insert, update, delete on
+  perfis, emails_autorizados, reembolsos, paradas, pedagios,
+  precos_gasolina, van_viagens, van_pontos, van_passageiros, auditoria
+  to authenticated;
+
+grant select on vw_reembolsos, vw_van_viagens to authenticated;
+
+
+-- ══════════════════════════════════════════════════════════════════════════
 -- PORTA DE ACESSO — só entra quem está na lista de autorizados
 -- ══════════════════════════════════════════════════════════════════════════
 --
