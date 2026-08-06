@@ -29,9 +29,31 @@ function doPost(e){
   try{
     var d = JSON.parse(e.postData.contents);
     if(d.action === "enviar_aviso_status") return enviarAvisoStatus(d);
+    if(d.action === "enviar_confirmacao_registro") return enviarConfirmacao(d);
     if(d.action === "upload_imagem") return uploadImagem(d);
     return _jr({success:false, error:"Ação desconhecida"});
   }catch(err){ return _jr({success:false, error:String(err && err.message || err)}); }
+}
+
+// ── E-mail de confirmação ao registrar (enviado ao próprio motorista) ──
+function enviarConfirmacao(d){
+  if(!d.jwt || !d.protocolo) return _jr({success:false, error:"Dados incompletos."});
+  var perfil = _sbGet("perfis?select=papel", d.jwt);
+  if(!perfil || !perfil.length) return _jr({success:false, error:"Não autorizado."});
+  var arr = _sbGet("vw_reembolsos?protocolo=eq." + encodeURIComponent(d.protocolo) +
+    "&select=nome,email,val_total,val_real,val_pedagios,dist_total,usou_estimativa,preco_base,preco_real", d.jwt);
+  if(!arr || !arr.length) return _jr({success:false, error:"Protocolo não encontrado."});
+  var r = arr[0];
+  if(!r.email) return _jr({success:true, enviado:false, motivo:"sem e-mail"});
+  var dTot=Number(r.dist_total||0), vReal=Number(r.val_real||0), vTot=Number(r.val_total||0), tPed=Number(r.val_pedagios||0);
+  var usouEstim = r.usou_estimativa===true;
+  var pReal = usouEstim ? Number(r.preco_base||0) : Number(r.preco_real||r.preco_base||0);
+  var rodape='<div style="margin-top:16px;padding:12px;background:#F4F6FA;border-radius:8px;border:1px solid #E2E8F0"><p style="font-size:13px;color:#475569;margin:0">📱 Qualquer problema ou dúvida, fale comigo: <strong>'+CONTATO_BUSINESS+'</strong></p></div>';
+  try{
+    MailApp.sendEmail({ to:r.email, subject:"📝 Reembolso registrado — "+d.protocolo,
+      htmlBody:'<div style="font-family:Arial,sans-serif;max-width:500px;margin:0 auto"><div style="background:#1A3A5C;color:#fff;padding:16px 20px;border-radius:10px 10px 0 0"><h2 style="margin:0;font-size:18px">Reembolso Registrado</h2></div><div style="background:#F4F6FA;padding:20px;border-radius:0 0 10px 10px"><p>Olá <strong>'+(r.nome||"")+'</strong>, sua solicitação foi registrada com sucesso.</p><p>Protocolo: <strong>'+d.protocolo+'</strong></p><p>Distância: '+dTot+' km</p><p>Combustível (R$ '+pReal.toFixed(2)+'/L'+(usouEstim?' — estimativa':'')+'): R$ '+vReal.toFixed(2)+'</p>'+(tPed?'<p>Pedágios: R$ '+tPed.toFixed(2)+'</p>':'')+'<p style="font-size:20px;color:#1A3A5C;font-weight:700">Total: R$ '+vTot.toFixed(2)+'</p><hr style="border:none;border-top:1px solid #ddd;margin:16px 0"><div style="background:#DBEAFE;padding:12px;border-radius:8px;border:1px solid #93C5FD"><p style="font-size:13px;color:#1E40AF;margin:0">🕐 Prazo: até <strong>5 dias úteis</strong> para processamento.</p></div>'+rodape+'</div></div>' });
+  }catch(err){ return _jr({success:false, error:"Falha no e-mail: "+String(err && err.message || err)}); }
+  return _jr({success:true, enviado:true, para:r.email});
 }
 
 // ── Upload de imagem ao Drive (para o formulário do motorista) ──
