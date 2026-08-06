@@ -1,0 +1,3 @@
+# NUNCA versionar o seed gerado: contém dados pessoais (nome, CPF, e-mail)
+seed_migracao.sql
+*.xlsx
