@@ -19,5 +19,5 @@ window.RBCIP_CONFIG = {
   // URL do "carteiro" (Apps Script novo que envia os e-mails na fase híbrida).
   // Deixe "" para o painel apenas gravar o status sem enviar e-mail.
   // Cole aqui a URL /exec depois de publicar o carteiro (ver carteiro/README.md).
-  CARTEIRO_URL: ""
+  CARTEIRO_URL: "https://script.google.com/macros/s/AKfycbzkNcYOzw9JK1u2fbbulmYJ_5uH2FoLK-NftMtZmYHgigMXSdNhw_GdtmnGVcX5v--a/exec"
 };
