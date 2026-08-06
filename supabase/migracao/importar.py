@@ -25,12 +25,15 @@ def num(x):
     except: return None
 
 def dt_iso(x):
+    # Horários da planilha são de São Paulo (UTC-3, sem horário de verão).
+    # Emitimos com o fuso explícito para o timestamptz gravar o instante certo.
+    TZ="-03:00"
     if x is None or (isinstance(x,str) and not x.strip()): return None
     if isinstance(x,(datetime.datetime,datetime.date)):
-        return x.strftime("%Y-%m-%d %H:%M:%S")
+        return x.strftime("%Y-%m-%d %H:%M:%S")+TZ
     s=str(x).strip()
     for fmt in ("%d/%m/%Y %H:%M:%S","%d/%m/%Y %H:%M","%Y-%m-%d %H:%M:%S","%d/%m/%Y"):
-        try: return datetime.datetime.strptime(s,fmt).strftime("%Y-%m-%d %H:%M:%S")
+        try: return datetime.datetime.strptime(s,fmt).strftime("%Y-%m-%d %H:%M:%S")+TZ
         except: pass
     return None
 
