@@ -14,5 +14,10 @@
 window.RBCIP_CONFIG = {
   // URL base do projeto (SEM o /rest/v1/ — o supabase-js acrescenta sozinho)
   SUPABASE_URL: "https://oharmunvmkrtlfpgsgww.supabase.co",
-  SUPABASE_PUBLISHABLE_KEY: "sb_publishable_kDWEzxNW7OpZB4VzqgcJ8g_QcEIWH7W"
+  SUPABASE_PUBLISHABLE_KEY: "sb_publishable_kDWEzxNW7OpZB4VzqgcJ8g_QcEIWH7W",
+
+  // URL do "carteiro" (Apps Script novo que envia os e-mails na fase híbrida).
+  // Deixe "" para o painel apenas gravar o status sem enviar e-mail.
+  // Cole aqui a URL /exec depois de publicar o carteiro (ver carteiro/README.md).
+  CARTEIRO_URL: ""
 };
