@@ -90,6 +90,13 @@
       <button class="ghost sm" style="width:auto;margin-top:12px" onclick="reqGPS()">↻ Atualizar GPS</button>
     </div>
 
+    <div class="card">
+      <h2>📸 Odômetro — saída</h2>
+      <p class="muted">Fotografe o odômetro (quilometragem) no início.</p>
+      <input type="file" accept="image/*" capture="environment" id="ci_foto" onchange="capFoto(this,'ci')">
+      <div id="ci_prev" class="muted" style="margin-top:8px">Nenhuma foto ainda.</div>
+    </div>
+
     <button onclick="enviarCI()">✅ Confirmar check-in</button>
     <button class="ghost" onclick="show('secHome')">← Voltar</button>
     <div id="msgCI" class="msg"></div>
@@ -137,6 +144,13 @@
       <button class="ghost sm" style="width:auto;margin-top:12px" onclick="reqGPS2()">↻ Atualizar GPS</button>
     </div>
 
+    <div class="card">
+      <h2>📸 Odômetro — chegada</h2>
+      <p class="muted">Fotografe o odômetro (quilometragem) no fim.</p>
+      <input type="file" accept="image/*" capture="environment" id="co_foto" onchange="capFoto(this,'co')">
+      <div id="co_prev" class="muted" style="margin-top:8px">Nenhuma foto ainda.</div>
+    </div>
+
     <button onclick="calcular()">🧮 Calcular total</button>
     <div id="resumoCard" class="card hide" style="margin-top:16px">
       <div id="resumo"></div>
@@ -162,8 +176,42 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="config.js"></script>
 <script>
-var sb=null, SESSION=null, PERFIL=null, gps=null, gps2=null, clk=null, TRIP=null, PB=6.47, _calc=null;
+var sb=null, SESSION=null, PERFIL=null, gps=null, gps2=null, clk=null, TRIP=null, PB=6.47, _calc=null, CI_FOTO=null, CO_FOTO=null;
 function el(id){return document.getElementById(id);}
+
+// ── Fotos: compressão (canvas) + captura + upload ao Drive (via carteiro) ──
+function compress(file){
+  return new Promise(function(resolve,reject){
+    var img=new Image();
+    img.onload=function(){
+      var max=1200,w=img.width,h=img.height;
+      if(w>h && w>max){h=Math.round(h*max/w);w=max;} else if(h>max){w=Math.round(w*max/h);h=max;}
+      var c=document.createElement("canvas");c.width=w;c.height=h;
+      c.getContext("2d").drawImage(img,0,0,w,h);
+      resolve(c.toDataURL("image/jpeg",0.7));
+    };
+    img.onerror=function(){reject(new Error("imagem inválida"));};
+    var r=new FileReader();r.onload=function(e){img.src=e.target.result;};r.onerror=function(){reject(new Error("leitura falhou"));};r.readAsDataURL(file);
+  });
+}
+function capFoto(input, which){
+  var f=input.files&&input.files[0]; if(!f)return;
+  compress(f).then(function(b64){
+    var prev=el(which+"_prev");
+    if(which==="ci") CI_FOTO=b64; else CO_FOTO=b64;
+    prev.innerHTML='<img src="'+b64+'" style="max-width:140px;border-radius:8px;margin-top:8px;display:block"><span class="muted">✓ foto pronta</span>';
+  }).catch(function(){ alert("Não consegui processar a foto. Tente outra."); });
+}
+async function uploadFoto(b64, name, proto){
+  var cfg=window.RBCIP_CONFIG||{};
+  if(!cfg.CARTEIRO_URL) throw new Error("uploader não configurado");
+  var s=await sb.auth.getSession(); var jwt=s.data.session.access_token;
+  var resp=await fetch(cfg.CARTEIRO_URL,{method:"POST",redirect:"follow",headers:{"Content-Type":"text/plain"},
+    body:JSON.stringify({action:"upload_imagem", jwt:jwt, base64:b64, name:name, protocolo:proto||(TRIP&&TRIP.protocolo)||""})});
+  var out={}; try{ out=JSON.parse(await resp.text()); }catch(_){}
+  if(!out.success||!out.link) throw new Error(out.error||"falha no upload");
+  return out.link;
+}
 function show(id){["carregando","secLogin","secHome","secCI","secFinal","secOk"].forEach(function(s){el(s).classList.add("hide");});el(id).classList.remove("hide");window.scrollTo(0,0);}
 function msg(box,tipo,txt){var m=el(box);m.className="msg show "+tipo;m.textContent=txt;}
 function limpaMsg(box){var m=el(box);m.className="msg";m.textContent="";}
@@ -228,6 +276,7 @@ function goCheckin(){
   // pré-preenche com o perfil
   if(PERFIL && PERFIL.nome && !el("ci_nome").value) el("ci_nome").value=PERFIL.nome;
   if(SESSION && !el("ci_email").value) el("ci_email").value=SESSION.user.email;
+  CI_FOTO=null; if(el("ci_foto"))el("ci_foto").value=""; if(el("ci_prev"))el("ci_prev").textContent="Nenhuma foto ainda.";
   reqGPS();
   if(clk) clearInterval(clk);
   var upd=function(){ el("ci_ck").textContent=fmtHora(new Date()); }; upd(); clk=setInterval(upd,1000);
@@ -248,14 +297,19 @@ async function enviarCI(){
   if(!veic)erros.push("Veículo");
   if(!placa)erros.push("Placa");
   if(!gps)erros.push("Localização (GPS)");
+  if(!CI_FOTO)erros.push("Foto do odômetro");
   if(erros.length){msg("msgCI","err","Corrija: "+erros.join(", ")+".");return;}
 
   var proto="RB-"+Date.now().toString(36).toUpperCase();
-  el("msgCI").className="msg show info"; el("msgCI").textContent="Registrando check-in…";
+  el("msgCI").className="msg show info"; el("msgCI").textContent="Enviando foto do odômetro…";
+  var fotoLink="";
+  try{ fotoLink=await uploadFoto(CI_FOTO,"odometro_saida",proto); }
+  catch(e){ msg("msgCI","err","Erro ao enviar a foto: "+e.message); return; }
+  el("msgCI").textContent="Registrando check-in…";
   var { error }=await sb.from("reembolsos").insert({
     protocolo:proto, status:"ABERTO", motorista_id:SESSION.user.id,
     nome:nome, cpf:cpf, rg:rg, orgao:orgao, email:email, telefone:tel, veiculo:veic, placa:placa,
-    checkin_em:new Date().toISOString(), checkin_lat:gps.lat, checkin_lng:gps.lng
+    checkin_em:new Date().toISOString(), checkin_lat:gps.lat, checkin_lng:gps.lng, checkin_foto:fotoLink
   });
   if(error){ msg("msgCI","err","Erro ao registrar: "+error.message); return; }
   el("ok_icone").textContent="🚀"; el("ok_titulo").textContent="Check-in registrado!";
@@ -267,6 +321,7 @@ async function enviarCI(){
 // ═══════════════════ 3c — PARADAS / CHECK-OUT / CÁLCULO ═══════════════════
 async function goFinal(id, protocolo){
   TRIP={id:id, protocolo:protocolo}; _calc=null;
+  CO_FOTO=null; if(el("co_foto"))el("co_foto").value=""; if(el("co_prev"))el("co_prev").textContent="Nenhuma foto ainda.";
   show("secFinal");
   el("resumoCard").classList.add("hide"); limpaMsg("msgFinal");
   if(!el("ida_list").children.length) addParada("ida");
@@ -356,9 +411,15 @@ function calcular(){
 async function enviarFinal(){
   if(!_calc){ msg("msgFinal","err","Toque em Calcular primeiro."); return; }
   if(!gps2){ msg("msgFinal","err","Capture o GPS do check-out."); return; }
+  if(!CO_FOTO){ msg("msgFinal","err","Fotografe o odômetro de chegada."); return; }
   var c=_calc;
-  el("msgFinal").className="msg show info"; el("msgFinal").textContent="Enviando…";
+  el("msgFinal").className="msg show info"; el("msgFinal").textContent="Enviando foto do odômetro…";
+  var coLink="";
+  try{ coLink=await uploadFoto(CO_FOTO,"odometro_chegada",TRIP.protocolo); }
+  catch(e){ msg("msgFinal","err","Erro ao enviar a foto: "+e.message); return; }
+  el("msgFinal").textContent="Enviando…";
   var upd={ status:"COMPLETO", checkout_em:new Date().toISOString(), checkout_lat:gps2.lat, checkout_lng:gps2.lng,
+    checkout_foto:coLink,
     dist_total:c.dist, consumo:c.con, usou_estimativa:c.usarEstim, preco_base:PB,
     preco_real:c.usarEstim?null:c.precoReal, caronas:coletarCaronas().join(", ")||null };
   var r1=await sb.from("reembolsos").update(upd).eq("id",TRIP.id);
