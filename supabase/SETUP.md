@@ -47,8 +47,11 @@ domínio da RBCIP — **sem outro serviço**. Em **Authentication → Emails**
   (precisa de verificação em 2 etapas ativa).
 - O aviso amarelo "Check your SMTP provider" é **informativo** — o Gmail é feito
   para e-mail pessoal, mas para o baixo volume de códigos de login funciona bem.
-- **Sempre teste a entrega real** (criar/convidar um usuário e ver se o e-mail
-  chega). SMTP errado falha em silêncio.
+- **Sempre teste a entrega real.** Atenção: "Add user → Create new user" **NÃO
+  envia e-mail** (cria já confirmado). Para testar o SMTP, use
+  **Authentication → Users → menu "..." → Send magic link** e veja se chega
+  (cheque o spam). SMTP errado falha em silêncio — o erro aparece em
+  **Logs → Auth**. Causa nº 1: senha de app errada.
 - Limites: Custom SMTP libera 30 e-mails/hora por padrão (ajustável em
   **Authentication → Rate Limits**); Workspace envia ~2.000/dia.
 - _Alternativa futura, se o volume crescer ou cair em spam:_ um provedor
