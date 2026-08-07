@@ -6,6 +6,8 @@
 <title>Painel (Supabase) — Reembolsos RBCIP</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <style>
 :root{
   --bg:#F1F5F9;--surface:#FFF;--surface2:#F8FAFC;--primary:#2563EB;--primary-light:#DBEAFE;
@@ -109,6 +111,7 @@ tbody tr:hover{background:var(--surface2)}
     </div>
     <div class="hdr-right">
       <span id="quem"></span>
+      <button class="btn" onclick="abrirStats()">📊 Estatísticas</button>
       <button class="btn" onclick="abrirPrecos()">⛽ Gasolina</button>
       <button class="btn" onclick="carregar()">↻ Atualizar</button>
       <button class="btn" onclick="sair()">Sair</button>
@@ -140,6 +143,16 @@ tbody tr:hover{background:var(--surface2)}
       <tbody id="tbody"></tbody>
     </table>
     <div id="vazio" class="loading hide">Nenhum registro encontrado com esse filtro.</div>
+  </div>
+</div>
+
+<div id="modalStats" class="modal-bg hide">
+  <div class="modal">
+    <div style="display:flex;justify-content:space-between;align-items:center">
+      <h3>📊 Estatísticas</h3>
+      <button class="btn" onclick="fecharStats()">Fechar</button>
+    </div>
+    <div id="stats_corpo"></div>
   </div>
 </div>
 
@@ -240,9 +253,9 @@ async function toggle(id){
 async function loadDetail(id){
   var box=el("det-"+id); if(!box) return;
   var reg=DADOS.filter(function(x){return x.id===id;})[0]||{};
-  var par = await sb.from("paradas").select("fase,ordem,origem,destino,km,horario,maps_link").eq("reembolso_id",id).order("fase").order("ordem");
+  var par = await sb.from("paradas").select("fase,ordem,origem,destino,km,horario,maps_link,lat,lng").eq("reembolso_id",id).order("fase").order("ordem");
   var ped = await sb.from("pedagios").select("fase,ordem,valor,comprovante_link").eq("reembolso_id",id).order("ordem");
-  var origq = await sb.from("reembolsos").select("val_total_planilha,checkin_foto,checkout_foto,cupom_foto,foto_consumo,recibo_link").eq("id",id).maybeSingle();
+  var origq = await sb.from("reembolsos").select("val_total_planilha,checkin_foto,checkout_foto,cupom_foto,foto_consumo,recibo_link,checkin_lat,checkin_lng,checkout_lat,checkout_lng").eq("id",id).maybeSingle();
   var od = (origq && origq.data) || {};
   var origPlan = (od.val_total_planilha!=null) ? od.val_total_planilha : null;
   var h="";
@@ -269,6 +282,13 @@ async function loadDetail(id){
     h+='<h4>Recibo</h4><div class="line"><a href="'+esc(od.recibo_link)+'" target="_blank">📄 Abrir recibo em PDF</a></div>';
   }
 
+  // ── Mapa da rota (pontos de GPS: check-in, paradas com GPS, check-out) ──
+  var pts=[];
+  if(od.checkin_lat!=null && od.checkin_lng!=null) pts.push({lat:Number(od.checkin_lat),lng:Number(od.checkin_lng),label:"Check-in"});
+  (par.data||[]).forEach(function(p,i){ if(p.lat!=null && p.lng!=null) pts.push({lat:Number(p.lat),lng:Number(p.lng),label:"Parada "+(i+1)}); });
+  if(od.checkout_lat!=null && od.checkout_lng!=null) pts.push({lat:Number(od.checkout_lat),lng:Number(od.checkout_lng),label:"Check-out"});
+  if(pts.length){ h+='<h4>Rota (GPS)</h4><div id="mapa-'+id+'" style="height:220px;border-radius:8px;overflow:hidden;border:1px solid var(--border)"></div>'; }
+
   // ── Ações do admin (Camada A: grava status no Supabase; e-mail vem depois) ──
   h+='<h4>Ações do admin</h4>';
   var emailAtivo = !!(window.RBCIP_CONFIG && window.RBCIP_CONFIG.CARTEIRO_URL);
@@ -279,8 +299,25 @@ async function loadDetail(id){
     h+='<button onclick="mudarStatus(\''+id+'\',\''+b[0]+'\')" style="background:'+b[1]+';color:'+b[2]+';border:none;padding:8px 14px;border-radius:6px;font-family:inherit;font-size:13px;font-weight:600;cursor:pointer">'+b[3]+'</button>';
   });
   h+='</div>';
+  h+='<div style="margin-top:10px"><button onclick="editarDados(\''+id+'\')" style="background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:8px 14px;border-radius:6px;font-family:inherit;font-size:13px;font-weight:600;cursor:pointer">✏️ Editar dados</button></div>';
+  h+='<div id="editbox-'+id+'"></div>';
 
   box.innerHTML=h;
+  if(pts.length) renderMapa("mapa-"+id, pts);
+}
+
+var _map=null;
+function renderMapa(divId, pts){
+  try{
+    if(_map){ _map.remove(); _map=null; }
+    _map=L.map(divId);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© OpenStreetMap'}).addTo(_map);
+    var latlngs=pts.map(function(p){ return [p.lat,p.lng]; });
+    pts.forEach(function(p){ L.marker([p.lat,p.lng]).addTo(_map).bindPopup(p.label); });
+    if(latlngs.length>1) L.polyline(latlngs,{color:'#2563EB',weight:3}).addTo(_map);
+    _map.fitBounds(latlngs,{padding:[24,24],maxZoom:15});
+    setTimeout(function(){ if(_map)_map.invalidateSize(); },120);
+  }catch(e){}
 }
 
 async function mudarStatus(id, novo){
@@ -341,6 +378,58 @@ function abrirPrecos(){
   carregarPrecos();
 }
 function fecharPrecos(){ el("modalPrecos").classList.add("hide"); }
+
+// ── Estatísticas ──
+function abrirStats(){ el("modalStats").classList.remove("hide"); renderStats(); }
+function fecharStats(){ el("modalStats").classList.add("hide"); }
+function renderStats(){
+  var n=DADOS.length, somaTot=0, somaKm=0, comValor=0, pagos=0, somaPagos=0, st={};
+  DADOS.forEach(function(r){
+    st[r.status]=(st[r.status]||0)+1;
+    if(r.val_total){ somaTot+=Number(r.val_total); comValor++; }
+    if(r.dist_total) somaKm+=Number(r.dist_total);
+    if(r.status==="PAGO"){ pagos++; if(r.val_total)somaPagos+=Number(r.val_total); }
+  });
+  function brlv(v){ return "R$ "+Number(v).toLocaleString("pt-BR",{minimumFractionDigits:2,maximumFractionDigits:2}); }
+  var cards=[["Reembolsos",n],["Soma total",brlv(somaTot)],["Distância total",Math.round(somaKm).toLocaleString("pt-BR")+" km"],
+    ["Média por pedido",comValor?brlv(somaTot/comValor):"—"],["Média de km",comValor?Math.round(somaKm/comValor)+" km":"—"],["Pagos",pagos+" · "+brlv(somaPagos)]];
+  var h='<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px">';
+  h+=cards.map(function(c){ return '<div style="border:1px solid var(--border);border-radius:8px;padding:12px"><div style="font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px">'+c[0]+'</div><div style="font-size:18px;font-weight:700;margin-top:4px">'+c[1]+'</div></div>'; }).join("");
+  h+='</div><h4 style="margin:16px 0 6px;font-size:12px;color:var(--text3);text-transform:uppercase">Por status</h4>';
+  h+='<table><tbody>'+Object.keys(st).map(function(k){ return '<tr><td><span class="st st-'+esc(k)+'">'+esc(k)+'</span></td><td class="right">'+st[k]+'</td></tr>'; }).join("")+'</tbody></table>';
+  el("stats_corpo").innerHTML=h;
+}
+
+// ── Edição de dados pelo admin ──
+async function editarDados(id){
+  var box=el("editbox-"+id); if(!box)return;
+  if(box.innerHTML){ box.innerHTML=""; return; } // toggle
+  var q=await sb.from("reembolsos").select("nome,cpf,rg,orgao,email,telefone,veiculo,placa,dist_total,consumo,preco_base,preco_real,usou_estimativa").eq("id",id).maybeSingle();
+  var r=(q&&q.data)||{};
+  function f(lbl,key,val,extra){ return '<label style="display:block;font-size:11px;color:var(--text3);margin-top:6px">'+lbl+'</label><input id="ed-'+key+'-'+id+'" value="'+esc(val==null?"":val)+'" '+(extra||"")+' style="width:100%;padding:7px 9px;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--text)">'; }
+  var h='<div style="background:var(--surface);border:1px dashed var(--border);border-radius:8px;padding:12px;margin-top:8px">';
+  h+='<div style="font-weight:600;margin-bottom:4px">✏️ Editar dados</div>';
+  h+='<div style="display:grid;grid-template-columns:1fr 1fr;gap:0 10px">';
+  h+=f("Nome","nome",r.nome)+f("CPF","cpf",r.cpf)+f("RG","rg",r.rg)+f("Órgão","orgao",r.orgao)+f("E-mail","email",r.email)+f("Telefone","telefone",r.telefone)+f("Veículo","veiculo",r.veiculo)+f("Placa","placa",r.placa);
+  h+=f("Distância (km)","dist_total",r.dist_total,'inputmode="decimal"')+f("Consumo (km/L)","consumo",r.consumo,'inputmode="decimal"')+f("Preço base","preco_base",r.preco_base,'inputmode="decimal"')+f("Preço real","preco_real",r.preco_real,'inputmode="decimal"');
+  h+='</div>';
+  h+='<label style="display:block;font-size:12px;margin-top:8px"><input type="checkbox" id="ed-usou-'+id+'" '+(r.usou_estimativa?"checked":"")+' style="width:auto;margin-right:6px">Usou estimativa (o valor usa o preço base, não o preço real)</label>';
+  h+='<div style="font-size:11px;color:var(--text3);margin-top:6px">Os valores em R$ são recalculados pelo banco a partir de distância, consumo e preço.</div>';
+  h+='<div style="margin-top:10px"><button style="background:var(--primary);color:#fff;border:none;padding:8px 14px;border-radius:6px;font-family:inherit;font-size:13px;font-weight:600;cursor:pointer" onclick="salvarEdicao(\''+id+'\')">Salvar alterações</button></div>';
+  h+='</div>';
+  box.innerHTML=h;
+}
+async function salvarEdicao(id){
+  function v(key){ var e=el("ed-"+key+"-"+id); return e?e.value.trim():null; }
+  function num(key){ var s=v(key); if(!s)return null; var n=parseFloat(String(s).replace(",",".")); return isNaN(n)?null:n; }
+  var upd={ nome:v("nome")||null, cpf:v("cpf")||null, rg:v("rg")||null, orgao:v("orgao")||null, email:v("email")||null, telefone:v("telefone")||null, veiculo:v("veiculo")||null, placa:v("placa")||null,
+    dist_total:num("dist_total"), consumo:num("consumo"), preco_base:num("preco_base"), preco_real:num("preco_real"),
+    usou_estimativa: el("ed-usou-"+id)?el("ed-usou-"+id).checked:false };
+  var { error }=await sb.from("reembolsos").update(upd).eq("id",id);
+  if(error){ alert("Erro ao salvar: "+error.message); return; }
+  msgTopo("Dados atualizados ✓");
+  await carregar(); abertoId=id; render(); await loadDetail(id);
+}
 async function carregarPrecos(){
   var { data, error }=await sb.from("precos_gasolina").select("inicio,fim,valor,registrado_por").order("inicio",{ascending:false});
   if(error){ el("pg_lista").innerHTML='<p class="loading">Erro: '+esc(error.message)+'</p>'; return; }
