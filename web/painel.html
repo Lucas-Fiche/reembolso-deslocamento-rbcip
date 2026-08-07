@@ -76,6 +76,15 @@ tbody tr:hover{background:var(--surface2)}
 .loading{color:var(--text3);text-align:center;padding:40px}
 #toast{position:fixed;left:50%;bottom:22px;transform:translateX(-50%);background:#0F172A;color:#fff;padding:11px 18px;border-radius:8px;font-size:13px;font-weight:500;box-shadow:0 6px 20px rgba(0,0,0,.25);z-index:200;max-width:90vw;text-align:center}
 #toast.err{background:#991B1B}
+.modal-bg{position:fixed;inset:0;background:rgba(15,23,42,.5);z-index:300;display:flex;align-items:flex-start;justify-content:center;padding:40px 16px;overflow:auto}
+.modal{background:var(--surface);border-radius:12px;max-width:560px;width:100%;padding:22px;box-shadow:0 20px 60px rgba(0,0,0,.3)}
+.modal h3{margin:0;font-size:16px}
+.modal label{display:block;font-size:11px;color:var(--text2);font-weight:600;margin:10px 0 4px}
+.modal input{width:100%;padding:9px 11px;border:1px solid var(--border);border-radius:6px;font-family:inherit;font-size:14px;background:var(--bg);color:var(--text)}
+.modal .mrow{display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap}
+.modal table{width:100%;border-collapse:collapse;margin-top:14px;font-size:13px}
+.modal th,.modal td{border-bottom:1px solid var(--border);padding:7px 8px;text-align:left}
+.modal th{font-size:11px;text-transform:uppercase;color:var(--text3)}
 </style>
 </head>
 <body>
@@ -100,6 +109,7 @@ tbody tr:hover{background:var(--surface2)}
     </div>
     <div class="hdr-right">
       <span id="quem"></span>
+      <button class="btn" onclick="abrirPrecos()">⛽ Gasolina</button>
       <button class="btn" onclick="carregar()">↻ Atualizar</button>
       <button class="btn" onclick="sair()">Sair</button>
     </div>
@@ -130,6 +140,22 @@ tbody tr:hover{background:var(--surface2)}
       <tbody id="tbody"></tbody>
     </table>
     <div id="vazio" class="loading hide">Nenhum registro encontrado com esse filtro.</div>
+  </div>
+</div>
+
+<div id="modalPrecos" class="modal-bg hide">
+  <div class="modal">
+    <div style="display:flex;justify-content:space-between;align-items:center">
+      <h3>⛽ Preço da gasolina</h3>
+      <button class="btn" onclick="fecharPrecos()">Fechar</button>
+    </div>
+    <p style="color:var(--text3);font-size:12px;margin:8px 0 0">O valor vigente é usado no cálculo das novas viagens (modo estimativa). Ao salvar um novo período, o anterior é encerrado no dia anterior.</p>
+    <div class="mrow" style="margin-top:8px">
+      <div style="flex:1;min-width:140px"><label>A partir de</label><input type="date" id="pg_inicio"></div>
+      <div style="flex:1;min-width:140px"><label>Valor do litro (R$)</label><input id="pg_valor" inputmode="decimal" placeholder="Ex: 6,29"></div>
+      <button class="btn" style="background:var(--primary);color:#fff;border-color:var(--primary)" onclick="addPreco()">Salvar</button>
+    </div>
+    <div id="pg_lista"></div>
   </div>
 </div>
 
@@ -291,6 +317,36 @@ async function mudarStatus(id, novo){
 }
 
 async function sair(){ await sb.auth.signOut(); location.href="login.html"; }
+
+// ── Preço da gasolina ──
+function abrirPrecos(){
+  el("modalPrecos").classList.remove("hide");
+  if(!el("pg_inicio").value) el("pg_inicio").value=new Date().toISOString().slice(0,10);
+  carregarPrecos();
+}
+function fecharPrecos(){ el("modalPrecos").classList.add("hide"); }
+async function carregarPrecos(){
+  var { data, error }=await sb.from("precos_gasolina").select("inicio,fim,valor,registrado_por").order("inicio",{ascending:false});
+  if(error){ el("pg_lista").innerHTML='<p class="loading">Erro: '+esc(error.message)+'</p>'; return; }
+  var rows=(data||[]).map(function(p){
+    return '<tr><td class="mono">'+esc(p.inicio||"")+'</td><td class="mono">'+esc(p.fim||"— atual —")+'</td><td class="right mono">R$ '+Number(p.valor).toLocaleString("pt-BR",{minimumFractionDigits:2,maximumFractionDigits:3})+'</td><td>'+esc(p.registrado_por||"")+'</td></tr>';
+  }).join("");
+  el("pg_lista").innerHTML='<table><thead><tr><th>Início</th><th>Fim</th><th class="right">R$/L</th><th>Por</th></tr></thead><tbody>'+(rows||'<tr><td colspan="4" class="muted">Nenhum preço cadastrado.</td></tr>')+'</tbody></table>';
+}
+async function addPreco(){
+  var inicio=el("pg_inicio").value, valor=parseFloat(String(el("pg_valor").value).replace(",","."));
+  if(!inicio){ alert("Informe a data de início."); return; }
+  if(!valor||valor<=0){ alert("Informe um valor de litro válido."); return; }
+  // encerra períodos abertos anteriores (fim nulo) no dia anterior ao novo início
+  var ab=await sb.from("precos_gasolina").select("id").is("fim",null).lt("inicio",inicio);
+  if(ab.data && ab.data.length){
+    var dt=new Date(inicio+"T00:00:00Z"); dt.setUTCDate(dt.getUTCDate()-1); var fimStr=dt.toISOString().slice(0,10);
+    for(var i=0;i<ab.data.length;i++){ await sb.from("precos_gasolina").update({fim:fimStr}).eq("id",ab.data[i].id); }
+  }
+  var { error }=await sb.from("precos_gasolina").insert({inicio:inicio, valor:valor, registrado_por:QUEM||"admin"});
+  if(error){ alert("Erro ao salvar: "+error.message); return; }
+  el("pg_valor").value=""; await carregarPrecos(); msgTopo("Preço da gasolina salvo ✓");
+}
 
 // ── Início: valida sessão + papel admin ──
 (async function(){
