@@ -87,6 +87,19 @@ tbody tr:hover{background:var(--surface2)}
 .modal table{width:100%;border-collapse:collapse;margin-top:14px;font-size:13px}
 .modal th,.modal td{border-bottom:1px solid var(--border);padding:7px 8px;text-align:left}
 .modal th{font-size:11px;text-transform:uppercase;color:var(--text3)}
+/* Botões de ação do admin */
+.acts{display:flex;gap:8px;flex-wrap:wrap}
+.act{display:inline-flex;align-items:center;gap:6px;padding:8px 14px;border-radius:8px;font-family:inherit;font-size:13px;font-weight:600;cursor:pointer;border:1px solid transparent;transition:background .15s,box-shadow .15s,transform .1s;line-height:1}
+.act:hover{transform:translateY(-1px);box-shadow:0 2px 8px rgba(15,23,42,.10)}
+.act:active{transform:translateY(0)}
+.act .ai{font-size:13px;opacity:.9}
+.act-aprovar{background:#EFF6FF;color:#1D4ED8;border-color:#BFDBFE}.act-aprovar:hover{background:#DBEAFE}
+.act-pagar{background:#F0FDFA;color:#0F766E;border-color:#99F6E4}.act-pagar:hover{background:#CCFBF1}
+.act-revisar{background:#FFFBEB;color:#B45309;border-color:#FDE68A}.act-revisar:hover{background:#FEF3C7}
+.act-reprovar{background:#FEF2F2;color:#B91C1C;border-color:#FECACA}.act-reprovar:hover{background:#FEE2E2}
+.act-edit{background:var(--surface);color:var(--text2);border-color:var(--border)}.act-edit:hover{background:var(--surface2);color:var(--text)}
+.act-edit .caret{transition:transform .2s;font-size:11px}
+.act-edit.open .caret{transform:rotate(180deg)}
 </style>
 </head>
 <body>
@@ -294,12 +307,12 @@ async function loadDetail(id){
   var emailAtivo = !!(window.RBCIP_CONFIG && window.RBCIP_CONFIG.CARTEIRO_URL);
   h+='<div class="line" style="font-size:12px;color:'+(emailAtivo?'var(--warning)':'var(--text3)')+'">Status atual: <b>'+esc(reg.status)+'</b>. As ações gravam no Supabase'+(emailAtivo?' e <b>enviam e-mail</b> ao pesquisador deste registro ✉️':' (sem enviar e-mail)')+'.</div>';
   h+='<textarea id="obs-'+id+'" placeholder="Observação (opcional) — fica registrada na validação" style="width:100%;margin:8px 0;padding:8px;border:1px solid var(--border);border-radius:6px;font-family:inherit;font-size:13px;resize:vertical;min-height:42px"></textarea>';
-  h+='<div style="display:flex;gap:8px;flex-wrap:wrap">';
-  [["APROVADO","#DBEAFE","#1E40AF","Aprovar"],["PAGO","#CCFBF1","#0F766E","Marcar pago"],["REVISÃO","#FEF3C7","#92400E","Pedir revisão"],["REPROVADO","#FEE2E2","#991B1B","Reprovar"]].forEach(function(b){
-    h+='<button onclick="mudarStatus(\''+id+'\',\''+b[0]+'\')" style="background:'+b[1]+';color:'+b[2]+';border:none;padding:8px 14px;border-radius:6px;font-family:inherit;font-size:13px;font-weight:600;cursor:pointer">'+b[3]+'</button>';
+  h+='<div class="acts">';
+  [["APROVADO","act-aprovar","✓","Aprovar"],["PAGO","act-pagar","💰","Marcar pago"],["REVISÃO","act-revisar","↻","Pedir revisão"],["REPROVADO","act-reprovar","✕","Reprovar"]].forEach(function(b){
+    h+='<button class="act '+b[1]+'" onclick="mudarStatus(\''+id+'\',\''+b[0]+'\')"><span class="ai">'+b[2]+'</span>'+b[3]+'</button>';
   });
   h+='</div>';
-  h+='<div style="margin-top:10px"><button onclick="editarDados(\''+id+'\')" style="background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:8px 14px;border-radius:6px;font-family:inherit;font-size:13px;font-weight:600;cursor:pointer">✏️ Editar dados</button></div>';
+  h+='<div style="margin-top:10px"><button id="editbtn-'+id+'" class="act act-edit" onclick="editarDados(\''+id+'\')"><span class="ai">✏️</span>Editar dados <span class="caret">▾</span></button></div>';
   h+='<div id="editbox-'+id+'"></div>';
 
   box.innerHTML=h;
@@ -403,7 +416,9 @@ function renderStats(){
 // ── Edição de dados pelo admin ──
 async function editarDados(id){
   var box=el("editbox-"+id); if(!box)return;
-  if(box.innerHTML){ box.innerHTML=""; return; } // toggle
+  var btn=el("editbtn-"+id);
+  if(box.innerHTML){ box.innerHTML=""; if(btn)btn.classList.remove("open"); return; } // toggle
+  if(btn)btn.classList.add("open");
   var q=await sb.from("reembolsos").select("nome,cpf,rg,orgao,email,telefone,veiculo,placa,dist_total,consumo,preco_base,preco_real,usou_estimativa").eq("id",id).maybeSingle();
   var r=(q&&q.data)||{};
   function f(lbl,key,val,extra){ return '<label style="display:block;font-size:11px;color:var(--text3);margin-top:6px">'+lbl+'</label><input id="ed-'+key+'-'+id+'" value="'+esc(val==null?"":val)+'" '+(extra||"")+' style="width:100%;padding:7px 9px;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--text)">'; }
