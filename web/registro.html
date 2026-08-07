@@ -53,6 +53,7 @@
       </div>
     </div>
     <div id="hm_aberta"></div>
+    <div id="hm_revisao"></div>
     <div class="card" id="hm_nova">
       <h2>Nova viagem</h2>
       <p class="muted">Faça o check-in ao iniciar o deslocamento (identificação, GPS e — em breve — foto do odômetro).</p>
@@ -232,6 +233,7 @@ function msg(box,tipo,txt){var m=el(box);m.className="msg show "+tipo;m.textCont
 function limpaMsg(box){var m=el(box);m.className="msg";m.textContent="";}
 function pad(n){return n<10?"0"+n:""+n;}
 function fmtHora(d){return pad(d.getHours())+":"+pad(d.getMinutes())+":"+pad(d.getSeconds());}
+function esc(s){return String(s==null?"":s).replace(/[&<>"]/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c];});}
 
 // ── Validações ──
 function validarEmail(e){return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e);}
@@ -334,21 +336,48 @@ async function enviarCI(){
 }
 
 // ═══════════════════ 3c — PARADAS / CHECK-OUT / CÁLCULO ═══════════════════
-async function goFinal(id, protocolo){
-  TRIP={id:id, protocolo:protocolo}; _calc=null;
-  CO_FOTO=null; CUPOM_FOTO=null; CON_FOTO=null;
+function limparFormFinal(){
+  el("ida_list").innerHTML=""; el("volta_list").innerHTML=""; el("ped_list").innerHTML=""; el("carona_list").innerHTML="";
+  el("fuelMode").value="estim"; onFuel(); el("fuel_preco").value=""; el("fuel_con").value="";
+  CO_FOTO=null; CUPOM_FOTO=null; CON_FOTO=null; gps2=null;
   if(el("co_foto"))el("co_foto").value=""; if(el("co_prev"))el("co_prev").textContent="Nenhuma foto ainda.";
   if(el("cupom_foto"))el("cupom_foto").value=""; if(el("cupom_prev"))el("cupom_prev").innerHTML="";
   if(el("con_foto"))el("con_foto").value=""; if(el("con_prev"))el("con_prev").innerHTML="";
-  show("secFinal");
   el("resumoCard").classList.add("hide"); limpaMsg("msgFinal");
-  if(!el("ida_list").children.length) addParada("ida");
+}
+async function goFinal(id, protocolo){
+  TRIP={id:id, protocolo:protocolo, modo:"novo"}; _calc=null;
+  limparFormFinal();
+  show("secFinal");
+  addParada("ida");
   await fetchPreco();
   el("preco_base_txt").textContent="Preço base atual: R$ "+PB.toFixed(2)+"/L";
   reqGPS2();
 }
+async function goCorrigir(id, protocolo){
+  var rq=await sb.from("reembolsos").select("*").eq("id",id).maybeSingle();
+  if(rq.error||!rq.data){ alert("Não consegui carregar o pedido."); return; }
+  var r=rq.data;
+  var par=await sb.from("paradas").select("*").eq("reembolso_id",id).order("fase").order("ordem");
+  var ped=await sb.from("pedagios").select("*").eq("reembolso_id",id).order("ordem");
+  TRIP={id:id, protocolo:protocolo, modo:"correcao", existing:{checkout_lat:r.checkout_lat, checkout_lng:r.checkout_lng, checkout_foto:r.checkout_foto, cupom_foto:r.cupom_foto}}; _calc=null;
+  limparFormFinal();
+  show("secFinal");
+  (par.data||[]).forEach(function(p){ addParada(p.fase==="volta"?"volta":"ida", {origem:p.origem, destino:p.destino, km:p.km, maps_link:p.maps_link}); });
+  if(!el("ida_list").children.length) addParada("ida");
+  el("fuelMode").value=(r.usou_estimativa===false)?"real":"estim"; onFuel();
+  if(r.preco_real!=null) el("fuel_preco").value=r.preco_real;
+  if(r.consumo!=null) el("fuel_con").value=r.consumo;
+  (ped.data||[]).forEach(function(p){ addPedagio({fase:p.fase, valor:p.valor, comprovante_link:p.comprovante_link}); });
+  if(r.caronas){ r.caronas.split(",").forEach(function(n){ n=n.trim(); if(n){ addCarona(); var ins=el("carona_list").querySelectorAll(".cr-nome"); ins[ins.length-1].value=n; } }); }
+  if((r.usou_estimativa===false) && r.cupom_foto && el("cupom_prev")) el("cupom_prev").innerHTML='<span class="muted">✓ cupom atual mantido (anexe outro só para trocar)</span>';
+  if(r.checkout_foto && el("co_prev")) el("co_prev").innerHTML='<span class="muted">✓ foto de odômetro mantida (fotografe de novo só para trocar)</span>';
+  await fetchPreco();
+  el("preco_base_txt").textContent="Preço base atual: R$ "+PB.toFixed(2)+"/L";
+  el("co_gt").textContent="Check-out original mantido — recapture o GPS só se necessário."; el("co_gs").className="gs";
+}
 
-function addParada(fase){
+function addParada(fase, data){
   var d=document.createElement("div");
   d.className="parada-row"; d.style.cssText="border:1px solid var(--border);border-radius:10px;padding:10px;margin-bottom:8px";
   d.innerHTML='<div class="fr"><div><label>Origem</label><input class="p-orig"></div><div><label>Destino</label><input class="p-dest"></div></div>'
@@ -356,18 +385,25 @@ function addParada(fase){
     +'<label>Print do Google Maps do trecho</label><input type="file" accept="image/*" class="p-foto" onchange="capRowFoto(this,\'parada-row\')"><span class="rowfprev"></span>'
     +'<div style="margin-top:8px"><button class="link" onclick="this.closest(\'.parada-row\').remove()">remover parada</button></div>';
   el(fase+"_list").appendChild(d);
+  if(data){
+    d.querySelector(".p-orig").value=data.origem||"";
+    d.querySelector(".p-dest").value=data.destino||"";
+    d.querySelector(".p-km").value=(data.km!=null?data.km:"");
+    d._existingLink=data.maps_link||null;
+    if(data.maps_link){ var p=d.querySelector(".rowfprev"); if(p)p.innerHTML=' <span class="muted">✓ print atual mantido (anexe outro só para trocar)</span>'; }
+  }
 }
 function coletarParadas(fase){
   var out=[], rows=el(fase+"_list").querySelectorAll(".parada-row");
   Array.prototype.forEach.call(rows,function(r){
     var o=r.querySelector(".p-orig").value.trim(), de=r.querySelector(".p-dest").value.trim(), km=parseFloat(String(r.querySelector(".p-km").value).replace(",","."))||0;
-    if(o||de||km) out.push({fase:fase, origem:o, destino:de, km:km, foto:r._foto||null});
+    if(o||de||km) out.push({fase:fase, origem:o, destino:de, km:km, foto:r._foto||null, existingLink:r._existingLink||null});
   });
   out.forEach(function(p,i){ p.ordem=i+1; });
   return out;
 }
 function onFuel(){ el("realBox").classList.toggle("hide", el("fuelMode").value!=="real"); }
-function addPedagio(){
+function addPedagio(data){
   var d=document.createElement("div");
   d.className="ped-row"; d.style.cssText="border:1px solid var(--border);border-radius:10px;padding:10px;margin-bottom:8px";
   d.innerHTML='<div class="fr"><div><label>Fase</label><select class="pd-fase"><option value="ida">Ida</option><option value="volta">Volta</option></select></div>'
@@ -375,12 +411,18 @@ function addPedagio(){
     +'<label>Comprovante (opcional)</label><input type="file" accept="image/*" class="pd-foto" onchange="capRowFoto(this,\'ped-row\')"><span class="rowfprev"></span>'
     +'<div style="margin-top:8px"><button class="link" onclick="this.closest(\'.ped-row\').remove()">remover pedágio</button></div>';
   el("ped_list").appendChild(d);
+  if(data){
+    if(data.fase) d.querySelector(".pd-fase").value=data.fase;
+    d.querySelector(".pd-val").value=(data.valor!=null?data.valor:"");
+    d._existingLink=data.comprovante_link||null;
+    if(data.comprovante_link){ var p=d.querySelector(".rowfprev"); if(p)p.innerHTML=' <span class="muted">✓ comprovante atual mantido</span>'; }
+  }
 }
 function coletarPedagios(){
   var out=[], rows=el("ped_list").querySelectorAll(".ped-row");
   Array.prototype.forEach.call(rows,function(r){
     var v=parseFloat(String(r.querySelector(".pd-val").value).replace(",","."))||0;
-    if(v>0) out.push({fase:r.querySelector(".pd-fase").value, valor:v, foto:r._foto||null});
+    if(v>0) out.push({fase:r.querySelector(".pd-fase").value, valor:v, foto:r._foto||null, existingLink:r._existingLink||null});
   });
   out.forEach(function(p,i){ p.ordem=i+1; });
   return out;
@@ -430,41 +472,45 @@ function calcular(){
 }
 async function enviarFinal(){
   if(!_calc){ msg("msgFinal","err","Toque em Calcular primeiro."); return; }
-  if(!gps2){ msg("msgFinal","err","Capture o GPS do check-out."); return; }
-  if(!CO_FOTO){ msg("msgFinal","err","Fotografe o odômetro de chegada."); return; }
+  var correcao = TRIP && TRIP.modo==="correcao";
+  var ex = (TRIP && TRIP.existing) || {};
+  if(!correcao && !gps2){ msg("msgFinal","err","Capture o GPS do check-out."); return; }
+  if(!correcao && !CO_FOTO){ msg("msgFinal","err","Fotografe o odômetro de chegada."); return; }
   var c=_calc, todas=c.ida.concat(c.volta);
-  for(var i=0;i<todas.length;i++){ if(!todas[i].foto){ msg("msgFinal","err","Anexe o print do Maps da parada "+(i+1)+" ("+todas[i].fase+")."); return; } }
-  if(!c.usarEstim && !CUPOM_FOTO){ msg("msgFinal","err","Anexe o cupom fiscal do combustível."); return; }
+  for(var i=0;i<todas.length;i++){ if(!todas[i].foto && !todas[i].existingLink){ msg("msgFinal","err","Anexe o print do Maps da parada "+(i+1)+" ("+todas[i].fase+")."); return; } }
+  if(!c.usarEstim && !CUPOM_FOTO && !ex.cupom_foto){ msg("msgFinal","err","Anexe o cupom fiscal do combustível."); return; }
   function setMsg(t){ el("msgFinal").className="msg show info"; el("msgFinal").textContent=t; }
-  var coLink, cupomLink=null, conLink=null;
+  var coLink=null, cupomLink=null, conLink=null;
   try{
-    setMsg("Enviando foto do odômetro…");
-    coLink=await uploadFoto(CO_FOTO,"odometro_chegada",TRIP.protocolo);
-    if(!c.usarEstim){ setMsg("Enviando cupom…"); cupomLink=await uploadFoto(CUPOM_FOTO,"cupom",TRIP.protocolo); }
+    if(CO_FOTO){ setMsg("Enviando foto do odômetro…"); coLink=await uploadFoto(CO_FOTO,"odometro_chegada",TRIP.protocolo); } else { coLink=ex.checkout_foto||null; }
+    if(!c.usarEstim){ if(CUPOM_FOTO){ setMsg("Enviando cupom…"); cupomLink=await uploadFoto(CUPOM_FOTO,"cupom",TRIP.protocolo); } else { cupomLink=ex.cupom_foto||null; } }
     if(CON_FOTO){ setMsg("Enviando foto do consumo…"); conLink=await uploadFoto(CON_FOTO,"consumo",TRIP.protocolo); }
-    for(var i=0;i<todas.length;i++){ setMsg("Enviando print do Maps "+(i+1)+" de "+todas.length+"…"); todas[i]._link=await uploadFoto(todas[i].foto, todas[i].fase+"_maps_"+(i+1), TRIP.protocolo); }
-    for(var i=0;i<c.peds.length;i++){ if(c.peds[i].foto){ setMsg("Enviando comprovante de pedágio "+(i+1)+"…"); c.peds[i]._link=await uploadFoto(c.peds[i].foto, "pedagio_"+(i+1), TRIP.protocolo); } }
+    for(var i=0;i<todas.length;i++){ if(todas[i].foto){ setMsg("Enviando print do Maps "+(i+1)+" de "+todas.length+"…"); todas[i]._link=await uploadFoto(todas[i].foto, todas[i].fase+"_maps_"+(i+1), TRIP.protocolo); } else { todas[i]._link=todas[i].existingLink||null; } }
+    for(var i=0;i<c.peds.length;i++){ if(c.peds[i].foto){ setMsg("Enviando comprovante de pedágio "+(i+1)+"…"); c.peds[i]._link=await uploadFoto(c.peds[i].foto, "pedagio_"+(i+1), TRIP.protocolo); } else { c.peds[i]._link=c.peds[i].existingLink||null; } }
   }catch(e){ msg("msgFinal","err","Erro ao enviar uma foto: "+e.message+" — verifique o sinal e tente de novo."); return; }
   setMsg("Salvando…");
-  var upd={ status:"COMPLETO", checkout_em:new Date().toISOString(), checkout_lat:gps2.lat, checkout_lng:gps2.lng,
+  var upd={ status: correcao?"CORRIGIDO":"COMPLETO",
     checkout_foto:coLink, cupom_foto:cupomLink, foto_consumo:conLink,
     dist_total:c.dist, consumo:c.con, usou_estimativa:c.usarEstim, preco_base:PB,
     preco_real:c.usarEstim?null:c.precoReal, caronas:coletarCaronas().join(", ")||null };
+  if(gps2){ upd.checkout_em=new Date().toISOString(); upd.checkout_lat=gps2.lat; upd.checkout_lng=gps2.lng; }
+  else if(!correcao){ upd.checkout_em=new Date().toISOString(); }
   var r1=await sb.from("reembolsos").update(upd).eq("id",TRIP.id);
-  if(r1.error){ msg("msgFinal","err","Erro ao finalizar: "+r1.error.message); return; }
+  if(r1.error){ msg("msgFinal","err","Erro ao salvar: "+r1.error.message); return; }
+  if(correcao){ await sb.from("paradas").delete().eq("reembolso_id",TRIP.id); await sb.from("pedagios").delete().eq("reembolso_id",TRIP.id); }
   var paradas=todas.map(function(p){ return {reembolso_id:TRIP.id, fase:p.fase, ordem:p.ordem, origem:p.origem, destino:p.destino, km:p.km, maps_link:p._link||null}; });
   if(paradas.length){ var r2=await sb.from("paradas").insert(paradas); if(r2.error){ msg("msgFinal","err","Erro ao salvar paradas: "+r2.error.message); return; } }
   if(c.peds.length){ var peds=c.peds.map(function(p){ return {reembolso_id:TRIP.id, fase:p.fase, ordem:p.ordem, valor:p.valor, comprovante_link:p._link||null}; }); var r3=await sb.from("pedagios").insert(peds); if(r3.error){ msg("msgFinal","err","Erro ao salvar pedágios: "+r3.error.message); return; } }
-  // E-mail de confirmação ao motorista (best-effort, via carteiro)
-  var cfg=window.RBCIP_CONFIG||{};
-  if(cfg.CARTEIRO_URL){
-    try{ var s2=await sb.auth.getSession();
+  if(!correcao){
+    var cfg=window.RBCIP_CONFIG||{};
+    if(cfg.CARTEIRO_URL){ try{ var s2=await sb.auth.getSession();
       await fetch(cfg.CARTEIRO_URL,{method:"POST",redirect:"follow",headers:{"Content-Type":"text/plain"},
         body:JSON.stringify({action:"enviar_confirmacao_registro", jwt:s2.data.session.access_token, protocolo:TRIP.protocolo})});
-    }catch(e){}
+    }catch(e){} }
   }
-  el("ok_icone").textContent="✅"; el("ok_titulo").textContent="Solicitação enviada!";
-  el("ok_texto").textContent="Seu reembolso foi registrado e você recebeu um e-mail de confirmação.";
+  el("ok_icone").textContent="✅";
+  el("ok_titulo").textContent= correcao?"Correção enviada!":"Solicitação enviada!";
+  el("ok_texto").textContent= correcao?"Seu pedido corrigido voltou para análise.":"Seu reembolso foi registrado e você recebeu um e-mail de confirmação.";
   el("ok_proto").textContent="Protocolo: "+TRIP.protocolo+" · Total: R$ "+c.vTot.toFixed(2);
   show("secOk");
 }
@@ -482,6 +528,18 @@ async function checarViagemAberta(){
   el("hm_nova").classList.toggle("hide", temAberta);
 }
 
+// ── Pedidos em REVISÃO (para o motorista corrigir) ──
+async function checarRevisao(){
+  var { data }=await sb.from("reembolsos").select("id,protocolo,validacao").eq("motorista_id",SESSION.user.id).eq("status","REVISÃO").order("atualizado_em",{ascending:false});
+  var box=el("hm_revisao"); if(!box)return;
+  if(data && data.length){
+    box.innerHTML=data.map(function(v){
+      return '<div class="viagem-aberta"><b>🔄 Pedido em revisão</b><br><span class="muted">Protocolo '+v.protocolo+'.'+(v.validacao?' — '+esc(v.validacao):'')+'</span>'
+        +'<button class="sm" style="width:auto;margin-top:10px" onclick="goCorrigir(\''+v.id+'\',\''+v.protocolo+'\')">Corrigir e reenviar →</button></div>';
+    }).join("");
+  } else box.innerHTML="";
+}
+
 // ── Início ──
 async function iniciar(){
   var { data:{ session } }=await sb.auth.getSession();
@@ -492,6 +550,7 @@ async function iniciar(){
   el("hm_nome").textContent=(PERFIL.nome)||session.user.email;
   el("hm_papel").textContent=(PERFIL.papel)||"—";
   await checarViagemAberta();
+  await checarRevisao();
   show("secHome");
 }
 
