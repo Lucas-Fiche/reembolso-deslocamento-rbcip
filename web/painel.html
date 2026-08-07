@@ -242,7 +242,7 @@ async function loadDetail(id){
   var reg=DADOS.filter(function(x){return x.id===id;})[0]||{};
   var par = await sb.from("paradas").select("fase,ordem,origem,destino,km,horario,maps_link").eq("reembolso_id",id).order("fase").order("ordem");
   var ped = await sb.from("pedagios").select("fase,ordem,valor,comprovante_link").eq("reembolso_id",id).order("ordem");
-  var origq = await sb.from("reembolsos").select("val_total_planilha,checkin_foto,checkout_foto,cupom_foto,foto_consumo").eq("id",id).maybeSingle();
+  var origq = await sb.from("reembolsos").select("val_total_planilha,checkin_foto,checkout_foto,cupom_foto,foto_consumo,recibo_link").eq("id",id).maybeSingle();
   var od = (origq && origq.data) || {};
   var origPlan = (od.val_total_planilha!=null) ? od.val_total_planilha : null;
   var h="";
@@ -264,6 +264,9 @@ async function loadDetail(id){
   var fotos=[["Odômetro saída",od.checkin_foto],["Odômetro chegada",od.checkout_foto],["Cupom",od.cupom_foto],["Foto consumo",od.foto_consumo]].filter(function(x){return x[1];});
   if(fotos.length){
     h+='<h4>Fotos</h4><div class="line">'+fotos.map(function(f){return '<a href="'+esc(f[1])+'" target="_blank">'+f[0]+'</a>';}).join(' · ')+'</div>';
+  }
+  if(od.recibo_link){
+    h+='<h4>Recibo</h4><div class="line"><a href="'+esc(od.recibo_link)+'" target="_blank">📄 Abrir recibo em PDF</a></div>';
   }
 
   // ── Ações do admin (Camada A: grava status no Supabase; e-mail vem depois) ──
@@ -310,6 +313,19 @@ async function mudarStatus(id, novo){
     }catch(e){ msgTopo("Status salvo, mas não consegui falar com o carteiro.", true); }
   } else {
     msgTopo("Status salvo ✓");
+  }
+
+  // Ao marcar PAGO: gera o recibo em PDF (via carteiro) e guarda o link
+  if(cfg.CARTEIRO_URL && novo==="PAGO"){
+    try{
+      msgTopo("Gerando recibo…");
+      var sr=await sb.auth.getSession();
+      var rr=await fetch(cfg.CARTEIRO_URL,{method:"POST",redirect:"follow",headers:{"Content-Type":"text/plain"},
+        body:JSON.stringify({action:"gerar_recibo", jwt:sr.data.session.access_token, protocolo:reg.protocolo})});
+      var ro={}; try{ ro=JSON.parse(await rr.text()); }catch(_){}
+      if(ro.success && ro.link){ await sb.from("reembolsos").update({recibo_link:ro.link}).eq("id",id); msgTopo("Recibo Nº "+(ro.numero||"")+" gerado e enviado aos e-mails internos ✅"); }
+      else { msgTopo("Status salvo, mas o recibo falhou: "+(ro.error||"erro"), true); }
+    }catch(e){ msgTopo("Status salvo, mas não gerei o recibo: "+e.message, true); }
   }
 
   await carregar();

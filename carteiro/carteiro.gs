@@ -31,6 +31,7 @@ function doPost(e){
     if(d.action === "enviar_aviso_status") return enviarAvisoStatus(d);
     if(d.action === "enviar_confirmacao_registro") return enviarConfirmacao(d);
     if(d.action === "upload_imagem") return uploadImagem(d);
+    if(d.action === "gerar_recibo") return gerarReciboAction(d);
     return _jr({success:false, error:"Ação desconhecida"});
   }catch(err){ return _jr({success:false, error:String(err && err.message || err)}); }
 }
@@ -81,8 +82,76 @@ function uploadImagem(d){
 
 function doGet(){ return _jr({status:"ok", carteiro:"rbcip", v:"1.1"}); }
 
-// Rode UMA vez no editor (menu ▶ Executar) para autorizar o acesso ao Drive.
-function autorizar(){ DriveApp.getRootFolder().getName(); return "Drive autorizado."; }
+// Rode UMA vez no editor (menu ▶ Executar) para autorizar Drive + Docs.
+function autorizar(){
+  var d = DocumentApp.create("rbcip_autorizacao_temp");
+  DriveApp.getFileById(d.getId()).setTrashed(true);
+  return "Drive e Docs autorizados.";
+}
+
+// ── Recibo em PDF (a partir de um Doc modelo com tags <<...>>) ──
+function dataPorExtenso(dt){
+  var m=["janeiro","fevereiro","março","abril","maio","junho","julho","agosto","setembro","outubro","novembro","dezembro"];
+  return dt.getDate()+" de "+m[dt.getMonth()]+" de "+dt.getFullYear();
+}
+function valorPorExtenso(v){
+  v=Number(v)||0; var reais=Math.floor(v+1e-9), centavos=Math.round((v-reais)*100);
+  var u=["","um","dois","três","quatro","cinco","seis","sete","oito","nove","dez","onze","doze","treze","quatorze","quinze","dezesseis","dezessete","dezoito","dezenove"];
+  var d=["","","vinte","trinta","quarenta","cinquenta","sessenta","setenta","oitenta","noventa"];
+  var c=["","cento","duzentos","trezentos","quatrocentos","quinhentos","seiscentos","setecentos","oitocentos","novecentos"];
+  function tres(n){ if(n===0)return""; if(n===100)return"cem"; var s=[],cent=Math.floor(n/100),resto=n%100; if(cent>0)s.push(c[cent]); if(resto>0){ if(resto<20)s.push(u[resto]); else{var dez=Math.floor(resto/10),uni=resto%10; s.push(d[dez]+(uni>0?" e "+u[uni]:""));} } return s.join(" e "); }
+  function ext(n){ if(n===0)return"zero"; var p=[],mi=Math.floor(n/1000000),mil=Math.floor((n%1000000)/1000),r=n%1000; if(mi>0)p.push(mi===1?"um milhão":tres(mi)+" milhões"); if(mil>0)p.push(mil===1?"mil":tres(mil)+" mil"); if(r>0)p.push(tres(r)); return p.join(" e "); }
+  var txt=""; if(reais>0)txt+=ext(reais)+(reais===1?" real":" reais");
+  if(centavos>0){ if(reais>0)txt+=" e "; txt+=ext(centavos)+(centavos===1?" centavo":" centavos"); }
+  if(reais===0&&centavos===0)txt="zero reais"; return txt;
+}
+function proximoNumeroRecibo(){ var n=parseInt(_props().getProperty("RECIBO_SEQ")||"0",10)+1; _props().setProperty("RECIBO_SEQ",String(n)); return ("00"+n).slice(-3); }
+
+function gerarReciboAction(d){
+  if(!d.jwt || !d.protocolo) return _jr({success:false, error:"Dados incompletos."});
+  var perfil=_sbGet("perfis?select=papel", d.jwt);
+  if(!perfil || !perfil.length || perfil[0].papel!=="admin") return _jr({success:false, error:"Não autorizado (apenas admin)."});
+  var tid=_props().getProperty("RECIBO_TEMPLATE_ID"), fid=_props().getProperty("RECIBOS_FOLDER_ID");
+  if(!tid || !fid) return _jr({success:false, error:"Recibo não configurado (RECIBO_TEMPLATE_ID / RECIBOS_FOLDER_ID)."});
+  var arr=_sbGet("vw_reembolsos?protocolo=eq."+encodeURIComponent(d.protocolo)+"&select=nome,cpf,rg,orgao,val_total,dist_total,checkin_foto,checkout_foto,cupom_foto", d.jwt);
+  if(!arr || !arr.length) return _jr({success:false, error:"Protocolo não encontrado."});
+  var r=arr[0];
+  try{
+    var folder=DriveApp.getFolderById(fid);
+    var num=proximoNumeroRecibo();
+    var nomeLimpo=String(r.nome||"Sem nome").replace(/[\\\/:*?"<>|]/g," ").replace(/\s+/g," ").trim();
+    var nomeArq="Recibo "+num+" - "+nomeLimpo;
+    var copia=DriveApp.getFileById(tid).makeCopy(nomeArq, folder);
+    var doc=DocumentApp.openById(copia.getId()), body=doc.getBody();
+    var valorFmt="R$ "+(Number(r.val_total)||0).toFixed(2).replace(".",",");
+    var descricao="reembolso de deslocamento referente ao Protocolo "+d.protocolo+" ("+(r.dist_total||0)+" km)";
+    body.replaceText("<<Nome_Completo>>", r.nome||"");
+    body.replaceText("<<RG>>", r.rg||"—");
+    body.replaceText("<<Orgao_Emissor>>", r.orgao||"");
+    body.replaceText("<<CPF>>", r.cpf||"");
+    body.replaceText("<<Valor_Total>>", valorFmt);
+    body.replaceText("<<Valor_Extenso>>", valorPorExtenso(r.val_total));
+    body.replaceText("<<Descricao_Pagamento>>", descricao);
+    body.replaceText("<<Chave_Pix>>", r.cpf||"");
+    body.replaceText("<<Data_Atual>>", dataPorExtenso(new Date()));
+    body.replaceText("<<Nome_Assinatura>>", r.nome||"");
+    body.replaceText("<<N_Recibo>>", num);
+    var links=[r.checkin_foto,r.checkout_foto,r.cupom_foto].filter(function(x){return x;});
+    body.replaceText("<<Link Imagem Autocrat>>", links.length?links.join("\n"):"—");
+    doc.saveAndClose();
+    var blob=copia.getAs("application/pdf").setName(nomeArq+".pdf");
+    var pdf=folder.createFile(blob);
+    pdf.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+    copia.setTrashed(true);
+    var emails=_props().getProperty("EMAILS_RECIBO") || "lucas@rbcip.org,financeiro@rbcip.org,luiz.rocha@rbcip.org";
+    if(emails){ try{ MailApp.sendEmail({ to:emails, subject:"Recibo de reembolso Nº "+num+" — "+(r.nome||"")+" ("+d.protocolo+")",
+      htmlBody:'<div style="font-family:Arial,sans-serif;max-width:520px;margin:0 auto"><div style="background:#1A3A5C;color:#fff;padding:16px 20px;border-radius:10px 10px 0 0"><h2 style="margin:0;font-size:18px">Recibo de Reembolso</h2></div><div style="background:#fff;padding:20px;border-radius:0 0 10px 10px;border:1px solid #E2E8F0;border-top:none"><table style="width:100%;font-size:13px;color:#555;border-collapse:collapse"><tr><td style="padding:6px 0;font-weight:600">Recibo Nº</td><td style="padding:6px 0">'+num+'/'+new Date().getFullYear()+'</td></tr><tr><td style="padding:6px 0;font-weight:600">Protocolo</td><td style="padding:6px 0">'+d.protocolo+'</td></tr><tr><td style="padding:6px 0;font-weight:600">Beneficiário</td><td style="padding:6px 0">'+(r.nome||"")+'</td></tr><tr><td style="padding:6px 0;font-weight:600">CPF</td><td style="padding:6px 0">'+(r.cpf||"")+'</td></tr><tr><td style="padding:6px 0;font-weight:600">Valor</td><td style="padding:6px 0;font-weight:700;color:#1A3A5C">'+valorFmt+'</td></tr></table><p style="font-size:13px;color:#475569;margin:14px 0 0">📎 Recibo em PDF em anexo. <a href="'+pdf.getUrl()+'">Abrir no Drive</a></p></div></div>',
+      attachments:[blob] }); }catch(eMail){} }
+    return _jr({success:true, link:pdf.getUrl(), numero:num});
+  }catch(err){ return _jr({success:false, error:"Falha no recibo: "+String(err && err.message || err)}); }
+}
+
+// ── Upload de imagem ao Drive (para o formulário do motorista) ──
 
 // Faz um GET no PostgREST do Supabase usando o token do usuário (respeita a RLS)
 function _sbGet(path, jwt){
