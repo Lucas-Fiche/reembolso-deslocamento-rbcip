@@ -299,6 +299,8 @@ async function loadDetail(id){
     h+='<button onclick="mudarStatus(\''+id+'\',\''+b[0]+'\')" style="background:'+b[1]+';color:'+b[2]+';border:none;padding:8px 14px;border-radius:6px;font-family:inherit;font-size:13px;font-weight:600;cursor:pointer">'+b[3]+'</button>';
   });
   h+='</div>';
+  h+='<div style="margin-top:10px"><button onclick="editarDados(\''+id+'\')" style="background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:8px 14px;border-radius:6px;font-family:inherit;font-size:13px;font-weight:600;cursor:pointer">✏️ Editar dados</button></div>';
+  h+='<div id="editbox-'+id+'"></div>';
 
   box.innerHTML=h;
   if(pts.length) renderMapa("mapa-"+id, pts);
@@ -396,6 +398,37 @@ function renderStats(){
   h+='</div><h4 style="margin:16px 0 6px;font-size:12px;color:var(--text3);text-transform:uppercase">Por status</h4>';
   h+='<table><tbody>'+Object.keys(st).map(function(k){ return '<tr><td><span class="st st-'+esc(k)+'">'+esc(k)+'</span></td><td class="right">'+st[k]+'</td></tr>'; }).join("")+'</tbody></table>';
   el("stats_corpo").innerHTML=h;
+}
+
+// ── Edição de dados pelo admin ──
+async function editarDados(id){
+  var box=el("editbox-"+id); if(!box)return;
+  if(box.innerHTML){ box.innerHTML=""; return; } // toggle
+  var q=await sb.from("reembolsos").select("nome,cpf,rg,orgao,email,telefone,veiculo,placa,dist_total,consumo,preco_base,preco_real,usou_estimativa").eq("id",id).maybeSingle();
+  var r=(q&&q.data)||{};
+  function f(lbl,key,val,extra){ return '<label style="display:block;font-size:11px;color:var(--text3);margin-top:6px">'+lbl+'</label><input id="ed-'+key+'-'+id+'" value="'+esc(val==null?"":val)+'" '+(extra||"")+' style="width:100%;padding:7px 9px;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--text)">'; }
+  var h='<div style="background:var(--surface);border:1px dashed var(--border);border-radius:8px;padding:12px;margin-top:8px">';
+  h+='<div style="font-weight:600;margin-bottom:4px">✏️ Editar dados</div>';
+  h+='<div style="display:grid;grid-template-columns:1fr 1fr;gap:0 10px">';
+  h+=f("Nome","nome",r.nome)+f("CPF","cpf",r.cpf)+f("RG","rg",r.rg)+f("Órgão","orgao",r.orgao)+f("E-mail","email",r.email)+f("Telefone","telefone",r.telefone)+f("Veículo","veiculo",r.veiculo)+f("Placa","placa",r.placa);
+  h+=f("Distância (km)","dist_total",r.dist_total,'inputmode="decimal"')+f("Consumo (km/L)","consumo",r.consumo,'inputmode="decimal"')+f("Preço base","preco_base",r.preco_base,'inputmode="decimal"')+f("Preço real","preco_real",r.preco_real,'inputmode="decimal"');
+  h+='</div>';
+  h+='<label style="display:block;font-size:12px;margin-top:8px"><input type="checkbox" id="ed-usou-'+id+'" '+(r.usou_estimativa?"checked":"")+' style="width:auto;margin-right:6px">Usou estimativa (o valor usa o preço base, não o preço real)</label>';
+  h+='<div style="font-size:11px;color:var(--text3);margin-top:6px">Os valores em R$ são recalculados pelo banco a partir de distância, consumo e preço.</div>';
+  h+='<div style="margin-top:10px"><button style="background:var(--primary);color:#fff;border:none;padding:8px 14px;border-radius:6px;font-family:inherit;font-size:13px;font-weight:600;cursor:pointer" onclick="salvarEdicao(\''+id+'\')">Salvar alterações</button></div>';
+  h+='</div>';
+  box.innerHTML=h;
+}
+async function salvarEdicao(id){
+  function v(key){ var e=el("ed-"+key+"-"+id); return e?e.value.trim():null; }
+  function num(key){ var s=v(key); if(!s)return null; var n=parseFloat(String(s).replace(",",".")); return isNaN(n)?null:n; }
+  var upd={ nome:v("nome")||null, cpf:v("cpf")||null, rg:v("rg")||null, orgao:v("orgao")||null, email:v("email")||null, telefone:v("telefone")||null, veiculo:v("veiculo")||null, placa:v("placa")||null,
+    dist_total:num("dist_total"), consumo:num("consumo"), preco_base:num("preco_base"), preco_real:num("preco_real"),
+    usou_estimativa: el("ed-usou-"+id)?el("ed-usou-"+id).checked:false };
+  var { error }=await sb.from("reembolsos").update(upd).eq("id",id);
+  if(error){ alert("Erro ao salvar: "+error.message); return; }
+  msgTopo("Dados atualizados ✓");
+  await carregar(); abertoId=id; render(); await loadDetail(id);
 }
 async function carregarPrecos(){
   var { data, error }=await sb.from("precos_gasolina").select("inicio,fim,valor,registrado_por").order("inicio",{ascending:false});
