@@ -18,6 +18,15 @@
   .ss .si{font-size:40px} .ss h2{margin:8px 0 4px}
   .sid{display:inline-block;background:#EFF6FF;color:var(--navy-2);font-weight:700;padding:6px 12px;border-radius:999px;margin-top:8px;font-size:14px}
   .viagem-aberta{background:var(--warn-bg);border:1px solid #FDE68A;border-radius:12px;padding:14px;margin-bottom:14px}
+  .stp{display:inline-block;padding:2px 8px;border-radius:999px;font-size:10px;font-weight:700;text-transform:uppercase;vertical-align:middle}
+  .stp-ABERTO{background:#E2E8F0;color:#475569}
+  .stp-COMPLETO{background:#DCFCE7;color:#166534}
+  .stp-REVISÃO{background:#FEF3C7;color:#92400E}
+  .stp-CORRIGIDO{background:#E0E7FF;color:#3730A3}
+  .stp-APROVADO{background:#DBEAFE;color:#1E40AF}
+  .stp-PAGO{background:#CCFBF1;color:#0F766E}
+  .stp-REPROVADO{background:#FEE2E2;color:#991B1B}
+  .pedido-item{border:1px solid var(--border);border-radius:10px;padding:10px 12px;margin-bottom:8px}
 </style>
 </head>
 <body>
@@ -56,9 +65,10 @@
     <div id="hm_revisao"></div>
     <div class="card" id="hm_nova">
       <h2>Nova viagem</h2>
-      <p class="muted">Faça o check-in ao iniciar o deslocamento (identificação, GPS e — em breve — foto do odômetro).</p>
+      <p class="muted">Faça o check-in ao iniciar o deslocamento (identificação, GPS e foto do odômetro).</p>
       <button onclick="goCheckin()">🚀 Iniciar check-in</button>
     </div>
+    <div id="hm_pedidos"></div>
   </div>
 
   <!-- CHECK-IN -->
@@ -236,6 +246,7 @@ function limpaMsg(box){var m=el(box);m.className="msg";m.textContent="";}
 function pad(n){return n<10?"0"+n:""+n;}
 function fmtHora(d){return pad(d.getHours())+":"+pad(d.getMinutes())+":"+pad(d.getSeconds());}
 function esc(s){return String(s==null?"":s).replace(/[&<>"]/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c];});}
+function brl(v){ if(v==null)return "—"; return "R$ "+Number(v).toLocaleString("pt-BR",{minimumFractionDigits:2,maximumFractionDigits:2}); }
 
 // ── Validações ──
 function validarEmail(e){return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e);}
@@ -542,6 +553,49 @@ async function checarRevisao(){
   } else box.innerHTML="";
 }
 
+// ── Meus pedidos (acompanhar) + pedágio pendente ──
+async function checarMeusPedidos(){
+  var { data }=await sb.from("vw_reembolsos").select("id,protocolo,status,val_total,criado_em").eq("motorista_id",SESSION.user.id).order("criado_em",{ascending:false}).limit(20);
+  var box=el("hm_pedidos"); if(!box)return;
+  if(!data || !data.length){ box.innerHTML=""; return; }
+  var rows=data.map(function(r){
+    var podePed=(r.status==="COMPLETO"||r.status==="REVISÃO"||r.status==="CORRIGIDO");
+    return '<div class="pedido-item"><div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap">'
+      +'<div><b>'+esc(r.protocolo)+'</b> <span class="stp stp-'+esc(r.status)+'">'+esc(r.status)+'</span><br><span class="muted">'+brl(r.val_total)+'</span></div>'
+      +(podePed?'<button class="ghost sm" style="width:auto" onclick="abrirPedPendente(\''+r.id+'\',\''+r.protocolo+'\')">+ pedágio</button>':'')
+      +'</div><div id="pedbox-'+r.id+'"></div></div>';
+  }).join("");
+  box.innerHTML='<div class="card"><h2>Meus pedidos</h2><p class="muted" style="margin-top:-2px">Acompanhe a situação e adicione pedágios que faltaram.</p>'+rows+'</div>';
+}
+function abrirPedPendente(id, protocolo){
+  var box=el("pedbox-"+id); if(!box)return;
+  if(box.innerHTML){ box.innerHTML=""; return; }
+  box.innerHTML='<div style="margin-top:10px;border-top:1px dashed var(--border);padding-top:10px">'
+    +'<div class="fr"><div><label>Fase</label><select id="pp-fase-'+id+'"><option value="ida">Ida</option><option value="volta">Volta</option></select></div>'
+    +'<div><label>Valor (R$)</label><input id="pp-val-'+id+'" inputmode="decimal"></div></div>'
+    +'<label>Comprovante (opcional)</label><input type="file" accept="image/*" id="pp-foto-'+id+'">'
+    +'<button class="sm" style="width:auto;margin-top:10px" onclick="salvarPedPendente(\''+id+'\',\''+protocolo+'\')">Adicionar pedágio</button>'
+    +'<div id="pp-msg-'+id+'" class="msg"></div></div>';
+}
+async function salvarPedPendente(id, protocolo){
+  var mbox=el("pp-msg-"+id);
+  var val=parseFloat(String(el("pp-val-"+id).value).replace(",","."))||0;
+  if(val<=0){ mbox.className="msg show err"; mbox.textContent="Informe o valor do pedágio."; return; }
+  var fase=el("pp-fase-"+id).value;
+  mbox.className="msg show info"; mbox.textContent="Salvando…";
+  var link=null, fin=el("pp-foto-"+id);
+  if(fin && fin.files && fin.files[0]){
+    try{ var b64=await compress(fin.files[0]); link=await uploadFoto(b64,"pedagio_pendente",protocolo); }
+    catch(e){ mbox.className="msg show err"; mbox.textContent="Erro na foto: "+e.message; return; }
+  }
+  var ex=await sb.from("pedagios").select("id").eq("reembolso_id",id);
+  var ordem=((ex.data&&ex.data.length)||0)+1;
+  var { error }=await sb.from("pedagios").insert({reembolso_id:id, fase:fase, ordem:ordem, valor:val, comprovante_link:link});
+  if(error){ mbox.className="msg show err"; mbox.textContent="Erro: "+error.message; return; }
+  mbox.className="msg show ok"; mbox.textContent="Pedágio adicionado! O total foi atualizado.";
+  setTimeout(function(){ checarMeusPedidos(); }, 1200);
+}
+
 // ── Início ──
 async function iniciar(){
   var { data:{ session } }=await sb.auth.getSession();
@@ -553,6 +607,7 @@ async function iniciar(){
   el("hm_papel").textContent=(PERFIL.papel)||"—";
   await checarViagemAberta();
   await checarRevisao();
+  await checarMeusPedidos();
   show("secHome");
 }
 
