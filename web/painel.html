@@ -46,8 +46,8 @@ body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--t
 table{width:100%;border-collapse:collapse;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden}
 thead th{background:var(--surface2);text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:var(--text3);font-weight:600;padding:10px 12px;border-bottom:1px solid var(--border)}
 tbody td{padding:10px 12px;border-bottom:1px solid var(--border);font-size:13px;vertical-align:middle}
-tbody tr{cursor:pointer}
-tbody tr:hover{background:var(--surface2)}
+tbody tr.clk{cursor:pointer}
+tbody tr.clk:hover{background:var(--surface2)}
 .mono{font-variant-numeric:tabular-nums}
 .right{text-align:right}
 .proto{font-weight:600;color:var(--primary)}
@@ -242,7 +242,7 @@ function render(){
   });
   el("vazio").classList.toggle("hide", rows.length>0);
   el("tbody").innerHTML = rows.map(function(r){
-    var tr='<tr onclick="toggle(\''+r.id+'\')">'
+    var tr='<tr class="clk" onclick="toggle(\''+r.id+'\')">'
       +'<td class="proto">'+esc(r.protocolo)+'</td>'
       +'<td><span class="st st-'+esc(r.status)+'">'+esc(r.status)+'</span></td>'
       +'<td>'+esc(r.nome||"—")+'</td>'
@@ -323,7 +323,7 @@ var _map=null;
 function renderMapa(divId, pts){
   try{
     if(_map){ _map.remove(); _map=null; }
-    _map=L.map(divId);
+    _map=L.map(divId,{scrollWheelZoom:false});
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© OpenStreetMap'}).addTo(_map);
     var latlngs=pts.map(function(p){ return [p.lat,p.lng]; });
     pts.forEach(function(p){ L.marker([p.lat,p.lng]).addTo(_map).bindPopup(p.label); });
