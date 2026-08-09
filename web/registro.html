@@ -660,6 +660,7 @@ async function iniciar(){
   SESSION=session;
   var { data:perfil }=await sb.from("perfis").select("nome,papel").eq("id",session.user.id).maybeSingle();
   PERFIL=perfil||{};
+  if(PERFIL.papel==="van"){ location.replace("van.html"); return; }
   var _nm=(PERFIL.nome)||session.user.email;
   el("hm_nome").textContent=_nm;
   el("hm_papel").textContent=(PERFIL.papel)||"—";
