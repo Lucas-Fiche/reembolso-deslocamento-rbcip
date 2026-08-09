@@ -34,6 +34,7 @@ body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--t
 .card .acc{position:absolute;left:0;top:0;bottom:0;width:3px}
 .card .label{font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.6px;margin-bottom:6px;font-weight:600}
 .card .val{font-size:20px;font-weight:700;letter-spacing:-.5px}
+.card .sub{font-size:10.5px;color:var(--text3);margin-top:3px}
 
 /* Filters */
 .filters{display:flex;gap:10px;padding:10px 20px;background:var(--surface);border-bottom:1px solid var(--border);flex-wrap:wrap;align-items:center}
@@ -217,19 +218,27 @@ async function carregar(){
 
 function contarCards(){
   var c={ABERTO:0,COMPLETO:0,"REVISÃO":0,CORRIGIDO:0,APROVADO:0,PAGO:0,REPROVADO:0};
-  var soma=0;
-  DADOS.forEach(function(r){ if(c[r.status]!=null)c[r.status]++; if(r.val_total)soma+=Number(r.val_total); });
+  var somaPagos=0, kmSemRep=0, valSemRep=0;
+  DADOS.forEach(function(r){
+    if(c[r.status]!=null)c[r.status]++;
+    if(r.status==="PAGO" && r.val_total) somaPagos+=Number(r.val_total);
+    if(r.status!=="REPROVADO"){ if(r.dist_total)kmSemRep+=Number(r.dist_total); if(r.val_total)valSemRep+=Number(r.val_total); }
+  });
+  var kmTxt=Number(kmSemRep).toLocaleString("pt-BR",{maximumFractionDigits:1})+" km";
   var defs=[
-    {k:"TOTAL",v:DADOS.length,acc:"var(--primary)"},
-    {k:"Aguardando",v:c.COMPLETO,acc:"var(--success)"},
-    {k:"Em revisão",v:c["REVISÃO"],acc:"#D97706"},
-    {k:"Aprovados",v:c.APROVADO,acc:"var(--primary)"},
-    {k:"Pagos",v:c.PAGO,acc:"#0F766E"},
+    {k:"Total",v:DADOS.length,acc:"var(--primary)"},
+    {k:"Abertos",v:c.ABERTO,sub:"Em andamento",acc:"#D97706"},
+    {k:"Aguardando análise",v:c.COMPLETO,sub:"Para analisar",acc:"var(--success)"},
+    {k:"Corrigidos",v:c.CORRIGIDO,sub:"Reanalisar",acc:"#7C3AED"},
+    {k:"Em revisão",v:c["REVISÃO"],sub:"Com o motorista",acc:"#D97706"},
+    {k:"Aprovados",v:c.APROVADO,sub:"Aguardando pagamento",acc:"var(--primary)"},
+    {k:"Pagos",v:c.PAGO,sub:brl(somaPagos),acc:"#0F766E"},
     {k:"Reprovados",v:c.REPROVADO,acc:"var(--danger)"},
-    {k:"Soma R$",v:brl(soma),acc:"#7C3AED"}
+    {k:"KM total",v:kmTxt,sub:"Sem reprovados",acc:"#0EA5E9"},
+    {k:"Valor total",v:brl(valSemRep),sub:"Sem reprovados",acc:"#16A34A"}
   ];
   el("cards").innerHTML = defs.map(function(d){
-    return '<div class="card"><div class="acc" style="background:'+d.acc+'"></div><div class="label">'+d.k+'</div><div class="val">'+d.v+'</div></div>';
+    return '<div class="card"><div class="acc" style="background:'+d.acc+'"></div><div class="label">'+d.k+'</div><div class="val">'+d.v+'</div>'+(d.sub?'<div class="sub">'+d.sub+'</div>':'')+'</div>';
   }).join("");
 }
 

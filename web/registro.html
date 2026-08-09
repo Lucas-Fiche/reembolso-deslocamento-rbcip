@@ -27,6 +27,26 @@
   .stp-PAGO{background:#CCFBF1;color:#0F766E}
   .stp-REPROVADO{background:#FEE2E2;color:#991B1B}
   .pedido-item{border:1px solid var(--border);border-radius:10px;padding:10px 12px;margin-bottom:8px}
+  .userbar{display:flex;align-items:center;justify-content:space-between;gap:12px}
+  .u-left{display:flex;align-items:center;gap:12px;min-width:0}
+  .avatar{width:44px;height:44px;border-radius:50%;background:linear-gradient(135deg,var(--navy-2),var(--accent));color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:16px;flex:0 0 auto}
+  .u-name{font-weight:700;font-size:15px;line-height:1.25;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .btn-sair{background:var(--bg);border:1.5px solid var(--border);color:var(--text-2);padding:9px 16px;border-radius:10px;font-size:13px;font-weight:600;cursor:pointer;width:auto;margin:0;flex:0 0 auto}
+  .btn-sair:hover{background:#fff;border-color:var(--text-3);color:var(--text)}
+  .card-h{display:flex;align-items:center;gap:9px;font-size:15px;font-weight:700;color:var(--navy)}
+  .card-h .ic{width:32px;height:32px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:16px;background:#EFF6FF;flex:0 0 auto}
+  .btn-hero{background:linear-gradient(135deg,var(--navy-2),var(--accent))}
+  .btn-hero:hover{background:linear-gradient(135deg,var(--navy),var(--navy-2))}
+  .collapse-h{display:flex;align-items:center;justify-content:space-between;cursor:pointer;gap:8px}
+  .collapse-h .caret{transition:transform .2s;color:var(--navy-2);font-size:13px}
+  .collapse.open .collapse-h .caret{transform:rotate(180deg)}
+  .collapse-body{display:none;margin-top:14px}
+  .collapse.open .collapse-body{display:block}
+  .step{display:flex;gap:12px;margin-top:14px}
+  .step .n{width:27px;height:27px;border-radius:50%;background:#EFF6FF;color:var(--navy-2);font-weight:700;font-size:13px;display:flex;align-items:center;justify-content:center;flex:0 0 auto}
+  .step .t{font-weight:700;font-size:14px}
+  .step .d{font-size:13px;color:var(--text-2);margin-top:2px;line-height:1.55}
+  .aviso{background:var(--warn-bg);border:1px solid #FDE68A;border-radius:10px;padding:12px 14px;margin-top:16px;font-size:12.5px;color:var(--warn);line-height:1.7}
 </style>
 </head>
 <body>
@@ -56,19 +76,49 @@
   <!-- HOME -->
   <div id="secHome" class="hide">
     <div class="card">
-      <div class="who">
-        <div><h2 id="hm_nome">—</h2><span class="pill" id="hm_papel">—</span></div>
-        <button class="link" onclick="sair()">Sair</button>
+      <div class="userbar">
+        <div class="u-left">
+          <div class="avatar" id="hm_avatar">?</div>
+          <div style="min-width:0"><div class="u-name" id="hm_nome">—</div><span class="pill" id="hm_papel">—</span></div>
+        </div>
+        <button class="btn-sair" onclick="sair()">Sair</button>
       </div>
     </div>
+
     <div id="hm_aberta"></div>
     <div id="hm_revisao"></div>
+
     <div class="card" id="hm_nova">
-      <h2>Nova viagem</h2>
-      <p class="muted">Faça o check-in ao iniciar o deslocamento (identificação, GPS e foto do odômetro).</p>
-      <button onclick="goCheckin()">🚀 Iniciar check-in</button>
+      <div class="card-h"><span class="ic">🚀</span> Nova viagem</div>
+      <p class="muted" style="margin-top:8px">Faça o check-in ao iniciar o deslocamento — seus dados e a foto do odômetro. O GPS e o horário entram automaticamente.</p>
+      <button class="btn-hero" onclick="goCheckin()">Iniciar check-in</button>
     </div>
-    <div id="hm_pedidos"></div>
+
+    <div class="card collapse" id="hm_como">
+      <div class="collapse-h" onclick="el('hm_como').classList.toggle('open')">
+        <div class="card-h"><span class="ic">📋</span> Como funciona?</div>
+        <span class="caret">▾</span>
+      </div>
+      <div class="collapse-body">
+        <p class="muted">O registro tem <b>2 momentos</b>:</p>
+        <div class="step"><div class="n">1</div><div><div class="t">Check-in (antes de sair)</div><div class="d">Preencha seus dados e tire a foto do odômetro. O <b>GPS e o horário</b> são registrados automaticamente.</div></div></div>
+        <div class="step"><div class="n">2</div><div><div class="t">Paradas + check-out (ao terminar)</div><div class="d">Informe cada trecho (origem, destino e km) com o <b>print do Google Maps</b>, os pedágios, o combustível e a foto do odômetro final. O app <b>calcula o reembolso</b> automaticamente.</div></div></div>
+        <div class="aviso">⚠️ <b>Dicas:</b><br>• Cada parada = um trecho (origem → destino + km).<br>• Se um pedido cair em <b>revisão</b>, ele aparece aqui na tela inicial para você corrigir.<br>• Pedágio de plano (Sem Parar, ConectCar) que chegou depois? Use o <b>Pedágio pendente</b> abaixo.</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-h"><span class="ic">🔎</span> Acompanhar meus pedidos</div>
+      <p class="muted" style="margin:8px 0 12px">Veja a situação dos seus reembolsos.</p>
+      <div id="hm_pedidos"></div>
+    </div>
+
+    <div class="card" style="border-color:#FBCFE8;background:#FEF5F7">
+      <div class="card-h"><span class="ic" style="background:#FCE7F3">🧾</span> Pedágio pendente</div>
+      <p class="muted" style="margin:8px 0 12px">Usa plano de pedágio (Sem Parar, ConectCar…) e o comprovante chegou <b>depois</b> de enviar o reembolso? Adicione o pedágio à sua solicitação aqui.</p>
+      <button class="btn-hero" onclick="togglePedPendente()">Lançar pedágio pendente</button>
+      <div id="pedPendenteBox"></div>
+    </div>
   </div>
 
   <!-- CHECK-IN -->
@@ -108,7 +158,7 @@
       <div id="ci_prev" class="muted" style="margin-top:8px">Nenhuma foto ainda.</div>
     </div>
 
-    <button onclick="enviarCI()">✅ Confirmar check-in</button>
+    <button class="btn-hero" onclick="enviarCI()">✅ Confirmar check-in</button>
     <button class="ghost" onclick="show('secHome')">← Voltar</button>
     <div id="msgCI" class="msg"></div>
   </div>
@@ -168,10 +218,10 @@
       <div id="co_prev" class="muted" style="margin-top:8px">Nenhuma foto ainda.</div>
     </div>
 
-    <button onclick="calcular()">🧮 Calcular total</button>
+    <button class="btn-hero" onclick="calcular()">🧮 Calcular total</button>
     <div id="resumoCard" class="card hide" style="margin-top:16px">
       <div id="resumo"></div>
-      <button onclick="enviarFinal()">✅ Enviar solicitação</button>
+      <button class="btn-hero" onclick="enviarFinal()">✅ Enviar solicitação</button>
     </div>
     <button class="ghost" onclick="show('secHome')">← Voltar ao início</button>
     <div id="msgFinal" class="msg"></div>
@@ -554,46 +604,53 @@ async function checarRevisao(){
 }
 
 // ── Meus pedidos (acompanhar) + pedágio pendente ──
+var _meusPedidos=[], _meusShow=5;
 async function checarMeusPedidos(){
-  var { data }=await sb.from("vw_reembolsos").select("id,protocolo,status,val_total,criado_em").eq("motorista_id",SESSION.user.id).order("criado_em",{ascending:false}).limit(20);
+  var { data }=await sb.from("vw_reembolsos").select("id,protocolo,status,val_total,criado_em").eq("motorista_id",SESSION.user.id).order("criado_em",{ascending:false});
+  _meusPedidos=data||[]; _meusShow=5; renderMeusPedidos();
+}
+function renderMeusPedidos(){
   var box=el("hm_pedidos"); if(!box)return;
-  if(!data || !data.length){ box.innerHTML=""; return; }
-  var rows=data.map(function(r){
-    var podePed=(r.status==="COMPLETO"||r.status==="REVISÃO"||r.status==="CORRIGIDO");
-    return '<div class="pedido-item"><div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap">'
-      +'<div><b>'+esc(r.protocolo)+'</b> <span class="stp stp-'+esc(r.status)+'">'+esc(r.status)+'</span><br><span class="muted">'+brl(r.val_total)+'</span></div>'
-      +(podePed?'<button class="ghost sm" style="width:auto" onclick="abrirPedPendente(\''+r.id+'\',\''+r.protocolo+'\')">+ pedágio</button>':'')
-      +'</div><div id="pedbox-'+r.id+'"></div></div>';
+  if(!_meusPedidos.length){ box.innerHTML='<p class="muted">Você ainda não tem pedidos.</p>'; return; }
+  var rows=_meusPedidos.slice(0,_meusShow).map(function(r){
+    return '<div class="pedido-item"><div style="display:flex;justify-content:space-between;align-items:center;gap:8px"><span><b>'+esc(r.protocolo)+'</b> <span class="stp stp-'+esc(r.status)+'">'+esc(r.status)+'</span></span><span class="muted">'+brl(r.val_total)+'</span></div></div>';
   }).join("");
-  box.innerHTML='<div class="card"><h2>Meus pedidos</h2><p class="muted" style="margin-top:-2px">Acompanhe a situação e adicione pedágios que faltaram.</p>'+rows+'</div>';
+  var mais=(_meusPedidos.length>_meusShow) ? '<button class="ghost sm" style="width:auto;margin-top:4px" onclick="_meusShow+=10;renderMeusPedidos()">Ver mais ('+(_meusPedidos.length-_meusShow)+')</button>' : '';
+  box.innerHTML=rows+mais;
 }
-function abrirPedPendente(id, protocolo){
-  var box=el("pedbox-"+id); if(!box)return;
+
+// ── Pedágio pendente (fluxo dedicado) ──
+async function togglePedPendente(){
+  var box=el("pedPendenteBox"); if(!box)return;
   if(box.innerHTML){ box.innerHTML=""; return; }
-  box.innerHTML='<div style="margin-top:10px;border-top:1px dashed var(--border);padding-top:10px">'
-    +'<div class="fr"><div><label>Fase</label><select id="pp-fase-'+id+'"><option value="ida">Ida</option><option value="volta">Volta</option></select></div>'
-    +'<div><label>Valor (R$)</label><input id="pp-val-'+id+'" inputmode="decimal"></div></div>'
-    +'<label>Comprovante (opcional)</label><input type="file" accept="image/*" id="pp-foto-'+id+'">'
-    +'<button class="sm" style="width:auto;margin-top:10px" onclick="salvarPedPendente(\''+id+'\',\''+protocolo+'\')">Adicionar pedágio</button>'
-    +'<div id="pp-msg-'+id+'" class="msg"></div></div>';
+  var { data }=await sb.from("vw_reembolsos").select("id,protocolo,status,criado_em").eq("motorista_id",SESSION.user.id).in("status",["COMPLETO","REVISÃO","CORRIGIDO"]).order("criado_em",{ascending:false});
+  if(!data || !data.length){ box.innerHTML='<p class="muted" style="margin-top:10px">Você não tem pedidos elegíveis para adicionar pedágio no momento.</p>'; return; }
+  var opts=data.map(function(r){ return '<option value="'+r.id+'|'+esc(r.protocolo)+'">'+esc(r.protocolo)+' — '+esc(r.status)+'</option>'; }).join("");
+  box.innerHTML='<div style="margin-top:14px;border-top:1px dashed var(--border);padding-top:14px">'
+    +'<label>Pedido</label><select id="pp-sel">'+opts+'</select>'
+    +'<div class="fr"><div><label>Fase</label><select id="pp-fase"><option value="ida">Ida</option><option value="volta">Volta</option></select></div>'
+    +'<div><label>Valor (R$)</label><input id="pp-val" inputmode="decimal"></div></div>'
+    +'<label>Comprovante (opcional)</label><input type="file" accept="image/*" id="pp-foto">'
+    +'<button style="margin-top:12px" onclick="salvarPedPendente()">Adicionar pedágio</button>'
+    +'<div id="pp-msg" class="msg"></div></div>';
 }
-async function salvarPedPendente(id, protocolo){
-  var mbox=el("pp-msg-"+id);
-  var val=parseFloat(String(el("pp-val-"+id).value).replace(",","."))||0;
+async function salvarPedPendente(){
+  var mbox=el("pp-msg"), sel=el("pp-sel").value.split("|"), id=sel[0], protocolo=sel[1];
+  var val=parseFloat(String(el("pp-val").value).replace(",","."))||0;
   if(val<=0){ mbox.className="msg show err"; mbox.textContent="Informe o valor do pedágio."; return; }
-  var fase=el("pp-fase-"+id).value;
   mbox.className="msg show info"; mbox.textContent="Salvando…";
-  var link=null, fin=el("pp-foto-"+id);
+  var link=null, fin=el("pp-foto");
   if(fin && fin.files && fin.files[0]){
     try{ var b64=await compress(fin.files[0]); link=await uploadFoto(b64,"pedagio_pendente",protocolo); }
     catch(e){ mbox.className="msg show err"; mbox.textContent="Erro na foto: "+e.message; return; }
   }
   var ex=await sb.from("pedagios").select("id").eq("reembolso_id",id);
   var ordem=((ex.data&&ex.data.length)||0)+1;
-  var { error }=await sb.from("pedagios").insert({reembolso_id:id, fase:fase, ordem:ordem, valor:val, comprovante_link:link});
+  var { error }=await sb.from("pedagios").insert({reembolso_id:id, fase:el("pp-fase").value, ordem:ordem, valor:val, comprovante_link:link});
   if(error){ mbox.className="msg show err"; mbox.textContent="Erro: "+error.message; return; }
-  mbox.className="msg show ok"; mbox.textContent="Pedágio adicionado! O total foi atualizado.";
-  setTimeout(function(){ checarMeusPedidos(); }, 1200);
+  mbox.className="msg show ok"; mbox.textContent="Pedágio adicionado ao "+protocolo+"! O total foi atualizado.";
+  el("pp-val").value=""; if(fin)fin.value="";
+  checarMeusPedidos();
 }
 
 // ── Início ──
@@ -603,8 +660,10 @@ async function iniciar(){
   SESSION=session;
   var { data:perfil }=await sb.from("perfis").select("nome,papel").eq("id",session.user.id).maybeSingle();
   PERFIL=perfil||{};
-  el("hm_nome").textContent=(PERFIL.nome)||session.user.email;
+  var _nm=(PERFIL.nome)||session.user.email;
+  el("hm_nome").textContent=_nm;
   el("hm_papel").textContent=(PERFIL.papel)||"—";
+  el("hm_avatar").textContent=((_nm||"?").trim().charAt(0)||"?").toUpperCase();
   await checarViagemAberta();
   await checarRevisao();
   await checarMeusPedidos();
