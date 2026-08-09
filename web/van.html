@@ -88,7 +88,7 @@
     </div>
     <div class="card">
       <div class="card-h"><span class="ic">👥</span> Passageiros <span class="pill" id="pax_qtd">0</span></div>
-      <div class="addrow" style="margin-top:10px"><div><label>Nome</label><input id="pax_nome" placeholder="Nome do passageiro"></div><button class="sm" style="margin-bottom:1px" onclick="addPax()">+ Add</button></div>
+      <div style="display:flex;gap:8px;margin-top:10px"><input id="pax_nome" placeholder="Nome do passageiro" style="flex:1;margin:0" onkeydown="if(event.key==='Enter')addPax()"><button onclick="addPax()" style="width:auto;margin:0;padding:12px 20px;flex:0 0 auto">Adicionar</button></div>
       <div id="pax_list" style="margin-top:10px"></div>
     </div>
     <div class="card">

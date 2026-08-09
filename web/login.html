@@ -27,6 +27,8 @@
       </div>
     </div>
     <a id="lg_admin" class="hide" href="autorizados.html"><button class="ghost" style="margin-top:16px">Gerir e-mails autorizados →</button></a>
+    <a id="lg_painel" class="hide" href="painel.html"><button class="ghost">📊 Painel</button></a>
+    <a href="registro.html"><button class="ghost">📝 Formulário</button></a>
     <button class="ghost" onclick="sair()">Sair</button>
   </div>
 
@@ -102,6 +104,7 @@ async function refreshUI(){
   el("lg_email").textContent = session.user.email;
   el("lg_papel").textContent = (perfil && perfil.papel) || "—";
   el("lg_admin").classList.toggle("hide", !(perfil && perfil.papel === "admin"));
+  el("lg_painel").classList.toggle("hide", !(perfil && perfil.papel === "admin"));
   mostrar("logado");
 }
 
