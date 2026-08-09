@@ -1,695 +1,486 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>RBCIP — Registro de Deslocamento</title>
-<link rel="stylesheet" href="estilo.css">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Registro de Deslocamento — RBCIP</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,400;0,500;0,600;0,700&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
 <style>
-  .gs{display:flex;align-items:center;gap:8px;font-size:13px;padding:10px 12px;border-radius:10px;background:var(--bg);border:1px solid var(--border);color:var(--text-2)}
-  .gs .gd{width:10px;height:10px;border-radius:50%;background:var(--text-3);flex:0 0 auto}
-  .gs.a{background:var(--ok-bg);color:#065F46;border-color:#A7F3D0} .gs.a .gd{background:var(--ok)}
-  .gs.e{background:var(--danger-bg);color:#991B1B;border-color:#FECACA} .gs.e .gd{background:var(--danger)}
-  .clock{font-variant-numeric:tabular-nums;font-weight:700;color:var(--navy);text-align:center;margin-top:8px;font-size:15px}
-  .fr{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-  @media(max-width:460px){.fr{grid-template-columns:1fr}}
-  .rq{color:var(--danger)}
-  .ss{text-align:center;padding:20px 0}
-  .ss .si{font-size:40px} .ss h2{margin:8px 0 4px}
-  .sid{display:inline-block;background:#EFF6FF;color:var(--navy-2);font-weight:700;padding:6px 12px;border-radius:999px;margin-top:8px;font-size:14px}
-  .viagem-aberta{background:var(--warn-bg);border:1px solid #FDE68A;border-radius:12px;padding:14px;margin-bottom:14px}
-  .stp{display:inline-block;padding:2px 8px;border-radius:999px;font-size:10px;font-weight:700;text-transform:uppercase;vertical-align:middle}
-  .stp-ABERTO{background:#E2E8F0;color:#475569}
-  .stp-COMPLETO{background:#DCFCE7;color:#166534}
-  .stp-REVISÃO{background:#FEF3C7;color:#92400E}
-  .stp-CORRIGIDO{background:#E0E7FF;color:#3730A3}
-  .stp-APROVADO{background:#DBEAFE;color:#1E40AF}
-  .stp-PAGO{background:#CCFBF1;color:#0F766E}
-  .stp-REPROVADO{background:#FEE2E2;color:#991B1B}
-  .pedido-item{border:1px solid var(--border);border-radius:10px;padding:10px 12px;margin-bottom:8px}
-  .userbar{display:flex;align-items:center;justify-content:space-between;gap:12px}
-  .u-left{display:flex;align-items:center;gap:12px;min-width:0}
-  .avatar{width:44px;height:44px;border-radius:50%;background:linear-gradient(135deg,var(--navy-2),var(--accent));color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:16px;flex:0 0 auto}
-  .u-name{font-weight:700;font-size:15px;line-height:1.25;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  .btn-sair{background:var(--bg);border:1.5px solid var(--border);color:var(--text-2);padding:9px 16px;border-radius:10px;font-size:13px;font-weight:600;cursor:pointer;width:auto;margin:0;flex:0 0 auto}
-  .btn-sair:hover{background:#fff;border-color:var(--text-3);color:var(--text)}
-  .card-h{display:flex;align-items:center;gap:9px;font-size:15px;font-weight:700;color:var(--navy)}
-  .card-h .ic{width:32px;height:32px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:16px;background:#EFF6FF;flex:0 0 auto}
-  .btn-hero{background:linear-gradient(135deg,var(--navy-2),var(--accent))}
-  .btn-hero:hover{background:linear-gradient(135deg,var(--navy),var(--navy-2))}
-  .card.como{padding:0;overflow:hidden;border-color:#BFDBFE}
-  .como-h{display:flex;align-items:center;gap:12px;padding:15px 18px;cursor:pointer;background:linear-gradient(135deg,#E7F0FF,#F6FAFF);user-select:none;-webkit-tap-highlight-color:transparent}
-  .como-ic{width:36px;height:36px;border-radius:10px;background:#fff;display:flex;align-items:center;justify-content:center;font-size:18px;box-shadow:0 1px 3px rgba(0,0,0,.08);flex:0 0 auto}
-  .como-t{flex:1;font-weight:800;font-size:16px;color:var(--navy-2)}
-  .como-arrow{color:var(--navy-2);font-size:12px;transition:transform .3s;flex:0 0 auto}
-  .card.como.open .como-arrow{transform:rotate(90deg)}
-  .collapse-body{max-height:0;overflow:hidden;transition:max-height .4s ease}
-  .cb-inner{padding:6px 18px 18px}
-  .step{display:flex;gap:12px;margin-top:16px}
-  .step .n{width:28px;height:28px;border-radius:50%;font-weight:700;font-size:13px;display:flex;align-items:center;justify-content:center;flex:0 0 auto}
-  .step .n.g{background:#ECFDF5;color:#059669} .step .n.b{background:#EFF6FF;color:#2563EB}
-  .step .n.p{background:#F5F3FF;color:#7C3AED} .step .n.a{background:#FFFBEB;color:#D97706}
-  .step .t{font-weight:700;font-size:14px}
-  .step .d{font-size:13px;color:var(--text-2);margin-top:2px;line-height:1.55}
-  .aviso{background:var(--warn-bg);border:1px solid #FDE68A;border-radius:10px;padding:12px 14px;margin-top:16px;font-size:12.5px;color:var(--warn);line-height:1.7}
+:root{--bg:#F4F6FA;--surface:#FFF;--primary:#1A3A5C;--primary-light:#2E6BAD;--accent:#0EA5E9;--accent-glow:rgba(14,165,233,.12);--success:#10B981;--success-bg:#ECFDF5;--warning:#F59E0B;--warning-bg:#FFFBEB;--danger:#EF4444;--danger-bg:#FEF2F2;--text:#1E293B;--text-secondary:#64748B;--text-muted:#94A3B8;--border:#E2E8F0;--border-focus:#0EA5E9;--radius:14px;--radius-sm:10px;--shadow-sm:0 1px 3px rgba(0,0,0,.06);--shadow-md:0 4px 16px rgba(0,0,0,.08)}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min-height:100dvh;-webkit-font-smoothing:antialiased}
+.hdr{background:linear-gradient(135deg,var(--primary),var(--primary-light));color:#fff;padding:16px 20px;position:sticky;top:0;z-index:100;box-shadow:0 4px 20px rgba(26,58,92,.25);display:flex;align-items:center;gap:12px}.hdr img{height:38px;width:auto;flex:0 0 auto}.hdr h1{font-size:18px;font-weight:700;margin-bottom:2px}.hdr p{font-size:13px;opacity:.75}
+.cnt{max-width:480px;margin:0 auto;padding:16px 16px 40px}
+.card{background:var(--surface);border-radius:var(--radius);padding:20px;margin-bottom:14px;box-shadow:var(--shadow-sm);border:1px solid var(--border);animation:fi .4s ease both}@keyframes fi{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+.ct{font-size:13px;font-weight:600;color:var(--text-secondary);text-transform:uppercase;letter-spacing:.8px;margin-bottom:14px;display:flex;align-items:center;gap:8px}.ct .ic{width:28px;height:28px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0}
+.f{margin-bottom:14px}.f:last-child{margin-bottom:0}.f label{display:block;font-size:13px;font-weight:600;color:var(--text);margin-bottom:6px}.f .rq{color:var(--danger)}
+.f input,.f select,.f textarea{width:100%;padding:12px 14px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-family:'DM Sans',sans-serif;font-size:15px;color:var(--text);background:var(--surface);outline:none;-webkit-appearance:none}.f input:focus,.f select:focus{border-color:var(--border-focus);box-shadow:0 0 0 3px var(--accent-glow)}
+.f select{padding-right:36px;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%2364748B' stroke-width='1.5' fill='none'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 14px center}
+.fr{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.cl{display:block;cursor:pointer}.cz{border:2px dashed var(--border);border-radius:var(--radius);padding:22px 16px;text-align:center;overflow:hidden;pointer-events:none;transition:all .25s}.cl:active .cz{border-color:var(--accent);background:var(--accent-glow)}.cz.ok{border-style:solid;border-color:var(--success);padding:0;background:#000}.cz .pi{font-size:26px;margin-bottom:4px}.cz .pt{font-size:13px;color:var(--text-secondary);font-weight:500}.cz .ps{font-size:11px;color:var(--text-muted);margin-top:2px}.cz img{width:100%;display:block;border-radius:calc(var(--radius) - 2px)}.chi{position:absolute;width:1px;height:1px;opacity:0;overflow:hidden}
+.cm{margin-top:8px;padding:10px 12px;background:var(--success-bg);border-radius:var(--radius-sm);font-family:'JetBrains Mono',monospace;font-size:11px;color:#065F46;line-height:1.6;display:none}.cm.v{display:block}.cm .mr{display:flex;justify-content:space-between}.cm .ml{font-family:'DM Sans',sans-serif;font-weight:600;font-size:11px;color:#047857}
+.gs{display:flex;align-items:center;gap:8px;padding:10px 14px;border-radius:var(--radius-sm);font-size:13px;font-weight:500;margin-bottom:14px}.gs.p{background:var(--warning-bg);color:#92400E}.gs.a{background:var(--success-bg);color:#065F46}.gs.e{background:var(--danger-bg);color:#991B1B}.gd{width:8px;height:8px;border-radius:50%;flex-shrink:0}.gs.p .gd{background:var(--warning);animation:pl 1.5s infinite}.gs.a .gd{background:var(--success)}.gs.e .gd{background:var(--danger)}@keyframes pl{0%,100%{opacity:1}50%{opacity:.3}}
+.bp{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;padding:16px;border:none;border-radius:var(--radius);background:linear-gradient(135deg,var(--primary),var(--primary-light));color:#fff;font-family:'DM Sans',sans-serif;font-size:16px;font-weight:700;cursor:pointer;box-shadow:var(--shadow-md);transition:transform .15s}.bp:active{transform:scale(.98)}.bp:disabled{opacity:.5;cursor:not-allowed}.bp.g{background:linear-gradient(135deg,#059669,#10B981)}.bp.y{background:linear-gradient(135deg,#D97706,#F59E0B);color:#1E293B}.bp.b{background:linear-gradient(135deg,#2563EB,#0EA5E9)}.bp.purple{background:linear-gradient(135deg,#7C3AED,#8B5CF6)}
+.bs{display:block;width:100%;padding:12px;border:1.5px solid var(--border);border-radius:var(--radius);background:transparent;color:var(--text-secondary);font-family:'DM Sans',sans-serif;font-size:14px;font-weight:600;cursor:pointer;margin-top:10px}
+.mc{background:var(--surface);border-radius:var(--radius);padding:24px 20px;margin-bottom:14px;box-shadow:var(--shadow-sm);border:2px solid var(--border);cursor:pointer;display:flex;align-items:center;gap:16px;animation:fi .4s ease both}.mc:active{transform:scale(.98);border-color:var(--accent)}.mc .mi{width:52px;height:52px;border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:24px;flex-shrink:0}.mc .mn h3{font-size:16px;font-weight:700;margin-bottom:4px}.mc .mn p{font-size:13px;color:var(--text-secondary);line-height:1.4}
+.ob{background:var(--warning-bg);border:1.5px solid #FCD34D;border-radius:var(--radius);padding:14px 16px;margin-bottom:14px;display:none}.ob.v{display:block}.ob .bt{font-size:13px;font-weight:700;color:#92400E;margin-bottom:4px}.ob .bd{font-size:12px;color:#A16207;line-height:1.5}
+.sec{display:none}.sec.a{display:block}
+.ss{text-align:center;padding:40px 20px;animation:fi .5s ease both}.si{width:72px;height:72px;background:var(--success-bg);border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 20px;font-size:36px}.ss h2{font-size:22px;margin-bottom:8px}.ss p{font-size:14px;color:var(--text-secondary);line-height:1.6}
+.sid{display:inline-block;margin-top:16px;padding:8px 16px;background:var(--bg);border-radius:var(--radius-sm);font-family:'JetBrains Mono',monospace;font-size:13px;color:var(--primary);font-weight:500}
+.lo{position:fixed;inset:0;background:rgba(255,255,255,.85);backdrop-filter:blur(4px);display:none;align-items:center;justify-content:center;z-index:999;flex-direction:column;gap:16px}.lo.s{display:flex}.sp{width:40px;height:40px;border:3px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:sn .7s linear infinite}@keyframes sn{to{transform:rotate(360deg)}}.lo p{font-size:14px;color:var(--text-secondary);font-weight:500}
+.lc{font-family:'JetBrains Mono',monospace;font-size:20px;font-weight:500;color:var(--primary);text-align:center;padding:8px 0;letter-spacing:1px}
+.wl{list-style:none;margin:8px 0}.wl li{padding:10px 12px;background:var(--bg);border-radius:var(--radius-sm);margin-bottom:6px;font-size:13px;color:var(--text-secondary);line-height:1.5;border-left:3px solid var(--accent);display:flex;justify-content:space-between;align-items:center;gap:8px}.wl li strong{color:var(--text)}.wl li .rmp{color:var(--danger);cursor:pointer;font-weight:700;font-size:15px;flex:0 0 auto}
+.dyn-item{background:var(--bg);border-radius:var(--radius-sm);padding:14px;margin-bottom:10px;position:relative;border:1px solid var(--border)}.dyn-item .rm{position:absolute;top:8px;right:8px;width:24px;height:24px;border-radius:50%;border:none;background:var(--danger-bg);color:var(--danger);font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center;font-weight:700}
+.add-btn{display:flex;align-items:center;justify-content:center;gap:6px;width:100%;padding:10px;border:1.5px dashed var(--border);border-radius:var(--radius-sm);background:transparent;color:var(--text-muted);font-family:'DM Sans',sans-serif;font-size:13px;font-weight:600;cursor:pointer;margin-bottom:14px}.add-btn:active{border-color:var(--accent);color:var(--accent)}
+.tog-row{display:flex;gap:0;border-radius:var(--radius-sm);overflow:hidden;border:1.5px solid var(--border);margin-bottom:14px}.tog-btn{flex:1;padding:12px 8px;text-align:center;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:600;cursor:pointer;border:none;background:var(--surface);color:var(--text-secondary);transition:all .2s}.tog-btn.on{background:var(--primary);color:#fff}
+.phase-badge{display:inline-block;padding:4px 12px;border-radius:20px;font-size:12px;font-weight:700;letter-spacing:.5px}
+.maps-item{background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-sm);padding:14px;margin-bottom:12px}.maps-item:last-child{margin-bottom:0}
+.maps-head{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 8px;margin-bottom:10px}.maps-tag{font-size:11px;font-weight:700;color:#1E40AF;background:#DBEAFE;padding:3px 8px;border-radius:6px;letter-spacing:.3px;white-space:nowrap}.maps-sub{font-size:12px;color:var(--text-secondary);font-weight:500}
+.ped-group-title{font-size:12px;font-weight:700;color:var(--text-secondary);text-transform:uppercase;letter-spacing:.5px;margin:4px 0 10px;display:flex;align-items:center;gap:6px}.ped-group-title:not(:first-child){margin-top:18px;padding-top:16px;border-top:1px solid var(--border)}
+.stp{display:inline-block;padding:2px 8px;border-radius:999px;font-size:10px;font-weight:700;text-transform:uppercase}
+.stp-ABERTO{background:#E2E8F0;color:#475569}.stp-COMPLETO{background:#DCFCE7;color:#166534}.stp-REVISÃO{background:#FEF3C7;color:#92400E}.stp-CORRIGIDO{background:#E0E7FF;color:#3730A3}.stp-APROVADO{background:#DBEAFE;color:#1E40AF}.stp-PAGO{background:#CCFBF1;color:#0F766E}.stp-REPROVADO{background:#FEE2E2;color:#991B1B}
+.msg{margin-top:12px;padding:11px 13px;border-radius:10px;font-size:13.5px;display:none}.msg.show{display:block}.msg.err{background:var(--danger-bg);color:#991B1B;border:1px solid #FECACA}.msg.ok{background:var(--success-bg);color:#065F46;border:1px solid #A7F3D0}.msg.info{background:var(--warning-bg);color:#92400E;border:1px solid #FDE68A}
+.foot{text-align:center;color:var(--text-muted);font-size:12.5px;padding:8px 16px 28px;line-height:1.6}.foot strong{color:var(--text-secondary)}
 </style>
 </head>
 <body>
-<div class="hdr"><div class="hdr-in"><img class="hdr-logo" src="assets/logo-branca.png" alt="RBCIP"><div><h1>Reembolso de Deslocamento</h1><p>Registro de deslocamento</p></div></div></div>
-<div class="wrap">
+<header class="hdr"><img src="assets/logo-branca.png" alt="RBCIP"><div><h1>Registro de Deslocamento</h1><p>RBCIP — Reembolso de Campo</p></div></header>
+<div class="cnt">
 
-  <div id="carregando" class="card"><p class="muted">Carregando…</p></div>
-
-  <!-- LOGIN POR CÓDIGO -->
-  <div id="secLogin" class="card hide">
-    <h2>Entrar</h2>
-    <p class="muted">Use o código de 6 dígitos enviado ao seu e-mail.</p>
-    <div id="passoEmail">
-      <label>E-mail</label>
-      <input id="lg_email" type="email" placeholder="voce@exemplo.com" autocomplete="email">
-      <button id="btnEnviar" onclick="enviarCodigo()">Enviar código</button>
-    </div>
-    <div id="passoCodigo" class="hide">
-      <label>Código recebido</label>
-      <input id="lg_codigo" type="text" inputmode="numeric" maxlength="6" placeholder="000000">
-      <button id="btnConfirmar" onclick="confirmarCodigo()">Entrar</button>
-      <button class="link" onclick="voltarEmail()">← usar outro e-mail</button>
-    </div>
+<!-- LOGIN -->
+<div class="sec a" id="secLogin">
+  <div class="card">
+    <div class="ct"><span class="ic" style="background:#EFF6FF;color:#2563EB">🔑</span> Entrar</div>
+    <p style="font-size:13px;color:var(--text-secondary);margin-bottom:8px">Use o código de 6 dígitos enviado ao seu e-mail.</p>
+    <div id="passoEmail"><div class="f"><label>E-mail</label><input id="lg_email" type="email" placeholder="voce@exemplo.com" autocomplete="email"></div>
+      <button class="bp b" id="btnEnviar" onclick="enviarCodigo()">Enviar código</button></div>
+    <div id="passoCodigo" style="display:none"><div class="f"><label>Código recebido</label><input id="lg_codigo" type="text" inputmode="numeric" maxlength="6" placeholder="000000"></div>
+      <button class="bp g" id="btnConfirmar" onclick="confirmarCodigo()">Entrar</button>
+      <button class="bs" onclick="voltarEmail()">← usar outro e-mail</button></div>
     <div id="msgLogin" class="msg"></div>
   </div>
-
-  <!-- HOME -->
-  <div id="secHome" class="hide">
-    <div class="card">
-      <div class="userbar">
-        <div class="u-left">
-          <div class="avatar" id="hm_avatar">?</div>
-          <div style="min-width:0"><div class="u-name" id="hm_nome">—</div><span class="pill" id="hm_papel">—</span></div>
-        </div>
-        <button class="btn-sair" onclick="sair()">Sair</button>
-      </div>
-    </div>
-
-    <div id="hm_aberta"></div>
-    <div id="hm_revisao"></div>
-
-    <div class="card" id="hm_nova">
-      <div class="card-h"><span class="ic">🚀</span> Nova viagem</div>
-      <p class="muted" style="margin-top:8px">Faça o check-in ao iniciar o deslocamento — seus dados e a foto do odômetro. O GPS e o horário entram automaticamente.</p>
-      <button class="btn-hero" onclick="goCheckin()">Iniciar check-in</button>
-    </div>
-
-    <div class="card como" id="hm_como">
-      <div class="como-h" onclick="toggleComo()">
-        <span class="como-ic">📋</span>
-        <span class="como-t">Como funciona?</span>
-        <span class="como-arrow">▶</span>
-      </div>
-      <div class="collapse-body"><div class="cb-inner">
-        <p style="font-weight:700;margin:6px 0 2px">O registro de deslocamento tem 4 etapas:</p>
-        <div class="step"><div class="n g">1</div><div><div class="t">CHECK-IN (antes de sair)</div><div class="d">Preencha seus dados, informe quantas paradas terá na ida e na volta, e tire a foto do odômetro. O GPS e horário são registrados automaticamente.</div></div></div>
-        <div class="step"><div class="n b">2</div><div><div class="t">PARADAS DA IDA (ao chegar em cada destino)</div><div class="d">Registro rápido: informe origem, destino e km. O app marca GPS e horário automaticamente. <b>Não precisa de foto aqui</b> — funciona mesmo com sinal fraco.</div></div></div>
-        <div class="step"><div class="n p">3</div><div><div class="t">PARADAS DA VOLTA (ao chegar em cada ponto de retorno)</div><div class="d">Mesmo processo rápido da ida: origem, destino e km de cada trecho da volta.</div></div></div>
-        <div class="step"><div class="n a">4</div><div><div class="t">CHECK-OUT (ao finalizar a viagem)</div><div class="d">Aqui você anexa tudo de uma vez: foto do odômetro final, <b>print do Google Maps de cada trecho</b> (ida e volta), pedágios e o preço do combustível. O app calcula o reembolso automaticamente.</div></div></div>
-        <div class="aviso">⚠️ <b>Importante:</b><br>• Cada parada = um trecho do percurso (origem → destino + km)<br>• Durante a viagem o registro é leve, <b>sem fotos</b><br>• No check-out, anexe o print do Maps de <b>cada trecho</b><br>• Não feche o app entre etapas — seus dados ficam salvos no servidor<br>• Se tiver cupom fiscal do combustível, tenha-o em mãos no check-out</div>
-      </div></div>
-    </div>
-
-    <div class="card">
-      <div class="card-h"><span class="ic">🔎</span> Acompanhar meus pedidos</div>
-      <p class="muted" style="margin:8px 0 12px">Veja a situação dos seus reembolsos.</p>
-      <div id="hm_pedidos"></div>
-    </div>
-
-    <div class="card" style="border-color:#FBCFE8;background:#FEF5F7">
-      <div class="card-h"><span class="ic" style="background:#FCE7F3">🧾</span> Pedágio pendente</div>
-      <p class="muted" style="margin:8px 0 12px">Usa plano de pedágio (Sem Parar, ConectCar…) e o comprovante chegou <b>depois</b> de enviar o reembolso? Adicione o pedágio à sua solicitação aqui.</p>
-      <button class="btn-hero" onclick="togglePedPendente()">Lançar pedágio pendente</button>
-      <div id="pedPendenteBox"></div>
-    </div>
-  </div>
-
-  <!-- CHECK-IN -->
-  <div id="secCI" class="hide">
-    <div class="card">
-      <h2>👤 Identificação</h2>
-      <label>Nome completo <span class="rq">*</span></label>
-      <input type="text" id="ci_nome" autocomplete="name">
-      <label>CPF <span class="rq">*</span></label>
-      <input type="text" id="ci_cpf" inputmode="numeric" maxlength="14" placeholder="000.000.000-00">
-      <div class="fr">
-        <div><label>RG <span class="rq">*</span></label><input type="text" id="ci_rg" maxlength="20"></div>
-        <div><label>Órgão emissor <span class="rq">*</span></label><input type="text" id="ci_orgao" placeholder="Ex: SSP/SP" maxlength="20"></div>
-      </div>
-      <div class="fr">
-        <div><label>E-mail <span class="rq">*</span></label><input type="email" id="ci_email"></div>
-        <div><label>Telefone <span class="rq">*</span></label><input type="tel" id="ci_tel" maxlength="15"></div>
-      </div>
-      <div class="fr">
-        <div><label>Veículo <span class="rq">*</span></label><select id="ci_veic"><option value="">Selecione</option><option>Carro</option><option>Moto</option></select></div>
-        <div><label>Placa <span class="rq">*</span></label><input type="text" id="ci_placa" maxlength="8" style="text-transform:uppercase"></div>
-      </div>
-      <p class="muted" style="margin-top:6px">RG e órgão emissor são usados no recibo de reembolso.</p>
-    </div>
-
-    <div class="card">
-      <h2>📍 Localização</h2>
-      <div class="gs" id="ci_gs"><span class="gd"></span><span id="ci_gt">Obtendo…</span></div>
-      <div class="clock" id="ci_ck">--:--:--</div>
-      <button class="ghost sm" style="width:auto;margin-top:12px" onclick="reqGPS()">↻ Atualizar GPS</button>
-    </div>
-
-    <div class="card">
-      <h2>📸 Odômetro — saída</h2>
-      <p class="muted">Fotografe o odômetro (quilometragem) no início.</p>
-      <input type="file" accept="image/*" capture="environment" id="ci_foto" onchange="capFoto(this,'ci')">
-      <div id="ci_prev" class="muted" style="margin-top:8px">Nenhuma foto ainda.</div>
-    </div>
-
-    <button class="btn-hero" onclick="enviarCI()">✅ Confirmar check-in</button>
-    <button class="ghost" onclick="show('secHome')">← Voltar</button>
-    <div id="msgCI" class="msg"></div>
-  </div>
-
-  <!-- FINAL: paradas + check-out + cálculo -->
-  <div id="secFinal" class="hide">
-    <div class="card">
-      <h2>🗺️ Paradas — IDA</h2>
-      <p class="muted">Cada parada é um trecho com origem, destino e km.</p>
-      <div id="ida_list"></div>
-      <button class="ghost sm" style="width:auto" onclick="addParada('ida')">+ parada ida</button>
-    </div>
-    <div class="card">
-      <h2>🗺️ Paradas — VOLTA</h2>
-      <p class="muted">Sem volta? Deixe vazio.</p>
-      <div id="volta_list"></div>
-      <button class="ghost sm" style="width:auto" onclick="addParada('volta')">+ parada volta</button>
-    </div>
-    <div class="card">
-      <h2>⛽ Combustível</h2>
-      <div id="preco_base_txt" class="muted"></div>
-      <label>Modo de cálculo</label>
-      <select id="fuelMode" onchange="onFuel()">
-        <option value="estim">Estimativa (usa o preço base)</option>
-        <option value="real">Valor real (informar preço do litro)</option>
-      </select>
-      <div id="realBox" class="hide">
-        <label>Preço do litro (R$)</label><input id="fuel_preco" inputmode="decimal" placeholder="Ex: 6,29">
-        <label>Cupom fiscal do combustível</label>
-        <input type="file" accept="image/*" id="cupom_foto" onchange="capFoto(this,'cupom')"><div id="cupom_prev" class="muted"></div>
-      </div>
-      <label>Consumo do veículo (km/L)</label>
-      <input id="fuel_con" inputmode="decimal" placeholder="Padrão: 10">
-      <label>Foto do painel com o consumo (opcional)</label>
-      <input type="file" accept="image/*" id="con_foto" onchange="capFoto(this,'con')"><div id="con_prev" class="muted"></div>
-    </div>
-    <div class="card">
-      <h2>🧾 Pedágios</h2>
-      <div id="ped_list"></div>
-      <button class="ghost sm" style="width:auto" onclick="addPedagio()">+ pedágio</button>
-    </div>
-    <div class="card">
-      <h2>👥 Caronas (opcional)</h2>
-      <div id="carona_list"></div>
-      <button class="ghost sm" style="width:auto" onclick="addCarona()">+ carona</button>
-    </div>
-    <div class="card">
-      <h2>📍 Check-out (localização)</h2>
-      <div class="gs" id="co_gs"><span class="gd"></span><span id="co_gt">Obtendo…</span></div>
-      <button class="ghost sm" style="width:auto;margin-top:12px" onclick="reqGPS2()">↻ Atualizar GPS</button>
-    </div>
-
-    <div class="card">
-      <h2>📸 Odômetro — chegada</h2>
-      <p class="muted">Fotografe o odômetro (quilometragem) no fim.</p>
-      <input type="file" accept="image/*" capture="environment" id="co_foto" onchange="capFoto(this,'co')">
-      <div id="co_prev" class="muted" style="margin-top:8px">Nenhuma foto ainda.</div>
-    </div>
-
-    <button class="btn-hero" onclick="calcular()">🧮 Calcular total</button>
-    <div id="resumoCard" class="card hide" style="margin-top:16px">
-      <div id="resumo"></div>
-      <button class="btn-hero" onclick="enviarFinal()">✅ Enviar solicitação</button>
-    </div>
-    <button class="ghost" onclick="show('secHome')">← Voltar ao início</button>
-    <div id="msgFinal" class="msg"></div>
-  </div>
-
-  <!-- OK -->
-  <div id="secOk" class="card hide">
-    <div class="ss">
-      <div class="si" id="ok_icone">🚀</div>
-      <h2 id="ok_titulo">Check-in registrado!</h2>
-      <p class="muted" id="ok_texto">Sua viagem foi aberta.</p>
-      <div class="sid" id="ok_proto"></div>
-    </div>
-    <button onclick="location.reload()">← Início</button>
-  </div>
-
 </div>
 
-<div style="text-align:center;color:var(--text-3);font-size:12.5px;padding:8px 16px 28px;line-height:1.6">📱 Qualquer problema ou dúvida, fale comigo:<br><strong style="color:var(--text-2)">+55 11 93623-3054</strong></div>
+<!-- HOME -->
+<div class="sec" id="secHome">
+  <div class="card" style="padding:14px 16px;display:flex;align-items:center;justify-content:space-between;gap:12px">
+    <div style="min-width:0"><div style="font-weight:700;font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" id="hm_nome">—</div><span class="stp" style="background:#EFF6FF;color:#2563EB" id="hm_papel">motorista</span></div>
+    <button class="bs" style="width:auto;margin:0;padding:9px 16px" onclick="sair()">Sair</button>
+  </div>
+  <div class="ob" id="openBanner"><div class="bt">⚠️ Viagem em andamento</div><div class="bd" id="openDetail"></div></div>
+
+  <div class="card" id="instrCard" style="border:2px solid var(--accent);padding:0;overflow:hidden">
+    <div onclick="toggleInstr()" style="display:flex;align-items:center;justify-content:space-between;padding:16px 20px;cursor:pointer;background:linear-gradient(135deg,#EFF6FF,#DBEAFE)">
+      <div style="display:flex;align-items:center;gap:10px"><span style="font-size:22px">📋</span><span style="font-size:15px;font-weight:700;color:#1E40AF">Como funciona?</span></div>
+      <span id="instrArrow" style="font-size:16px;color:#1E40AF;transition:transform .3s">▶</span>
+    </div>
+    <div id="instrBody" style="max-height:0;overflow:hidden;transition:max-height .4s ease">
+      <div style="padding:16px 20px;font-size:13px;color:var(--text-secondary);line-height:1.8">
+        <div style="font-weight:700;color:var(--text);margin-bottom:10px;font-size:14px">O registro de deslocamento tem 4 etapas:</div>
+        <div style="display:flex;gap:10px;margin-bottom:14px"><div style="width:28px;height:28px;border-radius:50%;background:#ECFDF5;color:#059669;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;flex-shrink:0">1</div><div><strong style="color:var(--text)">CHECK-IN (antes de sair)</strong><br>Preencha seus dados, informe quantas paradas terá na ida e na volta, e tire a foto do odômetro. O GPS e horário são registrados automaticamente.</div></div>
+        <div style="display:flex;gap:10px;margin-bottom:14px"><div style="width:28px;height:28px;border-radius:50%;background:#DBEAFE;color:#2563EB;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;flex-shrink:0">2</div><div><strong style="color:var(--text)">PARADAS DA IDA (ao chegar em cada destino)</strong><br>Registro rápido: informe origem, destino e km. O app marca GPS e horário automaticamente. <strong>Não precisa de foto aqui</strong> — funciona mesmo com sinal fraco.</div></div>
+        <div style="display:flex;gap:10px;margin-bottom:14px"><div style="width:28px;height:28px;border-radius:50%;background:#E0E7FF;color:#7C3AED;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;flex-shrink:0">3</div><div><strong style="color:var(--text)">PARADAS DA VOLTA (ao chegar em cada ponto de retorno)</strong><br>Mesmo processo rápido da ida: origem, destino e km de cada trecho da volta.</div></div>
+        <div style="display:flex;gap:10px;margin-bottom:14px"><div style="width:28px;height:28px;border-radius:50%;background:#FEF3C7;color:#D97706;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;flex-shrink:0">4</div><div><strong style="color:var(--text)">CHECK-OUT (ao finalizar a viagem)</strong><br>Aqui você anexa tudo de uma vez: foto do odômetro final, o <strong>print do Google Maps de cada trecho</strong> (ida e volta), pedágios e o preço do combustível. O app calcula o reembolso automaticamente.</div></div>
+        <div style="background:var(--warning-bg);border:1px solid #FCD34D;border-radius:8px;padding:12px;margin-top:4px"><div style="font-size:12px;color:#92400E;line-height:1.6"><strong>⚠️ Importante:</strong><br>• Cada parada = um trecho do percurso (origem → destino + km)<br>• Durante a viagem o registro é leve, <strong>sem fotos</strong><br>• No check-out, anexe o print do Maps de <strong>cada trecho</strong><br>• Não feche o app entre etapas — seus dados ficam salvos no servidor<br>• Se tiver cupom fiscal do combustível, tenha-o em mãos no check-out</div></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="mc" onclick="goCheckin()" id="cardCI"><div class="mi" style="background:#ECFDF5;color:#059669">🚀</div><div class="mn"><h3>CHECK-IN</h3><p>Registre o odômetro antes de sair.</p></div></div>
+  <div class="mc" onclick="goViagem()" id="cardV" style="display:none"><div class="mi" style="background:#EFF6FF;color:#2563EB">🗺️</div><div class="mn"><h3>Viagem em Andamento</h3><p>Registrar paradas ou finalizar.</p></div></div>
+
+  <div class="card"><div class="ct"><span class="ic" style="background:#EFF6FF;color:#2563EB">🔍</span> Recuperar / Acompanhar</div>
+    <p style="font-size:13px;color:var(--text-secondary);margin-bottom:12px">Acompanhe a situação dos seus pedidos e corrija os que estão em revisão.</p>
+    <div id="meus_pedidos"></div>
+  </div>
+
+  <div class="card" style="border:1.5px solid #FCA5A5;background:#FEF2F2">
+    <div class="ct" style="color:#991B1B"><span class="ic" style="background:#FEE2E2;color:#DC2626">🧾</span> Pedágio Pendente</div>
+    <p style="font-size:13px;color:#B91C1C;margin-bottom:12px">Usa plano de pedágio (Sem Parar, ConectCar…) e o comprovante chegou <strong>depois</strong> de enviar o reembolso? Adicione o pedágio à sua solicitação aqui.</p>
+    <button class="bp b" style="padding:12px" onclick="togglePedagio()">🧾 Lançar pedágio pendente</button>
+    <div id="pedPendenteBox"></div>
+  </div>
+</div>
+
+<!-- CHECK-IN -->
+<div class="sec" id="secCI">
+  <div class="card"><div class="ct"><span class="ic" style="background:#EFF6FF;color:#2563EB">👤</span> Identificação</div>
+    <div class="f"><label>Nome completo <span class="rq">*</span></label><input type="text" id="ci_nome" autocomplete="name"></div>
+    <div class="f"><label>CPF <span class="rq">*</span></label><input type="text" id="ci_cpf" inputmode="numeric" maxlength="14"></div>
+    <div class="fr"><div class="f"><label>RG <span class="rq">*</span></label><input type="text" id="ci_rg" maxlength="20"></div><div class="f"><label>Órgão emissor <span class="rq">*</span></label><input type="text" id="ci_orgao" placeholder="Ex: SSP/SP" maxlength="20"></div></div>
+    <div class="fr"><div class="f"><label>E-mail <span class="rq">*</span></label><input type="email" id="ci_email"></div><div class="f"><label>Telefone <span class="rq">*</span></label><input type="tel" id="ci_tel" maxlength="15"></div></div>
+    <div class="fr"><div class="f"><label>Veículo <span class="rq">*</span></label><select id="ci_veic"><option value="">Selecione</option><option>Carro</option><option>Moto</option></select></div><div class="f"><label>Placa <span class="rq">*</span></label><input type="text" id="ci_placa" maxlength="8" style="text-transform:uppercase"></div></div>
+    <p style="font-size:11px;color:var(--text-muted);margin-top:4px">RG e órgão emissor são usados no recibo de reembolso.</p>
+  </div>
+  <div class="card"><div class="ct"><span class="ic" style="background:#FEF3C7;color:#D97706">📍</span> Paradas do Percurso</div>
+    <div class="fr">
+      <div class="f"><label>Paradas na IDA</label><select id="ci_ida"><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option><option value="6">6</option><option value="7">7</option><option value="8">8</option><option value="9">9</option><option value="10">10</option></select></div>
+      <div class="f"><label>Paradas na VOLTA</label><select id="ci_volta"><option value="0">Sem volta (só ida)</option><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option><option value="6">6</option><option value="7">7</option><option value="8">8</option><option value="9">9</option><option value="10">10</option></select></div>
+    </div>
+    <p style="font-size:12px;color:var(--text-muted)">Cada parada = um trecho com origem, destino e km. Selecione <strong>"Sem volta"</strong> se a viagem for somente de ida.</p>
+  </div>
+  <div class="card"><div class="ct"><span class="ic" style="background:#ECFDF5;color:#059669">📡</span> Localização</div>
+    <div class="gs p" id="ci_gs"><div class="gd"></div><span id="ci_gt">Obtendo…</span></div><div class="lc" id="ci_ck">--:--:--</div>
+  </div>
+  <div class="card"><div class="ct"><span class="ic" style="background:#EFF6FF;color:#2563EB">📸</span> Odômetro — SAÍDA</div>
+    <label class="cl" for="ci_foto"><div class="cz" id="ci_cz"><div id="ci_ph"><div class="pi">📷</div><div class="pt">Toque para fotografar</div></div><img id="ci_pv" style="display:none"></div></label>
+    <input type="file" accept="image/*" id="ci_foto" class="chi" onchange="capFoto(this,'ci')">
+    <div class="cm" id="ci_cm"><div class="mr"><span class="ml">⏱</span><span id="ci_ts">—</span></div><div class="mr"><span class="ml">📍</span><span id="ci_co">—</span></div></div>
+  </div>
+  <button class="bp g" onclick="enviarCI()">✅ Confirmar CHECK-IN</button>
+  <button class="bs" onclick="show('secHome')">← Voltar</button>
+</div>
+
+<!-- CHECK-IN OK -->
+<div class="sec" id="secCIOk"><div class="ss"><div class="si" style="background:#ECFDF5">🚀</div><h2>Check-in Registrado!</h2><p>Ao chegar em cada destino, registre a <strong>parada</strong> correspondente.</p><div style="background:#FFFBEB;border:1px solid #FCD34D;border-radius:10px;padding:12px 14px;margin:16px auto 0;max-width:340px;text-align:left;font-size:12px;color:#92400E;line-height:1.6">📌 <strong>Já vá guardando para o check-out:</strong><br>📸 foto do odômetro na chegada · 🗺️ print do Google Maps de cada trecho · 🧾 comprovante dos pedágios (se houver).</div><div class="sid" id="ci_proto" style="margin-top:16px"></div><button class="bp" style="margin-top:24px" onclick="goViagem()">➡️ Registrar paradas</button></div></div>
+
+<!-- VIAGEM EM ANDAMENTO -->
+<div class="sec" id="secViagem">
+  <div class="card" style="background:var(--success-bg);border-color:var(--success)">
+    <div style="font-size:13px;font-weight:600;color:#065F46;margin-bottom:6px">📋 Viagem em andamento</div>
+    <div id="viagem_info" style="font-size:12px;color:#047857;line-height:1.6;font-family:'JetBrains Mono',monospace"></div>
+  </div>
+  <div class="card" style="border:2px solid #F59E0B;background:#FFFBEB;padding:16px">
+    <div style="font-size:14px;font-weight:700;color:#92400E;display:flex;align-items:center;gap:8px;margin-bottom:6px"><span style="font-size:18px">📌</span> Atenção: o que você vai precisar no CHECK-OUT</div>
+    <div style="font-size:12px;color:#A16207;line-height:1.5;margin-bottom:12px">Ao finalizar a viagem, será obrigatório anexar os itens abaixo. <strong>Vá guardando durante o trajeto</strong> para não perder nada:</div>
+    <ul style="list-style:none;display:flex;flex-direction:column;gap:10px">
+      <li style="display:flex;gap:10px;font-size:13px;color:#78350F;line-height:1.45"><span style="font-size:18px">📸</span><div><strong>Foto do odômetro</strong> na chegada</div></li>
+      <li style="display:flex;gap:10px;font-size:13px;color:#78350F;line-height:1.45"><span style="font-size:18px">🗺️</span><div><strong>Print do Google Maps de cada trecho</strong> (ida e volta) — tire o print da rota a cada parada para não esquecer</div></li>
+      <li style="display:flex;gap:10px;font-size:13px;color:#78350F;line-height:1.45"><span style="font-size:18px">🧾</span><div><strong>Comprovante de cada pedágio</strong>, se houver</div></li>
+    </ul>
+  </div>
+  <div class="card" id="ida_card">
+    <div class="ct"><span class="ic" style="background:#DBEAFE;color:#2563EB">➡️</span> <span id="ida_title">IDA</span></div>
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;font-size:13px;color:var(--text-secondary)">Nº de paradas:
+      <button onclick="mudarPlano('ida',-1)" style="width:30px;height:30px;border:1px solid var(--border);background:var(--bg);border-radius:8px;font-size:18px;cursor:pointer">−</button>
+      <strong id="ida_plan_lbl" style="min-width:18px;text-align:center">1</strong>
+      <button onclick="mudarPlano('ida',1)" style="width:30px;height:30px;border:1px solid var(--border);background:var(--bg);border-radius:8px;font-size:18px;cursor:pointer">+</button>
+    </div>
+    <ul class="wl" id="ida_list"></ul>
+    <button class="bp b" onclick="goParada('ida')" id="btnIda" style="display:none;padding:12px;font-size:14px">📍 Parada IDA</button>
+    <div id="ida_done" style="display:none;text-align:center;color:#065F46;font-size:13px;font-weight:600;padding:8px 0">✅ IDA completa</div>
+  </div>
+  <div class="card" id="volta_card">
+    <div class="ct"><span class="ic" style="background:#FEF3C7;color:#D97706">↩️</span> <span id="volta_title">VOLTA</span></div>
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;font-size:13px;color:var(--text-secondary)">Nº de paradas:
+      <button onclick="mudarPlano('volta',-1)" style="width:30px;height:30px;border:1px solid var(--border);background:var(--bg);border-radius:8px;font-size:18px;cursor:pointer">−</button>
+      <strong id="volta_plan_lbl" style="min-width:18px;text-align:center">1</strong>
+      <button onclick="mudarPlano('volta',1)" style="width:30px;height:30px;border:1px solid var(--border);background:var(--bg);border-radius:8px;font-size:18px;cursor:pointer">+</button>
+    </div>
+    <ul class="wl" id="volta_list"></ul>
+    <button class="bp purple" onclick="goParada('volta')" id="btnVolta" style="display:none;padding:12px;font-size:14px">📍 Parada VOLTA</button>
+    <div id="volta_done" style="display:none;text-align:center;color:#065F46;font-size:13px;font-weight:600;padding:8px 0">✅ VOLTA completa</div>
+  </div>
+  <div id="finalizar_area" style="display:none">
+    <div class="card" style="background:var(--success-bg);border-color:var(--success);text-align:center;padding:16px">
+      <div style="font-size:24px;margin-bottom:6px">🎉</div>
+      <div style="font-size:14px;font-weight:700;color:#065F46">Todas as paradas registradas!</div>
+      <p style="font-size:13px;color:#047857;margin-top:4px">Finalize a viagem para calcular o reembolso.</p>
+    </div>
+    <button class="bp y" onclick="goFinalizar()">🏁 CHECK-OUT — Finalizar</button>
+  </div>
+  <button class="bs" onclick="show('secHome')">← Início</button>
+</div>
+
+<!-- PARADA -->
+<div class="sec" id="secParada">
+  <div class="card" style="background:#EFF6FF;border-color:#93C5FD;text-align:center;padding:16px">
+    <div id="pa_badge" class="phase-badge" style="background:#DBEAFE;color:#1E40AF">IDA</div>
+    <div style="font-size:15px;font-weight:700;color:#1E40AF;margin-top:8px" id="pa_titulo">Parada 1 de 1</div>
+  </div>
+  <div class="card"><div class="ct"><span class="ic" style="background:#ECFDF5;color:#059669">📡</span> Localização</div>
+    <div class="gs p" id="pa_gs"><div class="gd"></div><span id="pa_gt">Obtendo…</span></div><div class="lc" id="pa_ck">--:--:--</div>
+  </div>
+  <div class="card"><div class="ct"><span class="ic" style="background:#FEF3C7;color:#D97706">🛣️</span> Trecho</div>
+    <div class="fr"><div class="f"><label>Origem <span class="rq">*</span></label><input type="text" id="pa_orig"></div><div class="f"><label>Destino <span class="rq">*</span></label><input type="text" id="pa_dest"></div></div>
+    <div class="f"><label>Distância (km) <span class="rq">*</span></label><input type="number" id="pa_km" inputmode="decimal" step="0.1"></div>
+    <p style="font-size:12px;color:#92400E;background:#FFFBEB;border:1px solid #FCD34D;border-radius:8px;padding:10px 12px;line-height:1.5">⚠️ Registro rápido, sem foto agora. <strong>Tire e guarde o print do Google Maps deste trecho</strong> — ele será obrigatório no check-out.</p>
+  </div>
+  <button class="bp b" onclick="enviarParada()">📍 Confirmar Parada</button>
+  <button class="bs" onclick="show('secViagem')">← Voltar</button>
+</div>
+
+<!-- FINALIZAR (Check-out) -->
+<div class="sec" id="secFinal">
+  <div class="card" style="background:linear-gradient(135deg,#FEF3C7,#FDE68A);border:2px solid #F59E0B;text-align:center;padding:20px">
+    <div style="font-size:28px;margin-bottom:6px">🏁</div>
+    <div style="font-size:16px;font-weight:700;color:#92400E">CHECK-OUT</div>
+    <p style="font-size:13px;color:#A16207;margin-top:4px">Registre a chegada e finalize a viagem.</p>
+  </div>
+  <div class="card"><div class="ct"><span class="ic" style="background:#ECFDF5;color:#059669">📡</span> Localização</div>
+    <div class="gs p" id="co_gs"><div class="gd"></div><span id="co_gt">Obtendo…</span></div><div class="lc" id="co_ck">--:--:--</div>
+  </div>
+  <div class="card"><div class="ct"><span class="ic" style="background:#FEF3C7;color:#D97706">📸</span> Odômetro — CHEGADA</div>
+    <label class="cl" for="co_foto"><div class="cz" id="co_cz"><div id="co_ph"><div class="pi">📷</div><div class="pt">Fotografar painel</div></div><img id="co_pv" style="display:none"></div></label>
+    <input type="file" accept="image/*" id="co_foto" class="chi" onchange="capFoto(this,'co')">
+    <div class="cm" id="co_cm"><div class="mr"><span class="ml">⏱</span><span id="co_ts">—</span></div><div class="mr"><span class="ml">📍</span><span id="co_co">—</span></div></div>
+  </div>
+  <div class="card"><div class="ct"><span class="ic" style="background:#F0FDF4;color:#16A34A">🗺️</span> Prints do Maps por trecho</div>
+    <p style="font-size:12px;color:var(--text-secondary);margin-bottom:12px">Anexe o print do Google Maps de <strong>cada parada registrada</strong> (ida e volta).</p>
+    <div id="maps_list"></div>
+  </div>
+  <div class="card"><div class="ct"><span class="ic" style="background:#FEF2F2;color:#DC2626">🧾</span> Pedágios</div>
+    <label style="display:flex;align-items:center;gap:8px;cursor:pointer;margin-bottom:12px;font-size:13px;font-weight:600;color:var(--text)"><input type="checkbox" id="co_ped_depois" onchange="togglePedDepois()" style="width:18px;height:18px;flex-shrink:0"> Vou lançar os pedágios depois (plano de pedágio)</label>
+    <div id="co_ped_depois_aviso" style="display:none;background:var(--warning-bg);border:1px solid #FCD34D;border-radius:var(--radius-sm);padding:12px;font-size:12px;color:#92400E;line-height:1.5">🧾 Os pedágios ficarão <strong>pendentes</strong>. Quando o comprovante chegar, use <strong>"Lançar pedágio pendente"</strong> na tela inicial para adicioná-los a este protocolo.</div>
+    <div id="co_ped_campos">
+      <div class="ped-group-title">➡️ Pedágios da IDA</div><div id="ped_list_ida"></div><button class="add-btn" onclick="addPed('ida')">+ Adicionar Pedágio (Ida)</button>
+      <div class="ped-group-title">↩️ Pedágios da VOLTA</div><div id="ped_list_volta"></div><button class="add-btn" onclick="addPed('volta')">+ Adicionar Pedágio (Volta)</button>
+      <p style="font-size:12px;color:var(--text-muted)">Adicione cada pedágio na fase correspondente. Se não houver, deixe vazio.</p>
+    </div>
+  </div>
+  <div class="card"><div class="ct"><span class="ic" style="background:#FEF3C7;color:#D97706">⛽</span> Valor do Combustível</div>
+    <div class="tog-row">
+      <button class="tog-btn on" id="tog_cupom" onclick="setFuelMode('cupom')">Tenho cupom fiscal</button>
+      <button class="tog-btn" id="tog_estim" onclick="setFuelMode('estim')">Usar estimativa</button>
+    </div>
+    <div id="fuel_cupom">
+      <div class="f"><label>Preço real do litro (R$) <span class="rq">*</span></label><input type="number" id="co_preco" placeholder="Ex: 7.49" inputmode="decimal" step="0.01"></div>
+      <label class="cl" for="co_cupom"><div class="cz" id="co_cupz"><div id="co_cuph"><div class="pi">🧾</div><div class="pt">Anexar cupom fiscal</div><div class="ps">Mostrando preço por litro</div></div><img id="co_cupv" style="display:none"></div></label>
+      <input type="file" accept="image/*" id="co_cupom" class="chi" onchange="capFile(this,'co_cupv','co_cuph','co_cupz')">
+    </div>
+    <div id="fuel_estim" style="display:none">
+      <div style="padding:14px;background:var(--warning-bg);border-radius:var(--radius-sm);border:1px solid #FCD34D;text-align:center">
+        <div style="font-size:13px;font-weight:600;color:#92400E;margin-bottom:4px">Valor estimado será utilizado</div>
+        <div class="pbtxt" style="font-size:20px;font-weight:700;color:#92400E">R$ 4,67/L</div>
+        <p style="font-size:12px;color:#A16207;margin-top:6px">Sem cupom fiscal, o cálculo usará o valor base.</p>
+      </div>
+    </div>
+  </div>
+  <div class="card"><div class="ct"><span class="ic" style="background:#EFF6FF;color:#2563EB">🧍</span> Caronas</div>
+    <p style="font-size:12px;color:var(--text-muted);margin-bottom:10px">Nome de quem pegou carona com você (se houver). Deixe vazio se viajou sozinho.</p>
+    <div id="carona_list"></div>
+    <button class="add-btn" onclick="addCarona()">+ Adicionar carona</button>
+  </div>
+  <div class="card"><div class="ct"><span class="ic" style="background:#FEF3C7;color:#D97706">🚗</span> Consumo do veículo</div>
+    <div class="tog-row">
+      <button class="tog-btn on" id="tog_con_pad" onclick="setConMode('padrao')">Usar padrão</button>
+      <button class="tog-btn" id="tog_con_custom" onclick="setConMode('custom')">Informar meu consumo</button>
+    </div>
+    <div id="con_padrao"><div style="padding:14px;background:var(--warning-bg);border-radius:var(--radius-sm);border:1px solid #FCD34D;text-align:center"><div style="font-size:13px;font-weight:600;color:#92400E;margin-bottom:4px">Será usado o consumo padrão</div><div id="con_padrao_val" style="font-size:18px;font-weight:700;color:#92400E">10 km/L</div></div></div>
+    <div id="con_custom" style="display:none">
+      <div class="f"><label>Consumo do seu carro (km/L) <span class="rq">*</span></label><input type="number" id="co_consumo" placeholder="Ex: 8.5" inputmode="decimal" step="0.1"></div>
+      <label class="cl" for="co_confoto"><div class="cz" id="co_confz"><div id="co_confh"><div class="pi">📷</div><div class="pt">Foto do painel com o consumo</div></div><img id="co_confv" style="display:none"></div></label>
+      <input type="file" accept="image/*" id="co_confoto" class="chi" onchange="capFile(this,'co_confv','co_confh','co_confz')">
+    </div>
+  </div>
+  <div class="card" id="resumoCard" style="display:none;background:var(--bg)"><div id="resumo"></div></div>
+  <button class="bp b" onclick="calcular()" id="btnCalc">🧮 Calcular Reembolso</button>
+  <button class="bp g" id="btnEnv" onclick="enviarFinal()" style="display:none;margin-top:10px">📤 Enviar Solicitação</button>
+  <button class="bs" onclick="show('secViagem')">← Voltar</button>
+</div>
+
+<!-- OK -->
+<div class="sec" id="secOk"><div class="ss"><div class="si">✅</div><h2 id="ok_titulo">Solicitação Enviada!</h2><p>Reembolso registrado com check-in, paradas e check-out.</p><div class="sid" id="ok_proto"></div><div class="sid" id="ok_val" style="margin-left:8px;background:var(--success-bg);color:#065F46"></div><button class="bp" style="margin-top:24px" onclick="location.reload()">← Início</button></div></div>
+
+</div>
+<div class="foot">📱 Qualquer problema ou dúvida, fale comigo:<br><strong>+55 11 93623-3054</strong></div>
+<div class="lo" id="ld"><div class="sp"></div><p id="lt">Enviando…</p></div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="config.js"></script>
 <script>
-var sb=null, SESSION=null, PERFIL=null, gps=null, gps2=null, clk=null, TRIP=null, PB=6.47, _calc=null, CI_FOTO=null, CO_FOTO=null, CUPOM_FOTO=null, CON_FOTO=null;
-function el(id){return document.getElementById(id);}
+var sb=null,SESSION=null,PERFIL=null,PB=4.67,gps=null,trip=null,coCapt={ts:null,lat:null,lng:null,b64:null},clk=null,curFase="ida",fuelMode="cupom",conMode="padrao",_calc=null,_meus=[],_meusShow=5;
+function $(id){return document.getElementById(id);}
+function pad(n){return("0"+n).slice(-2)}function fmtD(d){return pad(d.getDate())+"/"+pad(d.getMonth()+1)+"/"+d.getFullYear()+" "+pad(d.getHours())+":"+pad(d.getMinutes())+":"+pad(d.getSeconds())}
+function show(id){var s=document.querySelectorAll(".sec");for(var i=0;i<s.length;i++)s[i].classList.remove("a");$(id).classList.add("a");window.scrollTo(0,0);if(clk){clearInterval(clk);clk=null}}
+function ld(m){$("lt").textContent=m||"Enviando…";$("ld").classList.add("s")}function hd(){$("ld").classList.remove("s")}
+function esc(s){return String(s==null?"":s).replace(/[&<>"]/g,function(c){return{"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]})}
+function brl(v){if(v==null)return"—";return"R$ "+Number(v).toLocaleString("pt-BR",{minimumFractionDigits:2,maximumFractionDigits:2})}
+function reqGPS(s,t){var e=$(s);e.className="gs p";$(t).textContent="Obtendo…";if(!navigator.geolocation){e.className="gs e";$(t).textContent="GPS indisponível";return}navigator.geolocation.getCurrentPosition(function(p){gps={lat:p.coords.latitude,lng:p.coords.longitude};e.className="gs a";$(t).textContent=p.coords.latitude.toFixed(5)+", "+p.coords.longitude.toFixed(5)+" (±"+Math.round(p.coords.accuracy)+"m)"},function(){e.className="gs e";$(t).textContent="Permita localização"},{enableHighAccuracy:true,timeout:15000})}
+function clock(id){var u=function(){$(id).textContent=fmtD(new Date())};u();clk=setInterval(u,1000)}
+function compress(file){return new Promise(function(ok,no){if(!file){no(new Error("Nenhum arquivo."));return}
+  function desenhar(src,w,h){var c=document.createElement("canvas");if(w>1280){h=Math.round(h*(1280/w));w=1280}c.width=w;c.height=h;c.getContext("2d").drawImage(src,0,0,w,h);var out=c.toDataURL("image/jpeg",.6);c.width=0;c.height=0;return out}
+  var r=new FileReader();r.onerror=function(){no(new Error("Não foi possível ler o arquivo."))};
+  r.onload=function(){var img=new Image();img.onerror=function(){no(new Error("Não foi possível abrir a imagem (formato pode não ser suportado). Tente outra foto."))};img.onload=function(){try{ok(desenhar(img,img.width,img.height))}catch(e){no(new Error("Falha ao processar a imagem."))}};img.src=r.result};r.readAsDataURL(file)})}
+function validarCPF(c){c=c.replace(/\D/g,"");if(c==="00000000000")return true;if(c.length!==11||/^(\d)\1{10}$/.test(c))return false;var s=0,i,r;for(i=0;i<9;i++)s+=parseInt(c[i])*(10-i);r=11-(s%11);var d1=r>=10?0:r;if(parseInt(c[9])!==d1)return false;s=0;for(i=0;i<10;i++)s+=parseInt(c[i])*(11-i);r=11-(s%11);return parseInt(c[10])===(r>=10?0:r)}
+function validarEmail(e){return/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e)}function validarTel(t){return t.replace(/\D/g,"").length>=10}
+function markErr(id){$(id).style.borderColor="var(--danger)";setTimeout(function(){$(id).style.borderColor=""},4000)}
+document.addEventListener("input",function(e){if(e.target.id==="ci_cpf"){var v=e.target.value.replace(/\D/g,"").slice(0,11);if(v.length>9)v=v.replace(/(\d{3})(\d{3})(\d{3})(\d{1,2})/,"$1.$2.$3-$4");else if(v.length>6)v=v.replace(/(\d{3})(\d{3})(\d{1,3})/,"$1.$2.$3");else if(v.length>3)v=v.replace(/(\d{3})(\d{1,3})/,"$1.$2");e.target.value=v}if(e.target.id==="ci_tel"){var w=e.target.value.replace(/\D/g,"").slice(0,11);if(w.length>6)w=w.replace(/(\d{2})(\d{5})(\d{1,4})/,"($1) $2-$3");else if(w.length>2)w=w.replace(/(\d{2})(\d{1,5})/,"($1) $2");e.target.value=w}});
+function toggleInstr(){var b=$("instrBody"),a=$("instrArrow"),open=b.style.maxHeight&&b.style.maxHeight!=="0px";if(open){b.style.maxHeight="0px";a.style.transform="rotate(0deg)"}else{b.style.maxHeight=b.firstElementChild.scrollHeight+40+"px";a.style.transform="rotate(90deg)"}}
 
-// ── Fotos: compressão (canvas) + captura + upload ao Drive (via carteiro) ──
-function compress(file){
-  return new Promise(function(resolve,reject){
-    var img=new Image();
-    img.onload=function(){
-      var max=1200,w=img.width,h=img.height;
-      if(w>h && w>max){h=Math.round(h*max/w);w=max;} else if(h>max){w=Math.round(w*max/h);h=max;}
-      var c=document.createElement("canvas");c.width=w;c.height=h;
-      c.getContext("2d").drawImage(img,0,0,w,h);
-      resolve(c.toDataURL("image/jpeg",0.7));
-    };
-    img.onerror=function(){reject(new Error("imagem inválida"));};
-    var r=new FileReader();r.onload=function(e){img.src=e.target.result;};r.onerror=function(){reject(new Error("leitura falhou"));};r.readAsDataURL(file);
-  });
-}
-function capFoto(input, which){
-  var f=input.files&&input.files[0]; if(!f)return;
-  compress(f).then(function(b64){
-    if(which==="ci")CI_FOTO=b64; else if(which==="co")CO_FOTO=b64; else if(which==="cupom")CUPOM_FOTO=b64; else if(which==="con")CON_FOTO=b64;
-    var prev=el(which+"_prev");
-    if(prev) prev.innerHTML='<img src="'+b64+'" style="max-width:140px;border-radius:8px;margin-top:8px;display:block"><span class="muted">✓ foto pronta</span>';
-  }).catch(function(){ alert("Não consegui processar a foto. Tente outra."); });
-}
-// Foto anexada a uma LINHA dinâmica (parada / pedágio): guarda o base64 no elemento
-function capRowFoto(input, rowClass){
-  var f=input.files&&input.files[0]; if(!f)return;
-  var row=input.closest("."+rowClass); if(!row)return;
-  compress(f).then(function(b64){
-    row._foto=b64;
-    var p=row.querySelector(".rowfprev"); if(p)p.innerHTML=' <span class="muted">✓ foto anexada</span>';
-  }).catch(function(){ alert("Não consegui processar a foto. Tente outra."); });
-}
-async function uploadFoto(b64, name, proto){
-  var cfg=window.RBCIP_CONFIG||{};
-  if(!cfg.CARTEIRO_URL) throw new Error("uploader não configurado");
-  var s=await sb.auth.getSession(); var jwt=s.data.session.access_token;
-  var resp=await fetch(cfg.CARTEIRO_URL,{method:"POST",redirect:"follow",headers:{"Content-Type":"text/plain"},
-    body:JSON.stringify({action:"upload_imagem", jwt:jwt, base64:b64, name:name, protocolo:proto||(TRIP&&TRIP.protocolo)||""})});
-  var out={}; try{ out=JSON.parse(await resp.text()); }catch(_){}
-  if(!out.success||!out.link) throw new Error(out.error||"falha no upload");
-  return out.link;
-}
-function show(id){["carregando","secLogin","secHome","secCI","secFinal","secOk"].forEach(function(s){el(s).classList.add("hide");});el(id).classList.remove("hide");window.scrollTo(0,0);}
-function msg(box,tipo,txt){var m=el(box);m.className="msg show "+tipo;m.textContent=txt;}
-function limpaMsg(box){var m=el(box);m.className="msg";m.textContent="";}
-function pad(n){return n<10?"0"+n:""+n;}
-function fmtHora(d){return pad(d.getHours())+":"+pad(d.getMinutes())+":"+pad(d.getSeconds());}
-function esc(s){return String(s==null?"":s).replace(/[&<>"]/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c];});}
-function brl(v){ if(v==null)return "—"; return "R$ "+Number(v).toLocaleString("pt-BR",{minimumFractionDigits:2,maximumFractionDigits:2}); }
-function toggleComo(){
-  var card=el("hm_como"), body=card.querySelector(".collapse-body"), inner=body.firstElementChild;
-  var open=card.classList.toggle("open");
-  body.style.maxHeight = open ? (inner.scrollHeight+"px") : "0";
-}
-
-// ── Validações ──
-function validarEmail(e){return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e);}
-function validarTel(t){return t.replace(/\D/g,"").length>=10;}
-function validarCPF(cpf){
-  cpf=String(cpf).replace(/\D/g,""); if(cpf.length!==11||/^(\d)\1{10}$/.test(cpf))return false;
-  var s=0,i,r; for(i=0;i<9;i++)s+=parseInt(cpf[i])*(10-i); r=(s*10)%11; if(r===10)r=0; if(r!==parseInt(cpf[9]))return false;
-  s=0; for(i=0;i<10;i++)s+=parseInt(cpf[i])*(11-i); r=(s*10)%11; if(r===10)r=0; return r===parseInt(cpf[10]);
-}
+// ── localStorage do trip ──
+function saveTrip(d){try{var l={};for(var k in d)if(k!=="checkin_foto")l[k]=d[k];localStorage.setItem("rbcip_trip",JSON.stringify(l))}catch(e){}}
+function loadTrip(){try{var r=localStorage.getItem("rbcip_trip");return r?JSON.parse(r):null}catch(e){return null}}
+function clearTrip(){try{localStorage.removeItem("rbcip_trip")}catch(e){}}
 
 // ── Login por código ──
-async function enviarCodigo(){
-  limpaMsg("msgLogin");
-  var email=el("lg_email").value.trim();
-  if(!email){msg("msgLogin","err","Informe o e-mail.");return;}
-  el("btnEnviar").disabled=true; el("btnEnviar").textContent="Enviando…";
-  var { error }=await sb.auth.signInWithOtp({email:email});
-  el("btnEnviar").disabled=false; el("btnEnviar").textContent="Enviar código";
-  if(error){
-    var t=/autoriz|Database error|saving new user/i.test(error.message)
-      ? "Este e-mail não está autorizado a acessar o sistema. Fale com o administrador." : error.message;
-    msg("msgLogin","err",t); return;
-  }
-  el("passoEmail").classList.add("hide"); el("passoCodigo").classList.remove("hide");
-  msg("msgLogin","info","Código enviado para "+email+". Verifique também o spam.");
-}
-async function confirmarCodigo(){
-  limpaMsg("msgLogin");
-  var email=el("lg_email").value.trim(), token=el("lg_codigo").value.trim();
-  if(token.length<6){msg("msgLogin","err","Digite os 6 dígitos.");return;}
-  el("btnConfirmar").disabled=true; el("btnConfirmar").textContent="Entrando…";
-  var { error }=await sb.auth.verifyOtp({email:email,token:token,type:"email"});
-  el("btnConfirmar").disabled=false; el("btnConfirmar").textContent="Entrar";
-  if(error){
-    var t=/autoriz|Database error|saving new user/i.test(error.message)
-      ? "Este e-mail não está autorizado a acessar o sistema. Fale com o administrador." : error.message;
-    msg("msgLogin","err",t); return;
-  }
-  await iniciar();
-}
-function voltarEmail(){el("passoCodigo").classList.add("hide");el("passoEmail").classList.remove("hide");limpaMsg("msgLogin");}
-async function sair(){ await sb.auth.signOut(); location.reload(); }
+function msg(box,tipo,txt){var m=$(box);m.className="msg show "+tipo;m.textContent=txt}
+async function enviarCodigo(){var email=$("lg_email").value.trim();if(!email){msg("msgLogin","err","Informe o e-mail.");return}
+  $("btnEnviar").disabled=true;$("btnEnviar").textContent="Enviando…";
+  var r=await sb.auth.signInWithOtp({email:email});$("btnEnviar").disabled=false;$("btnEnviar").textContent="Enviar código";
+  if(r.error){msg("msgLogin","err",/autoriz|Database error|saving new user/i.test(r.error.message)?"Este e-mail não está autorizado. Fale com o administrador.":r.error.message);return}
+  $("passoEmail").style.display="none";$("passoCodigo").style.display="block";msg("msgLogin","info","Código enviado para "+email+". Verifique também o spam.")}
+async function confirmarCodigo(){var email=$("lg_email").value.trim(),token=$("lg_codigo").value.trim();if(token.length<6){msg("msgLogin","err","Digite os 6 dígitos.");return}
+  $("btnConfirmar").disabled=true;$("btnConfirmar").textContent="Entrando…";
+  var r=await sb.auth.verifyOtp({email:email,token:token,type:"email"});$("btnConfirmar").disabled=false;$("btnConfirmar").textContent="Entrar";
+  if(r.error){msg("msgLogin","err",/autoriz|Database error|saving new user/i.test(r.error.message)?"Este e-mail não está autorizado. Fale com o administrador.":r.error.message);return}
+  await iniciarApp()}
+function voltarEmail(){$("passoCodigo").style.display="none";$("passoEmail").style.display="block";$("msgLogin").className="msg"}
+async function sair(){await sb.auth.signOut();location.reload()}
 
-// ── GPS ──
-function reqGPS(){
-  var box=el("ci_gs"), txt=el("ci_gt"); box.className="gs"; txt.textContent="Obtendo…"; gps=null;
-  if(!navigator.geolocation){box.className="gs e";txt.textContent="GPS indisponível neste aparelho";return;}
-  navigator.geolocation.getCurrentPosition(function(p){
-    gps={lat:p.coords.latitude,lng:p.coords.longitude};
-    box.className="gs a"; txt.textContent=p.coords.latitude.toFixed(5)+", "+p.coords.longitude.toFixed(5)+" (±"+Math.round(p.coords.accuracy)+"m)";
-  },function(){ box.className="gs e"; txt.textContent="Permita a localização e toque em Atualizar GPS"; },{enableHighAccuracy:true,timeout:15000});
-}
+// ── Upload de foto via carteiro ──
+async function uploadFoto(b64,name){var cfg=window.RBCIP_CONFIG||{};if(!cfg.CARTEIRO_URL)throw new Error("uploader não configurado");
+  var s=await sb.auth.getSession();var jwt=s.data.session.access_token;
+  var resp=await fetch(cfg.CARTEIRO_URL,{method:"POST",redirect:"follow",headers:{"Content-Type":"text/plain"},body:JSON.stringify({action:"upload_imagem",jwt:jwt,base64:b64,name:name,protocolo:(trip&&trip.protocolo)||""})});
+  var out={};try{out=JSON.parse(await resp.text())}catch(_){}if(!out.success||!out.link)throw new Error(out.error||"falha no upload");return out.link}
+async function fetchPreco(){try{var today=new Date().toISOString().slice(0,10);var r=await sb.from("precos_gasolina").select("valor,inicio,fim").lte("inicio",today).order("inicio",{ascending:false}).limit(10);if(r.data){for(var i=0;i<r.data.length;i++){if(!r.data[i].fim||r.data[i].fim>=today){PB=Number(r.data[i].valor);break}}}}catch(e){}
+  document.querySelectorAll(".pbtxt").forEach(function(el){el.textContent="R$ "+PB.toFixed(2).replace(".",",")+"/L"})}
 
-// ── Check-in ──
-function goCheckin(){
-  show("secCI");
-  // pré-preenche com o perfil
-  if(PERFIL && PERFIL.nome && !el("ci_nome").value) el("ci_nome").value=PERFIL.nome;
-  if(SESSION && !el("ci_email").value) el("ci_email").value=SESSION.user.email;
-  CI_FOTO=null; if(el("ci_foto"))el("ci_foto").value=""; if(el("ci_prev"))el("ci_prev").textContent="Nenhuma foto ainda.";
-  reqGPS();
-  if(clk) clearInterval(clk);
-  var upd=function(){ el("ci_ck").textContent=fmtHora(new Date()); }; upd(); clk=setInterval(upd,1000);
-}
+// ── Foto (câmera) ──
+function capFoto(inp,prefix){var file=inp.files[0];if(!file)return;compress(file).then(function(c){var now=new Date();
+  if(navigator.geolocation)navigator.geolocation.getCurrentPosition(function(p){gps={lat:p.coords.latitude,lng:p.coords.longitude};$(prefix+"_co").textContent=p.coords.latitude.toFixed(5)+", "+p.coords.longitude.toFixed(5);$(prefix+"_gs").className="gs a";if(prefix==="ci"&&trip){trip.checkin_lat=gps.lat;trip.checkin_lng=gps.lng}if(prefix==="co"){coCapt.lat=gps.lat;coCapt.lng=gps.lng}},function(){},{enableHighAccuracy:true,timeout:5000});
+  $(prefix+"_ts").textContent=fmtD(now);$(prefix+"_co").textContent=gps?gps.lat.toFixed(5)+", "+gps.lng.toFixed(5):"—";$(prefix+"_cm").classList.add("v");$(prefix+"_pv").src=c;$(prefix+"_pv").style.display="block";$(prefix+"_ph").style.display="none";$(prefix+"_cz").classList.add("ok");
+  if(prefix==="ci"){trip=trip||{};trip.checkin_foto=c;trip.checkin_timestamp=now.toISOString();trip.checkin_lat=gps?gps.lat:null;trip.checkin_lng=gps?gps.lng:null}else{coCapt={ts:now.toISOString(),lat:gps?gps.lat:null,lng:gps?gps.lng:null,b64:c}}}).catch(function(e){alert("Erro: "+e.message)})}
+function capFile(inp,pvId,phId,zId){var file=inp.files[0];if(!file)return;compress(file).then(function(c){$(pvId).src=c;$(pvId).style.display="block";$(phId).style.display="none";$(zId).classList.add("ok");inp.dataset.compressed=c}).catch(function(e){alert("Erro: "+e.message)})}
 
-async function enviarCI(){
-  limpaMsg("msgCI");
-  var erros=[];
-  var nome=el("ci_nome").value.trim(), cpf=el("ci_cpf").value.trim(), rg=el("ci_rg").value.trim(),
-      orgao=el("ci_orgao").value.trim(), email=el("ci_email").value.trim(), tel=el("ci_tel").value.trim(),
-      veic=el("ci_veic").value, placa=el("ci_placa").value.trim().toUpperCase();
-  if(!nome)erros.push("Nome");
-  if(!cpf||!validarCPF(cpf))erros.push("CPF válido");
-  if(!rg)erros.push("RG");
-  if(!orgao)erros.push("Órgão emissor");
-  if(!email||!validarEmail(email))erros.push("E-mail válido");
-  if(!tel||!validarTel(tel))erros.push("Telefone válido");
-  if(!veic)erros.push("Veículo");
-  if(!placa)erros.push("Placa");
-  if(!gps)erros.push("Localização (GPS)");
-  if(!CI_FOTO)erros.push("Foto do odômetro");
-  if(erros.length){msg("msgCI","err","Corrija: "+erros.join(", ")+".");return;}
+// ── Home / sync ──
+async function sync(){trip=loadTrip();if(trip&&trip.protocolo){try{var r=await sb.from("reembolsos").select("id,status").eq("protocolo",trip.protocolo).maybeSingle();if(!r.data||r.data.status!=="ABERTO"){clearTrip();trip=null}else{trip.id=r.data.id;saveTrip(trip)}}catch(e){}}updateHome();await renderMeusPedidos()}
+function updateHome(){var b=$("openBanner"),ci=$("cardCI"),cv=$("cardV");if(trip&&trip.protocolo){b.classList.add("v");$("openDetail").innerHTML="<strong>"+esc(trip.nome)+"</strong> — "+esc(trip.veiculo)+" ("+esc(trip.placa)+")<br>Protocolo: "+esc(trip.protocolo);ci.style.display="none";cv.style.display="flex"}else{b.classList.remove("v");ci.style.display="flex";cv.style.display="none"}}
 
+// ── CHECK-IN ──
+function goCheckin(){show("secCI");reqGPS("ci_gs","ci_gt");clock("ci_ck");trip={};
+  $("ci_pv").style.display="none";$("ci_ph").style.display="block";$("ci_cz").classList.remove("ok");$("ci_cm").classList.remove("v");
+  if(PERFIL&&PERFIL.nome&&!$("ci_nome").value)$("ci_nome").value=PERFIL.nome;if(SESSION&&!$("ci_email").value)$("ci_email").value=SESSION.user.email}
+async function enviarCI(){var erros=[];
+  var nome=$("ci_nome").value.trim(),cpf=$("ci_cpf").value.trim(),rg=$("ci_rg").value.trim(),orgao=$("ci_orgao").value.trim(),email=$("ci_email").value.trim(),tel=$("ci_tel").value.trim(),veic=$("ci_veic").value,placa=$("ci_placa").value.trim().toUpperCase();
+  if(!nome){markErr("ci_nome");erros.push("• Nome")}
+  if(!cpf||!validarCPF(cpf)){markErr("ci_cpf");erros.push("• CPF válido")}
+  if(!rg){markErr("ci_rg");erros.push("• RG")}if(!orgao){markErr("ci_orgao");erros.push("• Órgão emissor")}
+  if(!email||!validarEmail(email)){markErr("ci_email");erros.push("• E-mail válido")}
+  if(!tel||!validarTel(tel)){markErr("ci_tel");erros.push("• Telefone válido")}
+  if(!veic){markErr("ci_veic");erros.push("• Veículo")}if(!placa){markErr("ci_placa");erros.push("• Placa")}
+  if(!trip||!trip.checkin_foto)erros.push("• Foto do odômetro");
+  if(erros.length){alert("Corrija:\n\n"+erros.join("\n"));return}
   var proto="RB-"+Date.now().toString(36).toUpperCase();
-  el("msgCI").className="msg show info"; el("msgCI").textContent="Enviando foto do odômetro…";
-  var fotoLink="";
-  try{ fotoLink=await uploadFoto(CI_FOTO,"odometro_saida",proto); }
-  catch(e){ msg("msgCI","err","Erro ao enviar a foto: "+e.message); return; }
-  el("msgCI").textContent="Registrando check-in…";
-  var { error }=await sb.from("reembolsos").insert({
-    protocolo:proto, status:"ABERTO", motorista_id:SESSION.user.id,
-    nome:nome, cpf:cpf, rg:rg, orgao:orgao, email:email, telefone:tel, veiculo:veic, placa:placa,
-    checkin_em:new Date().toISOString(), checkin_lat:gps.lat, checkin_lng:gps.lng, checkin_foto:fotoLink
-  });
-  if(error){ msg("msgCI","err","Erro ao registrar: "+error.message); return; }
-  el("ok_icone").textContent="🚀"; el("ok_titulo").textContent="Check-in registrado!";
-  el("ok_texto").textContent="Sua viagem foi aberta. Ao chegar, registre as paradas e o check-out.";
-  el("ok_proto").textContent="Protocolo: "+proto;
-  show("secOk");
-}
+  var ida_plan=parseInt($("ci_ida").value)||1,volta_plan=parseInt($("ci_volta").value,10);if(isNaN(volta_plan))volta_plan=1;
+  ld("Enviando foto do odômetro…");var fotoLink;
+  try{fotoLink=await uploadFoto(trip.checkin_foto,"odometro_saida")}catch(e){hd();alert("Erro ao enviar a foto: "+e.message);return}
+  ld("Registrando check-in…");
+  var ins=await sb.from("reembolsos").insert({protocolo:proto,status:"ABERTO",motorista_id:SESSION.user.id,nome:nome,cpf:cpf,rg:rg,orgao:orgao,email:email,telefone:tel,veiculo:veic,placa:placa,checkin_em:trip.checkin_timestamp||new Date().toISOString(),checkin_lat:trip.checkin_lat,checkin_lng:trip.checkin_lng,checkin_foto:fotoLink}).select("id").maybeSingle();
+  hd();if(ins.error){alert("Erro ao registrar: "+ins.error.message);return}
+  trip={id:ins.data.id,protocolo:proto,nome:nome,cpf:cpf,veiculo:veic,placa:placa,ida_plan:ida_plan,volta_plan:volta_plan,ida_paradas:[],volta_paradas:[]};saveTrip(trip);
+  $("ci_proto").textContent="Protocolo: "+proto;show("secCIOk")}
 
-// ═══════════════════ 3c — PARADAS / CHECK-OUT / CÁLCULO ═══════════════════
-function limparFormFinal(){
-  el("ida_list").innerHTML=""; el("volta_list").innerHTML=""; el("ped_list").innerHTML=""; el("carona_list").innerHTML="";
-  el("fuelMode").value="estim"; onFuel(); el("fuel_preco").value=""; el("fuel_con").value="";
-  CO_FOTO=null; CUPOM_FOTO=null; CON_FOTO=null; gps2=null;
-  if(el("co_foto"))el("co_foto").value=""; if(el("co_prev"))el("co_prev").textContent="Nenhuma foto ainda.";
-  if(el("cupom_foto"))el("cupom_foto").value=""; if(el("cupom_prev"))el("cupom_prev").innerHTML="";
-  if(el("con_foto"))el("con_foto").value=""; if(el("con_prev"))el("con_prev").innerHTML="";
-  el("resumoCard").classList.add("hide"); limpaMsg("msgFinal");
-}
-async function goFinal(id, protocolo){
-  TRIP={id:id, protocolo:protocolo, modo:"novo"}; _calc=null;
-  limparFormFinal();
-  show("secFinal");
-  addParada("ida");
-  await fetchPreco();
-  el("preco_base_txt").textContent="Preço base atual: R$ "+PB.toFixed(2)+"/L";
-  reqGPS2();
-}
-async function goCorrigir(id, protocolo){
-  var rq=await sb.from("reembolsos").select("*").eq("id",id).maybeSingle();
-  if(rq.error||!rq.data){ alert("Não consegui carregar o pedido."); return; }
-  var r=rq.data;
-  var par=await sb.from("paradas").select("*").eq("reembolso_id",id).order("fase").order("ordem");
-  var ped=await sb.from("pedagios").select("*").eq("reembolso_id",id).order("ordem");
-  TRIP={id:id, protocolo:protocolo, modo:"correcao", existing:{checkout_lat:r.checkout_lat, checkout_lng:r.checkout_lng, checkout_foto:r.checkout_foto, cupom_foto:r.cupom_foto}}; _calc=null;
-  limparFormFinal();
-  show("secFinal");
-  (par.data||[]).forEach(function(p){ addParada(p.fase==="volta"?"volta":"ida", {origem:p.origem, destino:p.destino, km:p.km, maps_link:p.maps_link}); });
-  if(!el("ida_list").children.length) addParada("ida");
-  el("fuelMode").value=(r.usou_estimativa===false)?"real":"estim"; onFuel();
-  if(r.preco_real!=null) el("fuel_preco").value=r.preco_real;
-  if(r.consumo!=null) el("fuel_con").value=r.consumo;
-  (ped.data||[]).forEach(function(p){ addPedagio({fase:p.fase, valor:p.valor, comprovante_link:p.comprovante_link}); });
-  if(r.caronas){ r.caronas.split(",").forEach(function(n){ n=n.trim(); if(n){ addCarona(); var ins=el("carona_list").querySelectorAll(".cr-nome"); ins[ins.length-1].value=n; } }); }
-  if((r.usou_estimativa===false) && r.cupom_foto && el("cupom_prev")) el("cupom_prev").innerHTML='<span class="muted">✓ cupom atual mantido (anexe outro só para trocar)</span>';
-  if(r.checkout_foto && el("co_prev")) el("co_prev").innerHTML='<span class="muted">✓ foto de odômetro mantida (fotografe de novo só para trocar)</span>';
-  await fetchPreco();
-  el("preco_base_txt").textContent="Preço base atual: R$ "+PB.toFixed(2)+"/L";
-  el("co_gt").textContent="Check-out original mantido — recapture o GPS só se necessário."; el("co_gs").className="gs";
-}
+// ── VIAGEM ──
+async function goViagem(){trip=loadTrip();if(!trip){show("secHome");return}show("secViagem");ld("Atualizando…");
+  try{if(!trip.id){var rr=await sb.from("reembolsos").select("id,status").eq("protocolo",trip.protocolo).maybeSingle();if(rr.data){trip.id=rr.data.id}}
+    var pr=await sb.from("paradas").select("id,fase,ordem,origem,destino,km").eq("reembolso_id",trip.id).order("fase").order("ordem");
+    var ida=[],vol=[];(pr.data||[]).forEach(function(p){var o={id:p.id,orig:p.origem,dest:p.destino,km:(p.km!=null?String(p.km):"0")};if(p.fase==="volta")vol.push(o);else ida.push(o)});
+    trip.ida_paradas=ida;trip.volta_paradas=vol;
+    if(trip.ida_plan==null)trip.ida_plan=Math.max(ida.length,1);
+    if(trip.volta_plan==null)trip.volta_plan=Math.max(vol.length,vol.length?1:1);
+    saveTrip(trip)}catch(e){}hd();renderViagem()}
+function renderViagem(){
+  $("viagem_info").innerHTML="Protocolo: "+esc(trip.protocolo)+"<br>"+esc(trip.nome)+" — "+esc(trip.veiculo)+" ("+esc(trip.placa)+")"+(trip.correcao?"<br><b>MODO CORREÇÃO</b>":"");
+  var idaD=trip.ida_paradas||[],idaP=trip.ida_plan||1,idaN=idaD.length;
+  var volD=trip.volta_paradas||[],volP=parseInt(trip.volta_plan,10),volN=volD.length;if(isNaN(volP))volP=1;
+  var idaOk=idaN>=idaP;
+  $("ida_title").textContent="IDA ("+idaN+" de "+idaP+")";$("ida_plan_lbl").textContent=idaP;$("volta_plan_lbl").textContent=volP;
+  $("ida_list").innerHTML=renderParadaList(idaD,"ida");
+  if(!idaOk){$("btnIda").style.display="flex";$("btnIda").textContent="📍 Parada IDA ("+(idaN+1)+" de "+idaP+")";$("ida_done").style.display="none"}else{$("btnIda").style.display="none";$("ida_done").style.display="block"}
+  if(volP===0){$("volta_card").style.display="none"}
+  else{$("volta_card").style.display=idaOk?"block":"none";$("volta_title").textContent="VOLTA ("+volN+" de "+volP+")";$("volta_list").innerHTML=renderParadaList(volD,"volta");
+    if(!idaOk){$("btnVolta").style.display="none";$("volta_done").style.display="none"}
+    else if(volN<volP){$("btnVolta").style.display="flex";$("btnVolta").textContent="📍 Parada VOLTA ("+(volN+1)+" de "+volP+")";$("volta_done").style.display="none"}
+    else{$("btnVolta").style.display="none";$("volta_done").style.display="block"}}
+  $("finalizar_area").style.display=(idaOk&&(volP===0||volN>=volP))?"block":"none"}
+function renderParadaList(arr,fase){if(!arr.length)return '<li style="color:var(--text-muted);border-left-color:var(--border)">Nenhuma parada.</li>';var h="";for(var i=0;i<arr.length;i++)h+='<li><strong>'+esc(arr[i].orig)+' → '+esc(arr[i].dest)+'</strong> — '+esc(arr[i].km)+' km'+(trip.correcao?'<span class="rmp" onclick="removerParada(\''+fase+'\','+i+')">✕</span>':'')+'</li>';return h}
+async function removerParada(fase,idx){var arr=fase==="ida"?trip.ida_paradas:trip.volta_paradas;var p=arr[idx];if(!p)return;if(!confirm("Remover esta parada?"))return;if(p.id)await sb.from("paradas").delete().eq("id",p.id);arr.splice(idx,1);saveTrip(trip);renderViagem()}
+function mudarPlano(fase,delta){if(!trip)return;var reg=(fase==="ida"?(trip.ida_paradas||[]):(trip.volta_paradas||[])).length;var cur=parseInt(fase==="ida"?trip.ida_plan:trip.volta_plan,10);if(isNaN(cur))cur=(fase==="ida"?1:0);var min=(fase==="ida")?Math.max(reg,1):Math.max(reg,0);var novo=cur+delta;if(novo<min){alert("Não dá para reduzir: a "+fase+" já tem "+reg+" parada(s).");return}if(novo>12){alert("Máximo de 12 paradas.");return}if(fase==="ida")trip.ida_plan=novo;else trip.volta_plan=novo;saveTrip(trip);renderViagem()}
 
-function addParada(fase, data){
-  var d=document.createElement("div");
-  d.className="parada-row"; d.style.cssText="border:1px solid var(--border);border-radius:10px;padding:10px;margin-bottom:8px";
-  d.innerHTML='<div class="fr"><div><label>Origem</label><input class="p-orig"></div><div><label>Destino</label><input class="p-dest"></div></div>'
-    +'<label>Distância (km)</label><input class="p-km" inputmode="decimal">'
-    +'<label>Print do Google Maps do trecho</label><input type="file" accept="image/*" class="p-foto" onchange="capRowFoto(this,\'parada-row\')"><span class="rowfprev"></span>'
-    +'<div style="margin-top:8px"><button class="link" onclick="this.closest(\'.parada-row\').remove()">remover parada</button></div>';
-  el(fase+"_list").appendChild(d);
-  if(data){
-    d.querySelector(".p-orig").value=data.origem||"";
-    d.querySelector(".p-dest").value=data.destino||"";
-    d.querySelector(".p-km").value=(data.km!=null?data.km:"");
-    d._existingLink=data.maps_link||null;
-    if(data.maps_link){ var p=d.querySelector(".rowfprev"); if(p)p.innerHTML=' <span class="muted">✓ print atual mantido (anexe outro só para trocar)</span>'; }
-  }
-}
-function coletarParadas(fase){
-  var out=[], rows=el(fase+"_list").querySelectorAll(".parada-row");
-  Array.prototype.forEach.call(rows,function(r){
-    var o=r.querySelector(".p-orig").value.trim(), de=r.querySelector(".p-dest").value.trim(), km=parseFloat(String(r.querySelector(".p-km").value).replace(",","."))||0;
-    if(o||de||km) out.push({fase:fase, origem:o, destino:de, km:km, foto:r._foto||null, existingLink:r._existingLink||null});
-  });
-  out.forEach(function(p,i){ p.ordem=i+1; });
-  return out;
-}
-function onFuel(){ el("realBox").classList.toggle("hide", el("fuelMode").value!=="real"); }
-function addPedagio(data){
-  var d=document.createElement("div");
-  d.className="ped-row"; d.style.cssText="border:1px solid var(--border);border-radius:10px;padding:10px;margin-bottom:8px";
-  d.innerHTML='<div class="fr"><div><label>Fase</label><select class="pd-fase"><option value="ida">Ida</option><option value="volta">Volta</option></select></div>'
-    +'<div><label>Valor (R$)</label><input class="pd-val" inputmode="decimal"></div></div>'
-    +'<label>Comprovante (opcional)</label><input type="file" accept="image/*" class="pd-foto" onchange="capRowFoto(this,\'ped-row\')"><span class="rowfprev"></span>'
-    +'<div style="margin-top:8px"><button class="link" onclick="this.closest(\'.ped-row\').remove()">remover pedágio</button></div>';
-  el("ped_list").appendChild(d);
-  if(data){
-    if(data.fase) d.querySelector(".pd-fase").value=data.fase;
-    d.querySelector(".pd-val").value=(data.valor!=null?data.valor:"");
-    d._existingLink=data.comprovante_link||null;
-    if(data.comprovante_link){ var p=d.querySelector(".rowfprev"); if(p)p.innerHTML=' <span class="muted">✓ comprovante atual mantido</span>'; }
-  }
-}
-function coletarPedagios(){
-  var out=[], rows=el("ped_list").querySelectorAll(".ped-row");
-  Array.prototype.forEach.call(rows,function(r){
-    var v=parseFloat(String(r.querySelector(".pd-val").value).replace(",","."))||0;
-    if(v>0) out.push({fase:r.querySelector(".pd-fase").value, valor:v, foto:r._foto||null, existingLink:r._existingLink||null});
-  });
-  out.forEach(function(p,i){ p.ordem=i+1; });
-  return out;
-}
-function addCarona(){
-  var d=document.createElement("div");
-  d.innerHTML='<input class="cr-nome" placeholder="Nome da carona" style="margin-top:6px">';
-  el("carona_list").appendChild(d);
-}
-function coletarCaronas(){
-  var out=[]; Array.prototype.forEach.call(el("carona_list").querySelectorAll(".cr-nome"),function(i){ if(i.value.trim())out.push(i.value.trim()); });
-  return out;
-}
-function reqGPS2(){
-  var box=el("co_gs"), txt=el("co_gt"); box.className="gs"; txt.textContent="Obtendo…"; gps2=null;
-  if(!navigator.geolocation){box.className="gs e";txt.textContent="GPS indisponível";return;}
-  navigator.geolocation.getCurrentPosition(function(p){
-    gps2={lat:p.coords.latitude,lng:p.coords.longitude};
-    box.className="gs a"; txt.textContent=p.coords.latitude.toFixed(5)+", "+p.coords.longitude.toFixed(5)+" (±"+Math.round(p.coords.accuracy)+"m)";
-  },function(){ box.className="gs e"; txt.textContent="Permita a localização e toque em Atualizar GPS"; },{enableHighAccuracy:true,timeout:15000});
-}
-async function fetchPreco(){
-  var today=new Date().toISOString().slice(0,10);
-  var { data }=await sb.from("precos_gasolina").select("valor,inicio,fim").lte("inicio",today).order("inicio",{ascending:false}).limit(10);
-  if(data && data.length){
-    for(var i=0;i<data.length;i++){ if(!data[i].fim || data[i].fim>=today){ PB=Number(data[i].valor); return; } }
-    PB=Number(data[0].valor);
-  }
-}
-function calcular(){
-  limpaMsg("msgFinal");
-  var ida=coletarParadas("ida"), volta=coletarParadas("volta");
-  var dist=0; ida.concat(volta).forEach(function(p){ dist+=p.km; });
-  if(dist<=0){ msg("msgFinal","err","Informe ao menos uma parada com distância (km)."); return; }
-  var con=parseFloat(String(el("fuel_con").value).replace(",","."))||10;
-  var usarEstim=el("fuelMode").value!=="real", precoReal=PB;
-  if(!usarEstim){ precoReal=parseFloat(String(el("fuel_preco").value).replace(",",".")); if(!precoReal||precoReal<=0){ msg("msgFinal","err","Informe o preço do litro."); return; } }
-  var peds=coletarPedagios(), tPed=0; peds.forEach(function(p){ tPed+=p.valor; });
-  var vReal=dist/con*precoReal, vTot=vReal+tPed;
-  _calc={dist:dist,con:con,usarEstim:usarEstim,precoReal:precoReal,ida:ida,volta:volta,peds:peds,vReal:vReal,vTot:vTot};
-  el("resumo").innerHTML='<div style="font-weight:700;color:var(--navy);margin-bottom:6px">📊 Resumo</div>'
-    +'Distância: <b>'+dist.toFixed(1)+' km</b> (ida '+ida.reduce(function(a,p){return a+p.km;},0).toFixed(1)+' + volta '+volta.reduce(function(a,p){return a+p.km;},0).toFixed(1)+')<br>'
-    +'Combustível ('+con+' km/L @ R$ '+(usarEstim?PB:precoReal).toFixed(2)+'/L): R$ '+vReal.toFixed(2)+(tPed?'<br>Pedágios: R$ '+tPed.toFixed(2):'')
-    +'<div style="font-size:18px;font-weight:700;color:var(--navy);margin-top:8px;padding-top:8px;border-top:2px solid var(--navy)">Total: R$ '+vTot.toFixed(2)+'</div>';
-  el("resumoCard").classList.remove("hide");
-  el("resumoCard").scrollIntoView({behavior:"smooth"});
-}
-async function enviarFinal(){
-  if(!_calc){ msg("msgFinal","err","Toque em Calcular primeiro."); return; }
-  var correcao = TRIP && TRIP.modo==="correcao";
-  var ex = (TRIP && TRIP.existing) || {};
-  if(!correcao && !gps2){ msg("msgFinal","err","Capture o GPS do check-out."); return; }
-  if(!correcao && !CO_FOTO){ msg("msgFinal","err","Fotografe o odômetro de chegada."); return; }
-  var c=_calc, todas=c.ida.concat(c.volta);
-  for(var i=0;i<todas.length;i++){ if(!todas[i].foto && !todas[i].existingLink){ msg("msgFinal","err","Anexe o print do Maps da parada "+(i+1)+" ("+todas[i].fase+")."); return; } }
-  if(!c.usarEstim && !CUPOM_FOTO && !ex.cupom_foto){ msg("msgFinal","err","Anexe o cupom fiscal do combustível."); return; }
-  function setMsg(t){ el("msgFinal").className="msg show info"; el("msgFinal").textContent=t; }
-  var coLink=null, cupomLink=null, conLink=null;
+// ── PARADA ──
+function goParada(fase){curFase=fase;var ps=fase==="ida"?(trip.ida_paradas||[]):(trip.volta_paradas||[]);var plan=fase==="ida"?(trip.ida_plan||1):(trip.volta_plan||1);var done=ps.length;show("secParada");reqGPS("pa_gs","pa_gt");clock("pa_ck");
+  $("pa_badge").textContent=fase.toUpperCase();$("pa_badge").style.background=fase==="ida"?"#DBEAFE":"#FEF3C7";$("pa_badge").style.color=fase==="ida"?"#1E40AF":"#92400E";
+  $("pa_titulo").textContent="Parada "+(done+1)+" de "+plan;$("pa_orig").value="";$("pa_dest").value="";$("pa_km").value=""}
+async function enviarParada(){var o=$("pa_orig").value.trim(),d=$("pa_dest").value.trim(),k=$("pa_km").value.trim();if(!o||!d||!k){alert("Preencha origem, destino e km.");return}ld("Registrando parada…");var now=new Date();
+  var arr=curFase==="ida"?"ida_paradas":"volta_paradas";var ordem=(trip[arr]||[]).length+1;
+  var ins=await sb.from("paradas").insert({reembolso_id:trip.id,fase:curFase,ordem:ordem,origem:o,destino:d,km:parseFloat(String(k).replace(",","."))||0,lat:gps?gps.lat:null,lng:gps?gps.lng:null,horario:now.toISOString()}).select("id").maybeSingle();
+  hd();if(ins.error){alert("Erro: "+ins.error.message);return}
+  trip[arr]=trip[arr]||[];trip[arr].push({id:ins.data.id,orig:o,dest:d,km:k,time:fmtD(now)});saveTrip(trip);show("secViagem");renderViagem()}
+
+// ── FINALIZAR ──
+function togglePedDepois(){var on=$("co_ped_depois").checked;$("co_ped_depois_aviso").style.display=on?"block":"none";$("co_ped_campos").style.display=on?"none":"block"}
+function pedDepoisOn(){return $("co_ped_depois").checked}
+function setFuelMode(m){fuelMode=m;$("tog_cupom").classList.toggle("on",m==="cupom");$("tog_estim").classList.toggle("on",m==="estim");$("fuel_cupom").style.display=m==="cupom"?"block":"none";$("fuel_estim").style.display=m==="estim"?"block":"none"}
+function setConMode(m){conMode=m;$("tog_con_pad").classList.toggle("on",m==="padrao");$("tog_con_custom").classList.toggle("on",m==="custom");$("con_padrao").style.display=m==="padrao"?"block":"none";$("con_custom").style.display=m==="custom"?"block":"none"}
+function getConsumo(){if(conMode==="custom")return parseFloat($("co_consumo").value)||0;return(trip&&trip.veiculo==="Moto")?49:10}
+var pedN=0;
+function addPed(fase){pedN++;var wrap=$("ped_list_"+fase);var d=document.createElement("div");d.className="dyn-item";
+  d.innerHTML='<button class="rm" onclick="this.parentNode.remove()">✕</button><div class="f" style="margin:0 0 10px"><label>Valor (R$)</label><input type="number" class="ped-val" inputmode="decimal" step="0.01"></div><label class="cl" for="pedf_'+pedN+'"><div class="cz" id="pedz_'+pedN+'" style="padding:14px"><div id="pedh_'+pedN+'"><div class="pi">🧾</div><div class="pt">Comprovante (opcional)</div></div><img id="pedv_'+pedN+'" style="display:none"></div></label><input type="file" accept="image/*" id="pedf_'+pedN+'" class="chi ped-foto" onchange="capFile(this,\'pedv_'+pedN+'\',\'pedh_'+pedN+'\',\'pedz_'+pedN+'\')">';wrap.appendChild(d)}
+function coletarPedagios(){var out=[];["ida","volta"].forEach(function(fase){var items=$("ped_list_"+fase).querySelectorAll(".dyn-item");Array.prototype.forEach.call(items,function(it,i){var v=parseFloat(String(it.querySelector(".ped-val").value).replace(",","."))||0;if(v>0)out.push({fase:fase,ordem:i+1,valor:v,foto:it.querySelector(".ped-foto").dataset.compressed||""})})});return out}
+function addCarona(){var d=document.createElement("div");d.className="dyn-item";d.innerHTML='<button class="rm" onclick="this.parentNode.remove()">✕</button><div class="f" style="margin:0"><label>Nome</label><input type="text" class="carona-nome"></div>';$("carona_list").appendChild(d)}
+function coletarCaronas(){var out=[];Array.prototype.forEach.call($("carona_list").querySelectorAll(".carona-nome"),function(i){if(i.value.trim())out.push(i.value.trim())});return out}
+function goFinalizar(){show("secFinal");reqGPS("co_gs","co_gt");clock("co_ck");coCapt={ts:null,lat:null,lng:null,b64:null};
+  $("co_pv").style.display="none";$("co_ph").style.display="block";$("co_cz").classList.remove("ok");$("co_cm").classList.remove("v");
+  $("co_cupv").style.display="none";$("co_cuph").style.display="block";$("co_cupz").classList.remove("ok");$("co_cupom").dataset.compressed="";
+  $("resumoCard").style.display="none";$("btnEnv").style.display="none";$("btnCalc").style.display="flex";$("btnEnv").disabled=false;
+  $("ped_list_ida").innerHTML="";$("ped_list_volta").innerHTML="";$("co_ped_depois").checked=false;togglePedDepois();$("co_preco").value="";fuelMode="cupom";setFuelMode("cupom");
+  $("carona_list").innerHTML="";conMode="padrao";setConMode("padrao");$("con_padrao_val").textContent=((trip&&trip.veiculo==="Moto")?"49":"10")+" km/L";$("co_consumo").value="";$("co_confoto").dataset.compressed="";
+  $("co_confv").style.display="none";$("co_confh").style.display="block";$("co_confz").classList.remove("ok");_calc=null;renderMapsList()}
+function renderMapsList(){var pI=trip.ida_paradas||[],pV=trip.volta_paradas||[],h="";for(var i=0;i<pI.length;i++)h+=mapsItem("mida_"+i,"IDA — Parada "+(i+1),pI[i]);for(var i=0;i<pV.length;i++)h+=mapsItem("mvolta_"+i,"VOLTA — Parada "+(i+1),pV[i]);if(!pI.length&&!pV.length)h='<p style="font-size:13px;color:var(--text-muted)">Nenhuma parada registrada.</p>';$("maps_list").innerHTML=h}
+function mapsItem(id,label,p){var sub=(p?(esc(p.orig)+" → "+esc(p.dest)+" · "+esc(p.km)+" km"):"");return '<div class="maps-item"><div class="maps-head"><span class="maps-tag">'+label+'</span><span class="maps-sub">'+sub+'</span></div><label class="cl" for="'+id+'"><div class="cz" id="'+id+'_z"><div id="'+id+'_p"><div class="pi">🗺️</div><div class="pt">Anexar print do Maps</div></div><img id="'+id+'_v" style="display:none"></div></label><input type="file" accept="image/*" id="'+id+'" class="chi" onchange="capFile(this,\''+id+'_v\',\''+id+'_p\',\''+id+'_z\')"></div>'}
+function calcular(){if(!coCapt.b64){alert("Tire a foto do odômetro de chegada.");return}
+  var pI=trip.ida_paradas||[],pV=trip.volta_paradas||[],i;
+  for(i=0;i<pI.length;i++){var e=$("mida_"+i);if(!e||!e.dataset.compressed){alert("Anexe o print do Maps da Parada "+(i+1)+" da IDA.");return}}
+  for(i=0;i<pV.length;i++){var e2=$("mvolta_"+i);if(!e2||!e2.dataset.compressed){alert("Anexe o print do Maps da Parada "+(i+1)+" da VOLTA.");return}}
+  var usarEstim=fuelMode==="estim",precoReal=PB;
+  if(!usarEstim){precoReal=parseFloat(String($("co_preco").value).replace(",","."));if(!precoReal||precoReal<=0){alert("Informe o preço do litro.");return}if(!$("co_cupom").dataset.compressed){alert("Anexe o cupom fiscal.");return}}
+  if(conMode==="custom"){var cc=parseFloat($("co_consumo").value);if(!cc||cc<=0){alert("Informe o consumo (km/L).");return}if(!$("co_confoto").dataset.compressed){alert("Anexe a foto do painel com o consumo.");return}}
+  var peds=pedDepoisOn()?[]:coletarPedagios(),tPed=0;peds.forEach(function(p){tPed+=p.valor});
+  var dIda=0;pI.forEach(function(p){dIda+=parseFloat(String(p.km).replace(",","."))||0});var dVol=0;pV.forEach(function(p){dVol+=parseFloat(String(p.km).replace(",","."))||0});
+  var dTot=dIda+dVol,con=getConsumo(),vReal=dTot/con*precoReal,vTot=vReal+tPed,vEst=dTot/con*PB;
+  _calc={dTot:dTot,con:con,usarEstim:usarEstim,precoReal:precoReal,peds:peds,vReal:vReal,vTot:vTot,pedDepois:pedDepoisOn()};
+  var fuelTxt=usarEstim?'<div style="padding:10px;background:var(--warning-bg);border-radius:8px;text-align:center;margin-bottom:8px"><div style="font-size:12px;font-weight:600;color:#92400E">ESTIMATIVA (R$ '+PB.toFixed(2)+'/L)</div><div style="font-size:18px;font-weight:700;color:#92400E">'+brl(vEst)+'</div></div>':'<div style="padding:10px;background:var(--success-bg);border-radius:8px;text-align:center;margin-bottom:8px"><div style="font-size:12px;font-weight:600;color:#065F46">VALOR REAL (R$ '+precoReal.toFixed(2)+'/L)</div><div style="font-size:20px;font-weight:700;color:#065F46">'+brl(vReal)+'</div></div>';
+  $("resumo").innerHTML='<div style="font-weight:700;font-size:15px;color:var(--primary);margin-bottom:10px">📊 Resumo</div><div style="font-size:13px">Distância: <strong>'+dTot.toFixed(1)+' km</strong> ('+con+' km/L)</div><hr style="border:none;border-top:1px solid var(--border);margin:10px 0">'+fuelTxt+(tPed?'<div style="font-size:13px"><strong>Pedágios ('+peds.length+'):</strong> '+brl(tPed)+'</div>':'')+'<div style="font-size:20px;font-weight:700;color:var(--primary);margin-top:12px;padding-top:12px;border-top:2px solid var(--primary)">Total: '+brl(vTot)+'</div>';
+  $("resumoCard").style.display="block";$("btnCalc").style.display="none";$("btnEnv").style.display="flex";$("resumoCard").scrollIntoView({behavior:"smooth"})}
+async function enviarFinal(){if(!_calc){alert("Calcule primeiro.");return}var c=_calc,pI=trip.ida_paradas||[],pV=trip.volta_paradas||[],i;$("btnEnv").disabled=true;
   try{
-    if(CO_FOTO){ setMsg("Enviando foto do odômetro…"); coLink=await uploadFoto(CO_FOTO,"odometro_chegada",TRIP.protocolo); } else { coLink=ex.checkout_foto||null; }
-    if(!c.usarEstim){ if(CUPOM_FOTO){ setMsg("Enviando cupom…"); cupomLink=await uploadFoto(CUPOM_FOTO,"cupom",TRIP.protocolo); } else { cupomLink=ex.cupom_foto||null; } }
-    if(CON_FOTO){ setMsg("Enviando foto do consumo…"); conLink=await uploadFoto(CON_FOTO,"consumo",TRIP.protocolo); }
-    for(var i=0;i<todas.length;i++){ if(todas[i].foto){ setMsg("Enviando print do Maps "+(i+1)+" de "+todas.length+"…"); todas[i]._link=await uploadFoto(todas[i].foto, todas[i].fase+"_maps_"+(i+1), TRIP.protocolo); } else { todas[i]._link=todas[i].existingLink||null; } }
-    for(var i=0;i<c.peds.length;i++){ if(c.peds[i].foto){ setMsg("Enviando comprovante de pedágio "+(i+1)+"…"); c.peds[i]._link=await uploadFoto(c.peds[i].foto, "pedagio_"+(i+1), TRIP.protocolo); } else { c.peds[i]._link=c.peds[i].existingLink||null; } }
-  }catch(e){ msg("msgFinal","err","Erro ao enviar uma foto: "+e.message+" — verifique o sinal e tente de novo."); return; }
-  setMsg("Salvando…");
-  var upd={ status: correcao?"CORRIGIDO":"COMPLETO",
-    checkout_foto:coLink, cupom_foto:cupomLink, foto_consumo:conLink,
-    dist_total:c.dist, consumo:c.con, usou_estimativa:c.usarEstim, preco_base:PB,
-    preco_real:c.usarEstim?null:c.precoReal, caronas:coletarCaronas().join(", ")||null };
-  if(gps2){ upd.checkout_em=new Date().toISOString(); upd.checkout_lat=gps2.lat; upd.checkout_lng=gps2.lng; }
-  else if(!correcao){ upd.checkout_em=new Date().toISOString(); }
-  var r1=await sb.from("reembolsos").update(upd).eq("id",TRIP.id);
-  if(r1.error){ msg("msgFinal","err","Erro ao salvar: "+r1.error.message); return; }
-  if(correcao){ await sb.from("paradas").delete().eq("reembolso_id",TRIP.id); await sb.from("pedagios").delete().eq("reembolso_id",TRIP.id); }
-  var paradas=todas.map(function(p){ return {reembolso_id:TRIP.id, fase:p.fase, ordem:p.ordem, origem:p.origem, destino:p.destino, km:p.km, maps_link:p._link||null}; });
-  if(paradas.length){ var r2=await sb.from("paradas").insert(paradas); if(r2.error){ msg("msgFinal","err","Erro ao salvar paradas: "+r2.error.message); return; } }
-  if(c.peds.length){ var peds=c.peds.map(function(p){ return {reembolso_id:TRIP.id, fase:p.fase, ordem:p.ordem, valor:p.valor, comprovante_link:p._link||null}; }); var r3=await sb.from("pedagios").insert(peds); if(r3.error){ msg("msgFinal","err","Erro ao salvar pedágios: "+r3.error.message); return; } }
-  if(!correcao){
-    var cfg=window.RBCIP_CONFIG||{};
-    if(cfg.CARTEIRO_URL){ try{ var s2=await sb.auth.getSession();
-      await fetch(cfg.CARTEIRO_URL,{method:"POST",redirect:"follow",headers:{"Content-Type":"text/plain"},
-        body:JSON.stringify({action:"enviar_confirmacao_registro", jwt:s2.data.session.access_token, protocolo:TRIP.protocolo})});
-    }catch(e){} }
-  }
-  el("ok_icone").textContent="✅";
-  el("ok_titulo").textContent= correcao?"Correção enviada!":"Solicitação enviada!";
-  el("ok_texto").textContent= correcao?"Seu pedido corrigido voltou para análise.":"Seu reembolso foi registrado e você recebeu um e-mail de confirmação.";
-  el("ok_proto").textContent="Protocolo: "+TRIP.protocolo+" · Total: R$ "+c.vTot.toFixed(2);
-  show("secOk");
-}
+    ld("Enviando foto do odômetro…");var odo=await uploadFoto(coCapt.b64,"odometro_chegada");
+    for(i=0;i<pI.length;i++){ld("Enviando Maps ida "+(i+1)+"…");var lk=await uploadFoto($("mida_"+i).dataset.compressed,"ida_"+(i+1)+"_maps");if(pI[i].id)await sb.from("paradas").update({maps_link:lk}).eq("id",pI[i].id)}
+    for(i=0;i<pV.length;i++){ld("Enviando Maps volta "+(i+1)+"…");var lk2=await uploadFoto($("mvolta_"+i).dataset.compressed,"volta_"+(i+1)+"_maps");if(pV[i].id)await sb.from("paradas").update({maps_link:lk2}).eq("id",pV[i].id)}
+    var cupomLink=null;if(!c.usarEstim){ld("Enviando cupom…");cupomLink=await uploadFoto($("co_cupom").dataset.compressed,"cupom")}
+    var conLink=null;if(conMode==="custom"){ld("Enviando foto do consumo…");conLink=await uploadFoto($("co_confoto").dataset.compressed,"consumo")}
+    for(i=0;i<c.peds.length;i++){var pl=null;if(c.peds[i].foto){ld("Enviando comprovante pedágio "+(i+1)+"…");pl=await uploadFoto(c.peds[i].foto,"pedagio_"+(i+1))}var rp=await sb.from("pedagios").insert({reembolso_id:trip.id,fase:c.peds[i].fase,ordem:c.peds[i].ordem,valor:c.peds[i].valor,comprovante_link:pl,pendente:false});if(rp.error)throw new Error(rp.error.message)}
+    ld("Finalizando…");
+    var upd={status:trip.correcao?"CORRIGIDO":"COMPLETO",checkout_em:coCapt.ts||new Date().toISOString(),checkout_lat:coCapt.lat,checkout_lng:coCapt.lng,checkout_foto:odo,dist_total:c.dTot,consumo:c.con,usou_estimativa:c.usarEstim,preco_base:PB,preco_real:c.usarEstim?null:c.precoReal,cupom_foto:cupomLink,foto_consumo:conLink,caronas:coletarCaronas().join(", ")||null};
+    var r1=await sb.from("reembolsos").update(upd).eq("id",trip.id);if(r1.error)throw new Error(r1.error.message);
+    var wasCorr=trip.correcao;
+    if(!wasCorr){try{var s=await sb.auth.getSession();await fetch(window.RBCIP_CONFIG.CARTEIRO_URL,{method:"POST",redirect:"follow",headers:{"Content-Type":"text/plain"},body:JSON.stringify({action:"enviar_confirmacao_registro",jwt:s.data.session.access_token,protocolo:trip.protocolo})})}catch(e){}}
+    hd();$("ok_titulo").textContent=wasCorr?"Correção Enviada!":"Solicitação Enviada!";$("ok_proto").textContent="Protocolo: "+trip.protocolo;$("ok_val").textContent=brl(c.vTot);clearTrip();trip=null;show("secOk")
+  }catch(e){hd();$("btnEnv").disabled=false;alert("Erro ao enviar: "+e.message)}}
 
-// ── Viagem em andamento (ABERTO) do motorista ──
-async function checarViagemAberta(){
-  var { data }=await sb.from("reembolsos").select("id,protocolo,checkin_em").eq("motorista_id",SESSION.user.id).eq("status","ABERTO").order("checkin_em",{ascending:false}).limit(1);
-  var box=el("hm_aberta"), temAberta=!!(data && data.length);
-  if(temAberta){
-    var v=data[0];
-    box.innerHTML='<div class="viagem-aberta"><b>🚗 Você tem uma viagem em andamento</b><br><span class="muted">Protocolo '+v.protocolo+'. Finalize-a antes de iniciar outra.</span>'
-      +'<button class="sm" style="width:auto;margin-top:10px" onclick="goFinal(\''+v.id+'\',\''+v.protocolo+'\')">Registrar paradas e check-out →</button></div>';
-  } else { box.innerHTML=""; }
-  // Não deixa iniciar uma nova viagem enquanto houver uma em andamento
-  el("hm_nova").classList.toggle("hide", temAberta);
-}
+// ── Meus pedidos / Correção ──
+async function renderMeusPedidos(){var r=await sb.from("vw_reembolsos").select("id,protocolo,status,val_total,criado_em").eq("motorista_id",SESSION.user.id).order("criado_em",{ascending:false});_meus=r.data||[];_meusShow=5;desenharMeus()}
+function desenharMeus(){var box=$("meus_pedidos");if(!box)return;if(!_meus.length){box.innerHTML='<p style="font-size:13px;color:var(--text-muted)">Você ainda não tem pedidos.</p>';return}
+  var h=_meus.slice(0,_meusShow).map(function(r){var corr=r.status==="REVISÃO"?'<button class="bp b" style="padding:8px;margin-top:8px;font-size:13px" onclick="abrirCorr(\''+esc(r.protocolo)+'\')">🔄 Corrigir</button>':'';
+    return '<div style="border:1px solid var(--border);border-radius:10px;padding:10px 12px;margin-bottom:8px"><div style="display:flex;justify-content:space-between;align-items:center;gap:8px"><span><strong>'+esc(r.protocolo)+'</strong> <span class="stp stp-'+esc(r.status)+'">'+esc(r.status)+'</span></span><span style="font-size:13px;color:var(--text-secondary)">'+brl(r.val_total)+'</span></div>'+corr+'</div>'}).join("");
+  if(_meus.length>_meusShow)h+='<button class="bs" style="margin-top:0" onclick="_meusShow+=10;desenharMeus()">Ver mais ('+(_meus.length-_meusShow)+')</button>';
+  box.innerHTML=h}
+async function abrirCorr(protocolo){ld("Carregando pedido…");var r=await sb.from("reembolsos").select("id,protocolo,nome,cpf,veiculo,placa").eq("protocolo",protocolo).maybeSingle();hd();if(!r.data){alert("Pedido não encontrado.");return}
+  var d=r.data;trip={id:d.id,protocolo:d.protocolo,nome:d.nome,cpf:d.cpf,veiculo:d.veiculo,placa:d.placa,correcao:true,ida_plan:null,volta_plan:null};saveTrip(trip);
+  alert("Modo correção: ajuste as paradas (pode remover e registrar de novo) e refaça o check-out para reenviar.");await goViagem()}
 
-// ── Pedidos em REVISÃO (para o motorista corrigir) ──
-async function checarRevisao(){
-  var { data }=await sb.from("reembolsos").select("id,protocolo,validacao").eq("motorista_id",SESSION.user.id).eq("status","REVISÃO").order("atualizado_em",{ascending:false});
-  var box=el("hm_revisao"); if(!box)return;
-  if(data && data.length){
-    box.innerHTML=data.map(function(v){
-      return '<div class="viagem-aberta"><b>🔄 Pedido em revisão</b><br><span class="muted">Protocolo '+v.protocolo+'.'+(v.validacao?' — '+esc(v.validacao):'')+'</span>'
-        +'<button class="sm" style="width:auto;margin-top:10px" onclick="goCorrigir(\''+v.id+'\',\''+v.protocolo+'\')">Corrigir e reenviar →</button></div>';
-    }).join("");
-  } else box.innerHTML="";
-}
-
-// ── Meus pedidos (acompanhar) + pedágio pendente ──
-var _meusPedidos=[], _meusShow=5;
-async function checarMeusPedidos(){
-  var { data }=await sb.from("vw_reembolsos").select("id,protocolo,status,val_total,criado_em").eq("motorista_id",SESSION.user.id).order("criado_em",{ascending:false});
-  _meusPedidos=data||[]; _meusShow=5; renderMeusPedidos();
-}
-function renderMeusPedidos(){
-  var box=el("hm_pedidos"); if(!box)return;
-  if(!_meusPedidos.length){ box.innerHTML='<p class="muted">Você ainda não tem pedidos.</p>'; return; }
-  var rows=_meusPedidos.slice(0,_meusShow).map(function(r){
-    return '<div class="pedido-item"><div style="display:flex;justify-content:space-between;align-items:center;gap:8px"><span><b>'+esc(r.protocolo)+'</b> <span class="stp stp-'+esc(r.status)+'">'+esc(r.status)+'</span></span><span class="muted">'+brl(r.val_total)+'</span></div></div>';
-  }).join("");
-  var mais=(_meusPedidos.length>_meusShow) ? '<button class="ghost sm" style="width:auto;margin-top:4px" onclick="_meusShow+=10;renderMeusPedidos()">Ver mais ('+(_meusPedidos.length-_meusShow)+')</button>' : '';
-  box.innerHTML=rows+mais;
-}
-
-// ── Pedágio pendente (fluxo dedicado) ──
-async function togglePedPendente(){
-  var box=el("pedPendenteBox"); if(!box)return;
-  if(box.innerHTML){ box.innerHTML=""; return; }
-  var { data }=await sb.from("vw_reembolsos").select("id,protocolo,status,criado_em").eq("motorista_id",SESSION.user.id).in("status",["COMPLETO","REVISÃO","CORRIGIDO","APROVADO","PAGO"]).order("criado_em",{ascending:false});
-  if(!data || !data.length){ box.innerHTML='<p class="muted" style="margin-top:10px">Você não tem pedidos elegíveis para adicionar pedágio no momento.</p>'; return; }
-  var opts=data.map(function(r){ return '<option value="'+r.id+'|'+esc(r.protocolo)+'">'+esc(r.protocolo)+' — '+esc(r.status)+'</option>'; }).join("");
-  box.innerHTML='<div style="margin-top:14px;border-top:1px dashed var(--border);padding-top:14px">'
-    +'<label>Pedido</label><select id="pp-sel">'+opts+'</select>'
-    +'<div class="fr"><div><label>Fase</label><select id="pp-fase"><option value="ida">Ida</option><option value="volta">Volta</option></select></div>'
-    +'<div><label>Valor (R$)</label><input id="pp-val" inputmode="decimal"></div></div>'
-    +'<label>Comprovante (opcional)</label><input type="file" accept="image/*" id="pp-foto">'
-    +'<button style="margin-top:12px" onclick="salvarPedPendente()">Adicionar pedágio</button>'
-    +'<div id="pp-msg" class="msg"></div></div>';
-}
-async function salvarPedPendente(){
-  var mbox=el("pp-msg"), sel=el("pp-sel").value.split("|"), id=sel[0], protocolo=sel[1];
-  var val=parseFloat(String(el("pp-val").value).replace(",","."))||0;
-  if(val<=0){ mbox.className="msg show err"; mbox.textContent="Informe o valor do pedágio."; return; }
-  mbox.className="msg show info"; mbox.textContent="Salvando…";
-  var link=null, fin=el("pp-foto");
-  if(fin && fin.files && fin.files[0]){
-    try{ var b64=await compress(fin.files[0]); link=await uploadFoto(b64,"pedagio_pendente",protocolo); }
-    catch(e){ mbox.className="msg show err"; mbox.textContent="Erro na foto: "+e.message; return; }
-  }
-  var ex=await sb.from("pedagios").select("id").eq("reembolso_id",id);
-  var ordem=((ex.data&&ex.data.length)||0)+1;
-  var { error }=await sb.from("pedagios").insert({reembolso_id:id, fase:el("pp-fase").value, ordem:ordem, valor:val, comprovante_link:link, pendente:true});
-  if(error){ mbox.className="msg show err"; mbox.textContent="Erro: "+error.message; return; }
-  mbox.className="msg show ok"; mbox.textContent="Solicitação enviada para o "+protocolo+". O pedágio ficará pendente até o gestor analisar (não entra no total automaticamente).";
-  el("pp-val").value=""; if(fin)fin.value="";
-  checarMeusPedidos();
-}
+// ── Pedágio pendente ──
+async function togglePedagio(){var box=$("pedPendenteBox");if(box.innerHTML){box.innerHTML="";return}
+  var r=await sb.from("vw_reembolsos").select("id,protocolo,status,criado_em").eq("motorista_id",SESSION.user.id).in("status",["COMPLETO","REVISÃO","CORRIGIDO","APROVADO","PAGO"]).order("criado_em",{ascending:false});
+  if(!r.data||!r.data.length){box.innerHTML='<p style="font-size:13px;color:var(--text-muted);margin-top:10px">Você não tem pedidos elegíveis no momento.</p>';return}
+  var opts=r.data.map(function(x){return '<option value="'+x.id+'|'+esc(x.protocolo)+'">'+esc(x.protocolo)+' — '+esc(x.status)+'</option>'}).join("");
+  box.innerHTML='<div style="margin-top:14px;border-top:1px dashed var(--border);padding-top:14px"><div class="f"><label>Pedido</label><select id="pp_sel">'+opts+'</select></div><div class="fr"><div class="f"><label>Fase</label><select id="pp_fase"><option value="ida">Ida</option><option value="volta">Volta</option></select></div><div class="f"><label>Valor (R$)</label><input id="pp_val" inputmode="decimal"></div></div><div class="f"><label>Comprovante (opcional)</label><input type="file" accept="image/*" id="pp_foto"></div><button class="bp b" onclick="salvarPedagio()">Adicionar pedágio</button><div id="pp_msg" class="msg"></div></div>'}
+async function salvarPedagio(){var sel=$("pp_sel").value.split("|"),id=sel[0],protocolo=sel[1],mb=$("pp_msg");var val=parseFloat(String($("pp_val").value).replace(",","."))||0;if(val<=0){mb.className="msg show err";mb.textContent="Informe o valor.";return}
+  mb.className="msg show info";mb.textContent="Salvando…";var link=null,fin=$("pp_foto");
+  if(fin&&fin.files&&fin.files[0]){try{var b64=await compress(fin.files[0]);var savedProto=(trip&&trip.protocolo)||"";trip=trip||{};trip.protocolo=protocolo;link=await uploadFoto(b64,"pedagio_pendente");trip.protocolo=savedProto}catch(e){mb.className="msg show err";mb.textContent="Erro na foto: "+e.message;return}}
+  var ex=await sb.from("pedagios").select("id").eq("reembolso_id",id);var ordem=((ex.data&&ex.data.length)||0)+1;
+  var r=await sb.from("pedagios").insert({reembolso_id:id,fase:$("pp_fase").value,ordem:ordem,valor:val,comprovante_link:link,pendente:true});
+  if(r.error){mb.className="msg show err";mb.textContent="Erro: "+r.error.message;return}
+  mb.className="msg show ok";mb.textContent="Solicitação enviada para o "+protocolo+". O pedágio fica pendente até o gestor analisar.";$("pp_val").value="";if(fin)fin.value=""}
 
 // ── Início ──
-async function iniciar(){
-  var { data:{ session } }=await sb.auth.getSession();
-  if(!session){ show("secLogin"); return; }
-  SESSION=session;
-  var { data:perfil }=await sb.from("perfis").select("nome,papel").eq("id",session.user.id).maybeSingle();
-  PERFIL=perfil||{};
-  if(PERFIL.papel==="van"){ location.replace("van.html"); return; }
-  var _nm=(PERFIL.nome)||session.user.email;
-  el("hm_nome").textContent=_nm;
-  el("hm_papel").textContent=(PERFIL.papel)||"—";
-  el("hm_avatar").textContent=((_nm||"?").trim().charAt(0)||"?").toUpperCase();
-  await checarViagemAberta();
-  await checarRevisao();
-  await checarMeusPedidos();
-  show("secHome");
-}
-
-(function(){
-  var c=window.RBCIP_CONFIG||{};
-  if(!c.SUPABASE_URL || String(c.SUPABASE_URL).indexOf("http")!==0){ show("secLogin"); msg("msgLogin","err","Configuração ausente (web/config.js)."); return; }
-  sb=window.supabase.createClient(c.SUPABASE_URL,c.SUPABASE_PUBLISHABLE_KEY);
-  iniciar();
-})();
+async function iniciarApp(){var s=await sb.auth.getSession();if(!s.data.session){show("secLogin");return}SESSION=s.data.session;
+  var p=await sb.from("perfis").select("nome,papel").eq("id",SESSION.user.id).maybeSingle();PERFIL=p.data||{};
+  if(PERFIL.papel==="van"){location.replace("van.html");return}
+  $("hm_nome").textContent=PERFIL.nome||SESSION.user.email;$("hm_papel").textContent=PERFIL.papel||"motorista";
+  show("secHome");await fetchPreco();await sync()}
+(function(){var c=window.RBCIP_CONFIG||{};if(!c.SUPABASE_URL||String(c.SUPABASE_URL).indexOf("http")!==0){show("secLogin");msg("msgLogin","err","Configuração ausente (web/config.js).");return}sb=window.supabase.createClient(c.SUPABASE_URL,c.SUPABASE_PUBLISHABLE_KEY);iniciarApp()})();
 </script>
 </body>
 </html>
