@@ -40,10 +40,12 @@
   .collapse-h{display:flex;align-items:center;justify-content:space-between;cursor:pointer;gap:8px}
   .collapse-h .caret{transition:transform .2s;color:var(--navy-2);font-size:13px}
   .collapse.open .collapse-h .caret{transform:rotate(180deg)}
-  .collapse-body{display:none;margin-top:14px}
-  .collapse.open .collapse-body{display:block}
-  .step{display:flex;gap:12px;margin-top:14px}
-  .step .n{width:27px;height:27px;border-radius:50%;background:#EFF6FF;color:var(--navy-2);font-weight:700;font-size:13px;display:flex;align-items:center;justify-content:center;flex:0 0 auto}
+  .collapse-body{max-height:0;overflow:hidden;opacity:0;transition:max-height .45s ease,opacity .35s ease}
+  .collapse.open .collapse-body{max-height:1600px;opacity:1;margin-top:14px}
+  .step{display:flex;gap:12px;margin-top:16px}
+  .step .n{width:28px;height:28px;border-radius:50%;font-weight:700;font-size:13px;display:flex;align-items:center;justify-content:center;flex:0 0 auto}
+  .step .n.g{background:#ECFDF5;color:#059669} .step .n.b{background:#EFF6FF;color:#2563EB}
+  .step .n.p{background:#F5F3FF;color:#7C3AED} .step .n.a{background:#FFFBEB;color:#D97706}
   .step .t{font-weight:700;font-size:14px}
   .step .d{font-size:13px;color:var(--text-2);margin-top:2px;line-height:1.55}
   .aviso{background:var(--warn-bg);border:1px solid #FDE68A;border-radius:10px;padding:12px 14px;margin-top:16px;font-size:12.5px;color:var(--warn);line-height:1.7}
@@ -101,8 +103,8 @@
       </div>
       <div class="collapse-body">
         <p class="muted">O registro tem <b>2 momentos</b>:</p>
-        <div class="step"><div class="n">1</div><div><div class="t">Check-in (antes de sair)</div><div class="d">Preencha seus dados e tire a foto do odômetro. O <b>GPS e o horário</b> são registrados automaticamente.</div></div></div>
-        <div class="step"><div class="n">2</div><div><div class="t">Paradas + check-out (ao terminar)</div><div class="d">Informe cada trecho (origem, destino e km) com o <b>print do Google Maps</b>, os pedágios, o combustível e a foto do odômetro final. O app <b>calcula o reembolso</b> automaticamente.</div></div></div>
+        <div class="step"><div class="n g">1</div><div><div class="t">Check-in (antes de sair)</div><div class="d">Preencha seus dados e tire a foto do odômetro. O <b>GPS e o horário</b> são registrados automaticamente.</div></div></div>
+        <div class="step"><div class="n b">2</div><div><div class="t">Paradas + check-out (ao terminar)</div><div class="d">Informe cada trecho (origem, destino e km) com o <b>print do Google Maps</b>, os pedágios, o combustível e a foto do odômetro final. O app <b>calcula o reembolso</b> automaticamente.</div></div></div>
         <div class="aviso">⚠️ <b>Dicas:</b><br>• Cada parada = um trecho (origem → destino + km).<br>• Se um pedido cair em <b>revisão</b>, ele aparece aqui na tela inicial para você corrigir.<br>• Pedágio de plano (Sem Parar, ConectCar) que chegou depois? Use o <b>Pedágio pendente</b> abaixo.</div>
       </div>
     </div>
@@ -623,7 +625,7 @@ function renderMeusPedidos(){
 async function togglePedPendente(){
   var box=el("pedPendenteBox"); if(!box)return;
   if(box.innerHTML){ box.innerHTML=""; return; }
-  var { data }=await sb.from("vw_reembolsos").select("id,protocolo,status,criado_em").eq("motorista_id",SESSION.user.id).in("status",["COMPLETO","REVISÃO","CORRIGIDO"]).order("criado_em",{ascending:false});
+  var { data }=await sb.from("vw_reembolsos").select("id,protocolo,status,criado_em").eq("motorista_id",SESSION.user.id).in("status",["COMPLETO","REVISÃO","CORRIGIDO","APROVADO","PAGO"]).order("criado_em",{ascending:false});
   if(!data || !data.length){ box.innerHTML='<p class="muted" style="margin-top:10px">Você não tem pedidos elegíveis para adicionar pedágio no momento.</p>'; return; }
   var opts=data.map(function(r){ return '<option value="'+r.id+'|'+esc(r.protocolo)+'">'+esc(r.protocolo)+' — '+esc(r.status)+'</option>'; }).join("");
   box.innerHTML='<div style="margin-top:14px;border-top:1px dashed var(--border);padding-top:14px">'
@@ -646,9 +648,9 @@ async function salvarPedPendente(){
   }
   var ex=await sb.from("pedagios").select("id").eq("reembolso_id",id);
   var ordem=((ex.data&&ex.data.length)||0)+1;
-  var { error }=await sb.from("pedagios").insert({reembolso_id:id, fase:el("pp-fase").value, ordem:ordem, valor:val, comprovante_link:link});
+  var { error }=await sb.from("pedagios").insert({reembolso_id:id, fase:el("pp-fase").value, ordem:ordem, valor:val, comprovante_link:link, pendente:true});
   if(error){ mbox.className="msg show err"; mbox.textContent="Erro: "+error.message; return; }
-  mbox.className="msg show ok"; mbox.textContent="Pedágio adicionado ao "+protocolo+"! O total foi atualizado.";
+  mbox.className="msg show ok"; mbox.textContent="Solicitação enviada para o "+protocolo+". O pedágio ficará pendente até o gestor analisar (não entra no total automaticamente).";
   el("pp-val").value=""; if(fin)fin.value="";
   checarMeusPedidos();
 }

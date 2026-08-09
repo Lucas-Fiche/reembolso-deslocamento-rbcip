@@ -146,6 +146,7 @@ tbody tr.clk:hover{background:var(--surface2)}
       <option value="APROVADO">Aprovado</option>
       <option value="PAGO">Pago</option>
       <option value="REPROVADO">Reprovado</option>
+      <option value="__PEND">⚠️ Com pedágio pendente</option>
     </select>
     <input id="fBusca" type="text" placeholder="Buscar por protocolo, nome ou CPF…" oninput="render()">
   </div>
@@ -210,7 +211,7 @@ function msgTopo(txt, err){
 // ── Carregar dados do Supabase ──
 async function carregar(){
   var { data, error } = await sb.from("vw_reembolsos")
-    .select("id,protocolo,status,nome,cpf,veiculo,placa,checkin_em,dist_total,val_real,val_pedagios,val_total,qtd_paradas,qtd_pedagios,criado_em")
+    .select("id,protocolo,status,nome,cpf,veiculo,placa,checkin_em,dist_total,val_real,val_pedagios,val_total,qtd_paradas,qtd_pedagios,qtd_ped_pendentes,criado_em")
     .order("criado_em",{ascending:false});
   if(error){ alert("Erro ao carregar: "+error.message); return; }
   DADOS = data||[];
@@ -219,9 +220,10 @@ async function carregar(){
 
 function contarCards(){
   var c={ABERTO:0,COMPLETO:0,"REVISÃO":0,CORRIGIDO:0,APROVADO:0,PAGO:0,REPROVADO:0};
-  var somaPagos=0, kmSemRep=0, valSemRep=0;
+  var somaPagos=0, kmSemRep=0, valSemRep=0, pendCount=0;
   DADOS.forEach(function(r){
     if(c[r.status]!=null)c[r.status]++;
+    if(r.qtd_ped_pendentes>0) pendCount++;
     if(r.status==="PAGO" && r.val_total) somaPagos+=Number(r.val_total);
     if(r.status!=="REPROVADO"){ if(r.dist_total)kmSemRep+=Number(r.dist_total); if(r.val_total)valSemRep+=Number(r.val_total); }
   });
@@ -238,6 +240,7 @@ function contarCards(){
     {k:"KM total",v:kmTxt,sub:"Sem reprovados",acc:"#0EA5E9"},
     {k:"Valor total",v:brl(valSemRep),sub:"Sem reprovados",acc:"#16A34A"}
   ];
+  if(pendCount>0) defs.splice(1,0,{k:"⚠️ Pedágio pendente",v:pendCount,sub:"Solicitações a analisar",acc:"#D97706"});
   el("cards").innerHTML = defs.map(function(d){
     return '<div class="card"><div class="acc" style="background:'+d.acc+'"></div><div class="label">'+d.k+'</div><div class="val">'+d.v+'</div>'+(d.sub?'<div class="sub">'+d.sub+'</div>':'')+'</div>';
   }).join("");
@@ -247,7 +250,8 @@ function render(){
   contarCards();
   var st=el("fStatus").value, q=el("fBusca").value.trim().toLowerCase();
   var rows=DADOS.filter(function(r){
-    if(st && r.status!==st) return false;
+    if(st==="__PEND"){ if(!(r.qtd_ped_pendentes>0)) return false; }
+    else if(st && r.status!==st) return false;
     if(q){ var hay=((r.protocolo||"")+" "+(r.nome||"")+" "+(r.cpf||"")).toLowerCase(); if(hay.indexOf(q)<0) return false; }
     return true;
   });
@@ -255,7 +259,7 @@ function render(){
   el("tbody").innerHTML = rows.map(function(r){
     var tr='<tr class="clk" onclick="toggle(\''+r.id+'\')">'
       +'<td class="proto">'+esc(r.protocolo)+'</td>'
-      +'<td><span class="st st-'+esc(r.status)+'">'+esc(r.status)+'</span></td>'
+      +'<td><span class="st st-'+esc(r.status)+'">'+esc(r.status)+'</span>'+(r.qtd_ped_pendentes>0?' <span class="st" style="background:#FEF3C7;color:#92400E">⚠️ pedágio</span>':'')+'</td>'
       +'<td>'+esc(r.nome||"—")+'</td>'
       +'<td>'+esc(r.veiculo||"—")+(r.placa?" · "+esc(r.placa):"")+'</td>'
       +'<td class="mono">'+dt(r.checkin_em)+'</td>'
@@ -278,7 +282,7 @@ async function loadDetail(id){
   var box=el("det-"+id); if(!box) return;
   var reg=DADOS.filter(function(x){return x.id===id;})[0]||{};
   var par = await sb.from("paradas").select("fase,ordem,origem,destino,km,horario,maps_link,lat,lng").eq("reembolso_id",id).order("fase").order("ordem");
-  var ped = await sb.from("pedagios").select("fase,ordem,valor,comprovante_link").eq("reembolso_id",id).order("ordem");
+  var ped = await sb.from("pedagios").select("id,fase,ordem,valor,comprovante_link,pendente").eq("reembolso_id",id).order("ordem");
   var origq = await sb.from("reembolsos").select("val_total_planilha,checkin_foto,checkout_foto,cupom_foto,foto_consumo,recibo_link,checkin_lat,checkin_lng,checkout_lat,checkout_lng").eq("id",id).maybeSingle();
   var od = (origq && origq.data) || {};
   var origPlan = (od.val_total_planilha!=null) ? od.val_total_planilha : null;
@@ -293,10 +297,20 @@ async function loadDetail(id){
   h+=((par.data||[]).map(function(p){
     return '<div class="line">['+esc(p.fase)+'] '+p.ordem+'. '+esc(p.origem||"?")+' → '+esc(p.destino||"?")+' · '+km(p.km)+' · '+dt(p.horario)+(p.maps_link?' · <a href="'+esc(p.maps_link)+'" target="_blank">mapa</a>':'')+'</div>';
   }).join("")) || '<div class="line">—</div>';
+  var peds=(ped.data||[]), pconf=peds.filter(function(p){return !p.pendente;}), ppend=peds.filter(function(p){return p.pendente;});
   h+='<h4>Pedágios</h4>';
-  h+=((ped.data||[]).map(function(p){
+  h+=(pconf.map(function(p){
     return '<div class="line">'+(p.fase?'['+esc(p.fase)+'] ':'')+p.ordem+'. '+brl(p.valor)+(p.comprovante_link?' · <a href="'+esc(p.comprovante_link)+'" target="_blank">comprovante</a>':'')+'</div>';
   }).join("")) || '<div class="line">— sem pedágios —</div>';
+  if(ppend.length){
+    h+='<h4 style="color:#B45309">⚠️ Pedágios pendentes — solicitação a analisar</h4>';
+    h+=ppend.map(function(p){
+      return '<div class="line" style="display:flex;justify-content:space-between;align-items:center;gap:8px;background:#FFFBEB;border:1px solid #FDE68A;border-radius:8px;padding:8px 10px;margin-bottom:6px">'
+        +'<span>'+(p.fase?'['+esc(p.fase)+'] ':'')+'<b>'+brl(p.valor)+'</b>'+(p.comprovante_link?' · <a href="'+esc(p.comprovante_link)+'" target="_blank">comprovante</a>':' · sem comprovante')+'</span>'
+        +'<span style="display:flex;gap:6px;flex:0 0 auto"><button onclick="aprovarPedagio(\''+p.id+'\',\''+id+'\')" style="background:#DCFCE7;color:#166534;border:1px solid #86EFAC;padding:5px 10px;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer">Aprovar</button>'
+        +'<button onclick="recusarPedagio(\''+p.id+'\',\''+id+'\')" style="background:#FEE2E2;color:#991B1B;border:1px solid #FCA5A5;padding:5px 10px;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer">Recusar</button></span></div>';
+    }).join("");
+  }
 
   var fotos=[["Odômetro saída",od.checkin_foto],["Odômetro chegada",od.checkout_foto],["Cupom",od.cupom_foto],["Foto consumo",od.foto_consumo]].filter(function(x){return x[1];});
   if(fotos.length){
@@ -422,6 +436,22 @@ function renderStats(){
   h+='</div><h4 style="margin:16px 0 6px;font-size:12px;color:var(--text3);text-transform:uppercase">Por status</h4>';
   h+='<table><tbody>'+Object.keys(st).map(function(k){ return '<tr><td><span class="st st-'+esc(k)+'">'+esc(k)+'</span></td><td class="right">'+st[k]+'</td></tr>'; }).join("")+'</tbody></table>';
   el("stats_corpo").innerHTML=h;
+}
+
+// ── Pedágios pendentes (aprovar/recusar) ──
+async function aprovarPedagio(pedId, reembolsoId){
+  if(!confirm("Aprovar este pedágio? Ele passará a somar no total do reembolso.")) return;
+  var { error }=await sb.from("pedagios").update({pendente:false}).eq("id",pedId);
+  if(error){ alert("Erro: "+error.message); return; }
+  msgTopo("Pedágio aprovado — somado ao total ✓");
+  await carregar(); abertoId=reembolsoId; render(); await loadDetail(reembolsoId);
+}
+async function recusarPedagio(pedId, reembolsoId){
+  if(!confirm("Recusar (excluir) este pedágio pendente?")) return;
+  var { error }=await sb.from("pedagios").delete().eq("id",pedId);
+  if(error){ alert("Erro: "+error.message); return; }
+  msgTopo("Pedágio recusado ✓");
+  await carregar(); abertoId=reembolsoId; render(); await loadDetail(reembolsoId);
 }
 
 // ── Edição de dados pelo admin ──
