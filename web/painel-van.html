@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>RBCIP — Deslocamento das Vans</title>
+<link rel="stylesheet" href="estilo.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<style>
+  .hdr-in{display:flex;align-items:center;gap:14px}
+  .hdr-logo{height:40px}
+  .turno{border:1px solid var(--border);border-radius:12px;padding:14px;margin-bottom:12px;box-shadow:var(--shadow);background:#fff}
+  .turno-top{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;cursor:pointer}
+  .badge{display:inline-block;font-size:10px;font-weight:700;padding:2px 8px;border-radius:999px;text-transform:uppercase}
+  .b-open{background:var(--ok-bg);color:#065F46}.b-done{background:#E2E8F0;color:#475569}
+  .det h4{font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:var(--text-3);margin:14px 0 6px}
+  .det .line{font-size:13px;color:var(--text-2);padding:2px 0}
+  .mapbox{height:240px;border-radius:8px;border:1px solid var(--border);overflow:hidden}
+  .center{min-height:60vh;display:flex;align-items:center;justify-content:center;text-align:center}
+</style>
+</head>
+<body>
+<div class="hdr"><div class="hdr-in"><img class="hdr-logo" src="assets/logo-branca.png" alt="RBCIP"><div><h1>Deslocamento das Vans</h1><p>Acompanhamento dos turnos</p></div></div></div>
+<div class="wrap wide">
+
+  <div id="carregando" class="card"><p class="muted">Carregando…</p></div>
+
+  <div id="semAcesso" class="center hide"><div class="card"><h2>🔒 Acesso restrito</h2><p class="muted">Esta página é só para administradores.</p><a href="login.html"><button>Ir para o login</button></a></div></div>
+
+  <div id="conteudo" class="hide">
+    <div class="card" style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap">
+      <div><b id="quem"></b></div>
+      <div style="display:flex;gap:8px"><a href="painel.html"><button class="ghost sm" style="width:auto">← Reembolsos</button></a><button class="sm" style="width:auto" onclick="carregar()">↻ Atualizar</button></div>
+    </div>
+    <div id="lista"></div>
+  </div>
+
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="config.js"></script>
+<script>
+var sb=null, PERFISMAP={}, _map=null, aberto=null;
+function el(id){return document.getElementById(id);}
+function show(id){["carregando","semAcesso","conteudo"].forEach(function(s){el(s).classList.add("hide");});el(id).classList.remove("hide");}
+function esc(s){return String(s==null?"":s).replace(/[&<>"]/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c];});}
+function dt(v){ if(!v)return "—"; var d=new Date(v); if(isNaN(d))return String(v); return d.toLocaleString("pt-BR",{day:"2-digit",month:"2-digit",year:"numeric",hour:"2-digit",minute:"2-digit"}); }
+
+async function carregar(){
+  var { data, error }=await sb.from("vw_van_viagens").select("id,motorista_id,inicio_turno,fim_turno,qtd_pontos,qtd_passageiros").order("inicio_turno",{ascending:false});
+  if(error){ el("lista").innerHTML='<p class="muted">Erro: '+esc(error.message)+'</p>'; return; }
+  var d=data||[];
+  if(!d.length){ el("lista").innerHTML='<div class="card"><p class="muted">Nenhum turno de van registrado ainda.</p></div>'; return; }
+  el("lista").innerHTML=d.map(function(v){
+    var nome=PERFISMAP[v.motorista_id]||"(motorista)";
+    var aberto=!v.fim_turno;
+    return '<div class="turno"><div class="turno-top" onclick="toggle(\''+v.id+'\')">'
+      +'<div><b>'+esc(nome)+'</b> <span class="badge '+(aberto?'b-open':'b-done')+'">'+(aberto?'em andamento':'encerrado')+'</span>'
+      +'<br><span class="muted" style="font-size:13px">'+dt(v.inicio_turno)+' → '+(v.fim_turno?dt(v.fim_turno):'—')+'</span></div>'
+      +'<div class="muted" style="font-size:13px;text-align:right">'+v.qtd_pontos+' pontos<br>'+v.qtd_passageiros+' passageiros</div>'
+      +'</div><div id="det-'+v.id+'"></div></div>';
+  }).join("");
+}
+
+async function toggle(id){
+  var box=el("det-"+id); if(!box)return;
+  if(box.innerHTML){ box.innerHTML=""; aberto=null; return; }
+  aberto=id;
+  var vg=await sb.from("van_viagens").select("observacao").eq("id",id).maybeSingle();
+  var pts=await sb.from("van_pontos").select("ordem,local,horario,lat,lng").eq("viagem_id",id).order("ordem");
+  var pax=await sb.from("van_passageiros").select("nome").eq("viagem_id",id).order("criado_em");
+  var h='<div class="det">';
+  if(vg.data && vg.data.observacao) h+='<h4>Observação</h4><div class="line">'+esc(vg.data.observacao)+'</div>';
+  h+='<h4>Passageiros ('+((pax.data||[]).length)+')</h4>';
+  h+='<div class="line">'+(((pax.data||[]).map(function(p){return esc(p.nome);}).join(" · "))||"—")+'</div>';
+  h+='<h4>Pontos ('+((pts.data||[]).length)+')</h4>';
+  h+=((pts.data||[]).map(function(p){ return '<div class="line">'+p.ordem+'. '+esc(p.local||"(sem nome)")+' · '+dt(p.horario)+(p.lat!=null?' · GPS':'')+'</div>'; }).join(""))||'<div class="line">—</div>';
+  var comGps=(pts.data||[]).filter(function(p){return p.lat!=null&&p.lng!=null;});
+  if(comGps.length){ h+='<h4>Mapa do percurso</h4><div class="mapbox" id="map-'+id+'"></div>'; }
+  h+='</div>';
+  box.innerHTML=h;
+  if(comGps.length) desenharMapa("map-"+id, comGps);
+}
+
+function desenharMapa(divId, pts){
+  try{
+    if(_map){ _map.remove(); _map=null; }
+    _map=L.map(divId,{scrollWheelZoom:false});
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© OpenStreetMap'}).addTo(_map);
+    var ll=pts.map(function(p){return [Number(p.lat),Number(p.lng)];});
+    pts.forEach(function(p){ L.marker([p.lat,p.lng]).addTo(_map).bindPopup((p.ordem)+". "+(p.local||"")); });
+    if(ll.length>1) L.polyline(ll,{color:'#2563EB',weight:3}).addTo(_map);
+    _map.fitBounds(ll,{padding:[24,24],maxZoom:15});
+    setTimeout(function(){ if(_map)_map.invalidateSize(); },120);
+  }catch(e){}
+}
+
+async function iniciar(){
+  var { data:{ session } }=await sb.auth.getSession();
+  if(!session){ show("semAcesso"); return; }
+  var { data:perfil }=await sb.from("perfis").select("nome,papel").eq("id",session.user.id).maybeSingle();
+  if(!perfil || perfil.papel!=="admin"){ show("semAcesso"); return; }
+  el("quem").textContent=(perfil.nome||session.user.email)+" · admin";
+  // mapa de nomes dos motoristas
+  var pf=await sb.from("perfis").select("id,nome");
+  (pf.data||[]).forEach(function(p){ PERFISMAP[p.id]=p.nome; });
+  show("conteudo");
+  await carregar();
+}
+(function(){
+  var c=window.RBCIP_CONFIG||{};
+  if(!c.SUPABASE_URL || String(c.SUPABASE_URL).indexOf("http")!==0){ show("semAcesso"); return; }
+  sb=window.supabase.createClient(c.SUPABASE_URL,c.SUPABASE_PUBLISHABLE_KEY);
+  iniciar();
+})();
+</script>
+</body>
+</html>

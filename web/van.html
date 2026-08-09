@@ -1,0 +1,248 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>RBCIP — Deslocamento da Van</title>
+<link rel="stylesheet" href="estilo.css">
+<style>
+  .gs{display:flex;align-items:center;gap:8px;font-size:13px;padding:10px 12px;border-radius:10px;background:var(--bg);border:1px solid var(--border);color:var(--text-2)}
+  .gs .gd{width:10px;height:10px;border-radius:50%;background:var(--text-3);flex:0 0 auto}
+  .gs.a{background:var(--ok-bg);color:#065F46;border-color:#A7F3D0} .gs.a .gd{background:var(--ok)}
+  .gs.e{background:var(--danger-bg);color:#991B1B;border-color:#FECACA} .gs.e .gd{background:var(--danger)}
+  .userbar{display:flex;align-items:center;justify-content:space-between;gap:12px}
+  .u-left{display:flex;align-items:center;gap:12px;min-width:0}
+  .avatar{width:44px;height:44px;border-radius:50%;background:linear-gradient(135deg,var(--navy-2),var(--accent));color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:16px;flex:0 0 auto}
+  .u-name{font-weight:700;font-size:15px;line-height:1.25;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .btn-sair{background:var(--bg);border:1.5px solid var(--border);color:var(--text-2);padding:9px 16px;border-radius:10px;font-size:13px;font-weight:600;cursor:pointer;width:auto;margin:0;flex:0 0 auto}
+  .btn-sair:hover{background:#fff;border-color:var(--text-3);color:var(--text)}
+  .card-h{display:flex;align-items:center;gap:9px;font-size:15px;font-weight:700;color:var(--navy)}
+  .card-h .ic{width:32px;height:32px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:16px;background:#EFF6FF;flex:0 0 auto}
+  .btn-hero{background:linear-gradient(135deg,var(--navy-2),var(--accent))}
+  .btn-hero:hover{background:linear-gradient(135deg,var(--navy),var(--navy-2))}
+  .addrow{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:end}
+  .lista-item{border:1px solid var(--border);border-radius:10px;padding:9px 12px;margin-bottom:7px;display:flex;justify-content:space-between;align-items:center;gap:8px;font-size:14px}
+  .lista-item .rm{color:var(--danger);cursor:pointer;font-size:12px;font-weight:600;flex:0 0 auto}
+  .turno-aberto{background:var(--ok-bg);border:1px solid #A7F3D0;border-radius:12px;padding:14px;margin-bottom:14px}
+  textarea{width:100%;padding:12px 13px;font-size:15px;border:1.5px solid var(--border);border-radius:10px;font-family:inherit;resize:vertical;min-height:60px}
+</style>
+</head>
+<body>
+<div class="hdr"><div class="hdr-in"><img class="hdr-logo" src="assets/logo-branca.png" alt="RBCIP"><div><h1>Deslocamento da Van</h1><p>Registro de turno</p></div></div></div>
+<div class="wrap">
+
+  <div id="carregando" class="card"><p class="muted">Carregando…</p></div>
+
+  <!-- LOGIN POR CÓDIGO -->
+  <div id="secLogin" class="card hide">
+    <h2>Entrar</h2>
+    <p class="muted">Use o código de 6 dígitos enviado ao seu e-mail.</p>
+    <div id="passoEmail">
+      <label>E-mail</label>
+      <input id="lg_email" type="email" placeholder="voce@exemplo.com" autocomplete="email">
+      <button id="btnEnviar" onclick="enviarCodigo()">Enviar código</button>
+    </div>
+    <div id="passoCodigo" class="hide">
+      <label>Código recebido</label>
+      <input id="lg_codigo" type="text" inputmode="numeric" maxlength="6" placeholder="000000">
+      <button id="btnConfirmar" onclick="confirmarCodigo()">Entrar</button>
+      <button class="link" onclick="voltarEmail()">← usar outro e-mail</button>
+    </div>
+    <div id="msgLogin" class="msg"></div>
+  </div>
+
+  <!-- Acesso indevido -->
+  <div id="secNaoVan" class="card hide">
+    <h2>Área da Van</h2>
+    <p class="muted">Esta área é para motoristas de <b>Van</b>. Para reembolso de deslocamento, use o app de registro.</p>
+    <a href="registro.html"><button class="ghost">Ir para o registro de reembolso</button></a>
+    <button class="link" onclick="sair()">Sair</button>
+  </div>
+
+  <!-- HOME -->
+  <div id="secHome" class="hide">
+    <div class="card">
+      <div class="userbar">
+        <div class="u-left"><div class="avatar" id="hm_avatar">?</div>
+          <div style="min-width:0"><div class="u-name" id="hm_nome">—</div><span class="pill">Van</span></div></div>
+        <button class="btn-sair" onclick="sair()">Sair</button>
+      </div>
+    </div>
+    <div id="hm_turno"></div>
+    <div class="card" id="hm_novo">
+      <div class="card-h"><span class="ic">🚐</span> Novo turno</div>
+      <p class="muted" style="margin:8px 0 12px">Inicie o turno ao começar o deslocamento. Durante o percurso você registra os pontos (com GPS) e os passageiros.</p>
+      <button class="btn-hero" onclick="iniciarTurno()">Iniciar turno</button>
+    </div>
+    <div class="card">
+      <div class="card-h"><span class="ic">📋</span> Meus turnos</div>
+      <div id="hm_turnos" style="margin-top:10px"></div>
+    </div>
+  </div>
+
+  <!-- TURNO EM ANDAMENTO -->
+  <div id="secTurno" class="hide">
+    <div class="card">
+      <div class="card-h"><span class="ic">🕐</span> Turno em andamento</div>
+      <div id="t_info" class="muted" style="margin-top:8px"></div>
+    </div>
+    <div class="card">
+      <div class="card-h"><span class="ic">👥</span> Passageiros <span class="pill" id="pax_qtd">0</span></div>
+      <div class="addrow" style="margin-top:10px"><div><label>Nome</label><input id="pax_nome" placeholder="Nome do passageiro"></div><button class="sm" style="margin-bottom:1px" onclick="addPax()">+ Add</button></div>
+      <div id="pax_list" style="margin-top:10px"></div>
+    </div>
+    <div class="card">
+      <div class="card-h"><span class="ic">📍</span> Pontos do percurso <span class="pill" id="pt_qtd">0</span></div>
+      <label style="margin-top:10px">Local do ponto</label>
+      <input id="pt_local" placeholder="Ex.: Terminal Central">
+      <div class="gs" id="pt_gs" style="margin-top:10px"><span class="gd"></span><span id="pt_gt">GPS será capturado ao registrar</span></div>
+      <button class="btn-hero" onclick="addPonto()">📍 Registrar ponto (com GPS)</button>
+      <div id="pt_list" style="margin-top:12px"></div>
+    </div>
+    <div class="card">
+      <label>Observação (opcional)</label>
+      <textarea id="t_obs" placeholder="Alguma anotação sobre o turno…"></textarea>
+    </div>
+    <button class="btn-hero" onclick="encerrarTurno()">✅ Encerrar turno</button>
+    <button class="ghost" onclick="location.reload()">← Início (mantém o turno aberto)</button>
+    <div id="msgTurno" class="msg"></div>
+  </div>
+
+</div>
+
+<div style="text-align:center;color:var(--text-3);font-size:12.5px;padding:8px 16px 28px;line-height:1.6">📱 Qualquer problema ou dúvida, fale comigo:<br><strong style="color:var(--text-2)">+55 11 93623-3054</strong></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="config.js"></script>
+<script>
+var sb=null, SESSION=null, PERFIL=null, TURNO=null;
+function el(id){return document.getElementById(id);}
+function show(id){["carregando","secLogin","secNaoVan","secHome","secTurno"].forEach(function(s){el(s).classList.add("hide");});el(id).classList.remove("hide");window.scrollTo(0,0);}
+function msg(box,tipo,txt){var m=el(box);m.className="msg show "+tipo;m.textContent=txt;}
+function limpaMsg(box){var m=el(box);m.className="msg";m.textContent="";}
+function esc(s){return String(s==null?"":s).replace(/[&<>"]/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c];});}
+function dt(v){ if(!v)return "—"; var d=new Date(v); if(isNaN(d))return String(v); return d.toLocaleString("pt-BR",{day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit"}); }
+
+// ── Login por código ──
+async function enviarCodigo(){
+  limpaMsg("msgLogin"); var email=el("lg_email").value.trim();
+  if(!email){msg("msgLogin","err","Informe o e-mail.");return;}
+  el("btnEnviar").disabled=true; el("btnEnviar").textContent="Enviando…";
+  var { error }=await sb.auth.signInWithOtp({email:email});
+  el("btnEnviar").disabled=false; el("btnEnviar").textContent="Enviar código";
+  if(error){ msg("msgLogin","err",/autoriz|Database error|saving new user/i.test(error.message)?"Este e-mail não está autorizado. Fale com o administrador.":error.message); return; }
+  el("passoEmail").classList.add("hide"); el("passoCodigo").classList.remove("hide");
+  msg("msgLogin","info","Código enviado para "+email+". Verifique também o spam.");
+}
+async function confirmarCodigo(){
+  limpaMsg("msgLogin"); var email=el("lg_email").value.trim(), token=el("lg_codigo").value.trim();
+  if(token.length<6){msg("msgLogin","err","Digite os 6 dígitos.");return;}
+  el("btnConfirmar").disabled=true; el("btnConfirmar").textContent="Entrando…";
+  var { error }=await sb.auth.verifyOtp({email:email,token:token,type:"email"});
+  el("btnConfirmar").disabled=false; el("btnConfirmar").textContent="Entrar";
+  if(error){ msg("msgLogin","err",/autoriz|Database error|saving new user/i.test(error.message)?"Este e-mail não está autorizado. Fale com o administrador.":error.message); return; }
+  await iniciar();
+}
+function voltarEmail(){el("passoCodigo").classList.add("hide");el("passoEmail").classList.remove("hide");limpaMsg("msgLogin");}
+async function sair(){ await sb.auth.signOut(); location.reload(); }
+
+// ── Turno ──
+async function iniciarTurno(){
+  var { data, error }=await sb.from("van_viagens").insert({motorista_id:SESSION.user.id, inicio_turno:new Date().toISOString()}).select("id,inicio_turno").maybeSingle();
+  if(error){ alert("Erro ao iniciar: "+error.message); return; }
+  TURNO={id:data.id, inicio:data.inicio_turno};
+  abrirTurno();
+}
+function abrirTurno(){
+  show("secTurno");
+  el("t_info").textContent="Início: "+dt(TURNO.inicio);
+  el("t_obs").value=""; el("pt_local").value=""; el("pax_nome").value="";
+  el("pt_gs").className="gs"; el("pt_gt").textContent="GPS será capturado ao registrar";
+  renderPax(); renderPontos();
+}
+async function renderPax(){
+  var { data }=await sb.from("van_passageiros").select("id,nome").eq("viagem_id",TURNO.id).order("criado_em");
+  var d=data||[]; el("pax_qtd").textContent=d.length;
+  el("pax_list").innerHTML=d.map(function(p){ return '<div class="lista-item"><span>'+esc(p.nome)+'</span><span class="rm" onclick="rmPax(\''+p.id+'\')">remover</span></div>'; }).join("")||'<p class="muted">Nenhum passageiro ainda.</p>';
+}
+async function addPax(){
+  var nome=el("pax_nome").value.trim(); if(!nome){ return; }
+  var { error }=await sb.from("van_passageiros").insert({viagem_id:TURNO.id, nome:nome});
+  if(error){ alert("Erro: "+error.message); return; }
+  el("pax_nome").value=""; renderPax();
+}
+async function rmPax(id){ await sb.from("van_passageiros").delete().eq("id",id); renderPax(); }
+
+async function renderPontos(){
+  var { data }=await sb.from("van_pontos").select("id,ordem,local,horario,lat,lng").eq("viagem_id",TURNO.id).order("ordem");
+  var d=data||[]; el("pt_qtd").textContent=d.length;
+  el("pt_list").innerHTML=d.map(function(p){ return '<div class="lista-item"><span><b>'+p.ordem+'.</b> '+esc(p.local||"(sem nome)")+'<br><span class="muted" style="font-size:12px">'+dt(p.horario)+(p.lat!=null?' · GPS ok':' · sem GPS')+'</span></span><span class="rm" onclick="rmPonto(\''+p.id+'\')">remover</span></div>'; }).join("")||'<p class="muted">Nenhum ponto registrado ainda.</p>';
+}
+async function rmPonto(id){ await sb.from("van_pontos").delete().eq("id",id); renderPontos(); }
+function addPonto(){
+  var local=el("pt_local").value.trim();
+  if(!local){ msg("msgTurno","err","Informe o local do ponto."); return; }
+  el("pt_gs").className="gs"; el("pt_gt").textContent="Obtendo GPS…";
+  function salvar(lat,lng){
+    sb.from("van_pontos").select("id").eq("viagem_id",TURNO.id).then(function(r){
+      var ordem=((r.data&&r.data.length)||0)+1;
+      sb.from("van_pontos").insert({viagem_id:TURNO.id, ordem:ordem, local:local, horario:new Date().toISOString(), lat:lat, lng:lng}).then(function(res){
+        if(res.error){ msg("msgTurno","err","Erro: "+res.error.message); return; }
+        limpaMsg("msgTurno"); el("pt_local").value=""; el("pt_gs").className="gs"; el("pt_gt").textContent="Ponto registrado ✓"; renderPontos();
+      });
+    });
+  }
+  if(!navigator.geolocation){ salvar(null,null); return; }
+  navigator.geolocation.getCurrentPosition(function(p){ salvar(p.coords.latitude,p.coords.longitude); },
+    function(){ el("pt_gt").textContent="Sem GPS — ponto salvo sem localização"; salvar(null,null); }, {enableHighAccuracy:true,timeout:12000});
+}
+async function encerrarTurno(){
+  if(!confirm("Encerrar o turno agora?")) return;
+  var { error }=await sb.from("van_viagens").update({fim_turno:new Date().toISOString(), observacao:el("t_obs").value.trim()||null}).eq("id",TURNO.id);
+  if(error){ msg("msgTurno","err","Erro ao encerrar: "+error.message); return; }
+  alert("Turno encerrado!"); location.reload();
+}
+
+// ── Home ──
+async function checarTurnoAberto(){
+  var { data }=await sb.from("van_viagens").select("id,inicio_turno").eq("motorista_id",SESSION.user.id).is("fim_turno",null).order("inicio_turno",{ascending:false}).limit(1);
+  var box=el("hm_turno");
+  if(data && data.length){
+    var v=data[0];
+    box.innerHTML='<div class="turno-aberto"><b>🕐 Turno em andamento</b><br><span class="muted">Início: '+dt(v.inicio_turno)+'</span><br><button class="sm" style="width:auto;margin-top:10px" onclick="continuarTurno(\''+v.id+'\',\''+v.inicio_turno+'\')">Continuar turno →</button></div>';
+    el("hm_novo").classList.add("hide");
+  } else { box.innerHTML=""; el("hm_novo").classList.remove("hide"); }
+}
+function continuarTurno(id, inicio){ TURNO={id:id, inicio:inicio}; abrirTurno(); }
+async function listarTurnos(){
+  var { data }=await sb.from("vw_van_viagens").select("id,inicio_turno,fim_turno,qtd_pontos,qtd_passageiros").eq("motorista_id",SESSION.user.id).order("inicio_turno",{ascending:false}).limit(10);
+  var d=data||[];
+  el("hm_turnos").innerHTML=d.length? d.map(function(v){
+    return '<div class="lista-item"><span>'+dt(v.inicio_turno)+' → '+(v.fim_turno?dt(v.fim_turno):'<b style="color:var(--ok)">em andamento</b>')+'<br><span class="muted" style="font-size:12px">'+v.qtd_pontos+' pontos · '+v.qtd_passageiros+' passageiros</span></span></div>';
+  }).join("") : '<p class="muted">Nenhum turno ainda.</p>';
+}
+
+// ── Início ──
+async function iniciar(){
+  var { data:{ session } }=await sb.auth.getSession();
+  if(!session){ show("secLogin"); return; }
+  SESSION=session;
+  var { data:perfil }=await sb.from("perfis").select("nome,papel").eq("id",session.user.id).maybeSingle();
+  PERFIL=perfil||{};
+  if(PERFIL.papel!=="van" && PERFIL.papel!=="admin"){ show("secNaoVan"); return; }
+  var nm=(PERFIL.nome)||session.user.email;
+  el("hm_nome").textContent=nm;
+  el("hm_avatar").textContent=((nm||"?").trim().charAt(0)||"?").toUpperCase();
+  await checarTurnoAberto();
+  await listarTurnos();
+  show("secHome");
+}
+(function(){
+  var c=window.RBCIP_CONFIG||{};
+  if(!c.SUPABASE_URL || String(c.SUPABASE_URL).indexOf("http")!==0){ show("secLogin"); msg("msgLogin","err","Configuração ausente (web/config.js)."); return; }
+  sb=window.supabase.createClient(c.SUPABASE_URL,c.SUPABASE_PUBLISHABLE_KEY);
+  iniciar();
+})();
+</script>
+</body>
+</html>
