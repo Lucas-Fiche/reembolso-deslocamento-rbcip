@@ -37,11 +37,14 @@
   .card-h .ic{width:32px;height:32px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:16px;background:#EFF6FF;flex:0 0 auto}
   .btn-hero{background:linear-gradient(135deg,var(--navy-2),var(--accent))}
   .btn-hero:hover{background:linear-gradient(135deg,var(--navy),var(--navy-2))}
-  .collapse-h{display:flex;align-items:center;justify-content:space-between;cursor:pointer;gap:8px}
-  .collapse-h .caret{transition:transform .2s;color:var(--navy-2);font-size:13px}
-  .collapse.open .collapse-h .caret{transform:rotate(180deg)}
-  .collapse-body{max-height:0;overflow:hidden;opacity:0;transition:max-height .45s ease,opacity .35s ease}
-  .collapse.open .collapse-body{max-height:1600px;opacity:1;margin-top:14px}
+  .card.como{padding:0;overflow:hidden;border-color:#BFDBFE}
+  .como-h{display:flex;align-items:center;gap:12px;padding:15px 18px;cursor:pointer;background:linear-gradient(135deg,#E7F0FF,#F6FAFF);user-select:none;-webkit-tap-highlight-color:transparent}
+  .como-ic{width:36px;height:36px;border-radius:10px;background:#fff;display:flex;align-items:center;justify-content:center;font-size:18px;box-shadow:0 1px 3px rgba(0,0,0,.08);flex:0 0 auto}
+  .como-t{flex:1;font-weight:800;font-size:16px;color:var(--navy-2)}
+  .como-arrow{color:var(--navy-2);font-size:12px;transition:transform .3s;flex:0 0 auto}
+  .card.como.open .como-arrow{transform:rotate(90deg)}
+  .collapse-body{max-height:0;overflow:hidden;transition:max-height .4s ease}
+  .cb-inner{padding:6px 18px 18px}
   .step{display:flex;gap:12px;margin-top:16px}
   .step .n{width:28px;height:28px;border-radius:50%;font-weight:700;font-size:13px;display:flex;align-items:center;justify-content:center;flex:0 0 auto}
   .step .n.g{background:#ECFDF5;color:#059669} .step .n.b{background:#EFF6FF;color:#2563EB}
@@ -96,17 +99,20 @@
       <button class="btn-hero" onclick="goCheckin()">Iniciar check-in</button>
     </div>
 
-    <div class="card collapse" id="hm_como">
-      <div class="collapse-h" onclick="el('hm_como').classList.toggle('open')">
-        <div class="card-h"><span class="ic">📋</span> Como funciona?</div>
-        <span class="caret">▾</span>
+    <div class="card como" id="hm_como">
+      <div class="como-h" onclick="toggleComo()">
+        <span class="como-ic">📋</span>
+        <span class="como-t">Como funciona?</span>
+        <span class="como-arrow">▶</span>
       </div>
-      <div class="collapse-body">
-        <p class="muted">O registro tem <b>2 momentos</b>:</p>
-        <div class="step"><div class="n g">1</div><div><div class="t">Check-in (antes de sair)</div><div class="d">Preencha seus dados e tire a foto do odômetro. O <b>GPS e o horário</b> são registrados automaticamente.</div></div></div>
-        <div class="step"><div class="n b">2</div><div><div class="t">Paradas + check-out (ao terminar)</div><div class="d">Informe cada trecho (origem, destino e km) com o <b>print do Google Maps</b>, os pedágios, o combustível e a foto do odômetro final. O app <b>calcula o reembolso</b> automaticamente.</div></div></div>
-        <div class="aviso">⚠️ <b>Dicas:</b><br>• Cada parada = um trecho (origem → destino + km).<br>• Se um pedido cair em <b>revisão</b>, ele aparece aqui na tela inicial para você corrigir.<br>• Pedágio de plano (Sem Parar, ConectCar) que chegou depois? Use o <b>Pedágio pendente</b> abaixo.</div>
-      </div>
+      <div class="collapse-body"><div class="cb-inner">
+        <p style="font-weight:700;margin:6px 0 2px">O registro de deslocamento tem 4 etapas:</p>
+        <div class="step"><div class="n g">1</div><div><div class="t">CHECK-IN (antes de sair)</div><div class="d">Preencha seus dados, informe quantas paradas terá na ida e na volta, e tire a foto do odômetro. O GPS e horário são registrados automaticamente.</div></div></div>
+        <div class="step"><div class="n b">2</div><div><div class="t">PARADAS DA IDA (ao chegar em cada destino)</div><div class="d">Registro rápido: informe origem, destino e km. O app marca GPS e horário automaticamente. <b>Não precisa de foto aqui</b> — funciona mesmo com sinal fraco.</div></div></div>
+        <div class="step"><div class="n p">3</div><div><div class="t">PARADAS DA VOLTA (ao chegar em cada ponto de retorno)</div><div class="d">Mesmo processo rápido da ida: origem, destino e km de cada trecho da volta.</div></div></div>
+        <div class="step"><div class="n a">4</div><div><div class="t">CHECK-OUT (ao finalizar a viagem)</div><div class="d">Aqui você anexa tudo de uma vez: foto do odômetro final, <b>print do Google Maps de cada trecho</b> (ida e volta), pedágios e o preço do combustível. O app calcula o reembolso automaticamente.</div></div></div>
+        <div class="aviso">⚠️ <b>Importante:</b><br>• Cada parada = um trecho do percurso (origem → destino + km)<br>• Durante a viagem o registro é leve, <b>sem fotos</b><br>• No check-out, anexe o print do Maps de <b>cada trecho</b><br>• Não feche o app entre etapas — seus dados ficam salvos no servidor<br>• Se tiver cupom fiscal do combustível, tenha-o em mãos no check-out</div>
+      </div></div>
     </div>
 
     <div class="card">
@@ -299,6 +305,11 @@ function pad(n){return n<10?"0"+n:""+n;}
 function fmtHora(d){return pad(d.getHours())+":"+pad(d.getMinutes())+":"+pad(d.getSeconds());}
 function esc(s){return String(s==null?"":s).replace(/[&<>"]/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c];});}
 function brl(v){ if(v==null)return "—"; return "R$ "+Number(v).toLocaleString("pt-BR",{minimumFractionDigits:2,maximumFractionDigits:2}); }
+function toggleComo(){
+  var card=el("hm_como"), body=card.querySelector(".collapse-body"), inner=body.firstElementChild;
+  var open=card.classList.toggle("open");
+  body.style.maxHeight = open ? (inner.scrollHeight+"px") : "0";
+}
 
 // ── Validações ──
 function validarEmail(e){return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e);}
