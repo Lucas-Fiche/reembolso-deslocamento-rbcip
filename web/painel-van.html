@@ -100,8 +100,9 @@ function desenharMapa(divId, pts){
 async function iniciar(){
   var { data:{ session } }=await sb.auth.getSession();
   if(!session){ show("semAcesso"); return; }
-  var { data:perfil }=await sb.from("perfis").select("nome,papel").eq("id",session.user.id).maybeSingle();
-  if(!perfil || perfil.papel!=="admin"){ show("semAcesso"); return; }
+  var { data:perfil }=await sb.from("perfis").select("nome,papel,ativo").eq("id",session.user.id).maybeSingle();
+  if(!perfil || perfil.ativo===false){ await sb.auth.signOut(); show("semAcesso"); return; }
+  if(perfil.papel!=="admin"){ show("semAcesso"); return; }
   el("quem").textContent=(perfil.nome||session.user.email)+" · admin";
   // mapa de nomes dos motoristas
   var pf=await sb.from("perfis").select("id,nome");

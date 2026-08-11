@@ -727,8 +727,13 @@ async function addPreco(){
   sb = window.supabase.createClient(c.SUPABASE_URL, c.SUPABASE_PUBLISHABLE_KEY);
   var { data:{ session } } = await sb.auth.getSession();
   if(!session){ show("semAcesso"); return; }
-  var { data:perfil } = await sb.from("perfis").select("nome,papel").eq("id",session.user.id).maybeSingle();
-  if(!perfil || perfil.papel!=="admin"){
+  var { data:perfil } = await sb.from("perfis").select("nome,papel,ativo").eq("id",session.user.id).maybeSingle();
+  if(!perfil || perfil.ativo===false){
+    await sb.auth.signOut();
+    el("semAcessoMsg").textContent="Seu acesso foi removido. Fale com o administrador.";
+    show("semAcesso"); return;
+  }
+  if(perfil.papel!=="admin"){
     el("semAcessoMsg").textContent="Você está logado, mas esta página é só para administradores.";
     show("semAcesso"); return;
   }
