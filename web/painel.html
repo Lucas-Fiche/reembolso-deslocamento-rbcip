@@ -184,7 +184,7 @@ tbody tr.sel{background:var(--primary-light)}
       <button class="btn" onclick="location.href='painel-van.html'">🚐 Vans</button>
       <button class="btn" onclick="abrirStats()">📊 Estatísticas</button>
       <button class="btn" onclick="abrirPrecos()">⛽ Gasolina</button>
-      <button class="btn" onclick="carregar()">↻ Atualizar</button>
+      <button class="btn" onclick="carregar(this)">↻ Atualizar</button>
       <button class="btn" onclick="sair()">Sair</button>
     </div>
   </div>
@@ -296,13 +296,19 @@ function msgTopo(txt, err){
 }
 
 // ── Carregar dados do Supabase ──
-async function carregar(){
-  var { data, error } = await sb.from("vw_reembolsos")
-    .select("id,protocolo,status,motorista_id,nome,cpf,rg,orgao,email,telefone,veiculo,placa,checkin_em,checkin_lat,checkin_lng,checkin_foto,checkout_em,checkout_lat,checkout_lng,checkout_foto,dist_total,consumo,usou_estimativa,preco_base,preco_real,cupom_foto,foto_consumo,caronas,validacao,recibo_link,val_estimado,val_real,val_pedagios,val_total,qtd_pedagios,qtd_paradas,qtd_ped_pendentes,criado_em")
-    .order("criado_em",{ascending:false});
-  if(error){ alert("Erro ao carregar: "+error.message); return; }
-  DADOS = data||[];
-  render();
+async function carregar(fromBtn){
+  var b=(fromBtn&&fromBtn.nodeType)?fromBtn:null, prev="";
+  if(b){ prev=b.textContent; b.textContent="Atualizando…"; b.disabled=true; }
+  try{
+    var { data, error } = await sb.from("vw_reembolsos")
+      .select("id,protocolo,status,motorista_id,nome,cpf,rg,orgao,email,telefone,veiculo,placa,checkin_em,checkin_lat,checkin_lng,checkin_foto,checkout_em,checkout_lat,checkout_lng,checkout_foto,dist_total,consumo,usou_estimativa,preco_base,preco_real,cupom_foto,foto_consumo,caronas,validacao,recibo_link,val_estimado,val_real,val_pedagios,val_total,qtd_pedagios,qtd_paradas,qtd_ped_pendentes,criado_em")
+      .order("criado_em",{ascending:false});
+    if(error){ msgTopo("Erro ao atualizar: "+error.message, true); return; }
+    DADOS = data||[];
+    render();
+    if(b) msgTopo("Painel atualizado ✓ ("+DADOS.length+" registros)");
+  }catch(e){ msgTopo("Erro ao atualizar: "+(e&&e.message||e), true); }
+  finally{ if(b){ b.textContent=prev; b.disabled=false; } }
 }
 
 // ── Filtro (status + datas + busca) → FILTRADOS; alimenta cards, tabela e stats ──

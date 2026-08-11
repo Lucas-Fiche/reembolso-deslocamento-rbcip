@@ -77,7 +77,7 @@
     <div id="instrBody" style="max-height:0;overflow:hidden;transition:max-height .4s ease">
       <div style="padding:16px 20px;font-size:13px;color:var(--text-secondary);line-height:1.8">
         <div style="font-weight:700;color:var(--text);margin-bottom:10px;font-size:14px">O registro de deslocamento tem 4 etapas:</div>
-        <div style="display:flex;gap:10px;margin-bottom:14px"><div style="width:28px;height:28px;border-radius:50%;background:#ECFDF5;color:#059669;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;flex-shrink:0">1</div><div><strong style="color:var(--text)">CHECK-IN (antes de sair)</strong><br>Preencha seus dados, informe quantas paradas terá na ida e na volta, e tire a foto do odômetro. O GPS e horário são registrados automaticamente.</div></div>
+        <div style="display:flex;gap:10px;margin-bottom:14px"><div style="width:28px;height:28px;border-radius:50%;background:#ECFDF5;color:#059669;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;flex-shrink:0">1</div><div><strong style="color:var(--text)">CHECK-IN (antes de sair)</strong><br>Preencha seus dados e tire a foto do odômetro. O GPS e o horário são registrados automaticamente.</div></div>
         <div style="display:flex;gap:10px;margin-bottom:14px"><div style="width:28px;height:28px;border-radius:50%;background:#DBEAFE;color:#2563EB;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;flex-shrink:0">2</div><div><strong style="color:var(--text)">PARADAS DA IDA (ao chegar em cada destino)</strong><br>Registro rápido: informe origem, destino e km. O app marca GPS e horário automaticamente. <strong>Não precisa de foto aqui</strong> — funciona mesmo com sinal fraco.</div></div>
         <div style="display:flex;gap:10px;margin-bottom:14px"><div style="width:28px;height:28px;border-radius:50%;background:#E0E7FF;color:#7C3AED;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;flex-shrink:0">3</div><div><strong style="color:var(--text)">PARADAS DA VOLTA (ao chegar em cada ponto de retorno)</strong><br>Mesmo processo rápido da ida: origem, destino e km de cada trecho da volta.</div></div>
         <div style="display:flex;gap:10px;margin-bottom:14px"><div style="width:28px;height:28px;border-radius:50%;background:#FEF3C7;color:#D97706;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;flex-shrink:0">4</div><div><strong style="color:var(--text)">CHECK-OUT (ao finalizar a viagem)</strong><br>Aqui você anexa tudo de uma vez: foto do odômetro final, o <strong>print do Google Maps de cada trecho</strong> (ida e volta), pedágios e o preço do combustível. O app calcula o reembolso automaticamente.</div></div>
@@ -118,13 +118,6 @@
     <div class="fr"><div class="f"><label>Veículo <span class="rq">*</span></label><select id="ci_veic"><option value="">Selecione</option><option>Carro</option><option>Moto</option></select></div><div class="f"><label>Placa <span class="rq">*</span></label><input type="text" id="ci_placa" maxlength="8" style="text-transform:uppercase"></div></div>
     <p style="font-size:11px;color:var(--text-muted);margin-top:4px">RG e órgão emissor são usados no recibo de reembolso.</p>
   </div>
-  <div class="card"><div class="ct"><span class="ic" style="background:#FEF3C7;color:#D97706">📍</span> Paradas do Percurso</div>
-    <div class="fr">
-      <div class="f"><label>Paradas na IDA</label><select id="ci_ida"><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option><option value="6">6</option><option value="7">7</option><option value="8">8</option><option value="9">9</option><option value="10">10</option></select></div>
-      <div class="f"><label>Paradas na VOLTA</label><select id="ci_volta"><option value="0">Sem volta (só ida)</option><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option><option value="6">6</option><option value="7">7</option><option value="8">8</option><option value="9">9</option><option value="10">10</option></select></div>
-    </div>
-    <p style="font-size:12px;color:var(--text-muted)">Cada parada = um trecho com origem, destino e km. Selecione <strong>"Sem volta"</strong> se a viagem for somente de ida.</p>
-  </div>
   <div class="card"><div class="ct"><span class="ic" style="background:#ECFDF5;color:#059669">📡</span> Localização</div>
     <div class="gs p" id="ci_gs"><div class="gd"></div><span id="ci_gt">Obtendo…</span></div><div class="lc" id="ci_ck">--:--:--</div>
   </div>
@@ -158,31 +151,21 @@
   </div>
   <div class="card" id="ida_card">
     <div class="ct"><span class="ic" style="background:#DBEAFE;color:#2563EB">➡️</span> <span id="ida_title">IDA</span></div>
-    <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;font-size:13px;color:var(--text-secondary)">Nº de paradas:
-      <button onclick="mudarPlano('ida',-1)" style="width:30px;height:30px;border:1px solid var(--border);background:var(--bg);border-radius:8px;font-size:18px;cursor:pointer">−</button>
-      <strong id="ida_plan_lbl" style="min-width:18px;text-align:center">1</strong>
-      <button onclick="mudarPlano('ida',1)" style="width:30px;height:30px;border:1px solid var(--border);background:var(--bg);border-radius:8px;font-size:18px;cursor:pointer">+</button>
-    </div>
+    <p style="font-size:12px;color:var(--text-muted);margin-bottom:10px">Registre uma parada para <strong>cada trecho da ida</strong>. Adicione quantas precisar.</p>
     <ul class="wl" id="ida_list"></ul>
-    <button class="bp b" onclick="goParada('ida')" id="btnIda" style="display:none;padding:12px;font-size:14px">📍 Parada IDA</button>
-    <div id="ida_done" style="display:none;text-align:center;color:#065F46;font-size:13px;font-weight:600;padding:8px 0">✅ IDA completa</div>
+    <button class="bp b" onclick="goParada('ida')" id="btnIda" style="padding:12px;font-size:14px">📍 Registrar parada da IDA</button>
   </div>
   <div class="card" id="volta_card">
     <div class="ct"><span class="ic" style="background:#FEF3C7;color:#D97706">↩️</span> <span id="volta_title">VOLTA</span></div>
-    <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;font-size:13px;color:var(--text-secondary)">Nº de paradas:
-      <button onclick="mudarPlano('volta',-1)" style="width:30px;height:30px;border:1px solid var(--border);background:var(--bg);border-radius:8px;font-size:18px;cursor:pointer">−</button>
-      <strong id="volta_plan_lbl" style="min-width:18px;text-align:center">1</strong>
-      <button onclick="mudarPlano('volta',1)" style="width:30px;height:30px;border:1px solid var(--border);background:var(--bg);border-radius:8px;font-size:18px;cursor:pointer">+</button>
-    </div>
+    <p style="font-size:12px;color:var(--text-muted);margin-bottom:10px">Registre uma parada para <strong>cada trecho da volta</strong>. Se a viagem for só de ida, deixe vazio.</p>
     <ul class="wl" id="volta_list"></ul>
-    <button class="bp purple" onclick="goParada('volta')" id="btnVolta" style="display:none;padding:12px;font-size:14px">📍 Parada VOLTA</button>
-    <div id="volta_done" style="display:none;text-align:center;color:#065F46;font-size:13px;font-weight:600;padding:8px 0">✅ VOLTA completa</div>
+    <button class="bp purple" onclick="goParada('volta')" id="btnVolta" style="padding:12px;font-size:14px">📍 Registrar parada da VOLTA</button>
   </div>
   <div id="finalizar_area" style="display:none">
     <div class="card" style="background:var(--success-bg);border-color:var(--success);text-align:center;padding:16px">
-      <div style="font-size:24px;margin-bottom:6px">🎉</div>
-      <div style="font-size:14px;font-weight:700;color:#065F46">Todas as paradas registradas!</div>
-      <p style="font-size:13px;color:#047857;margin-top:4px">Finalize a viagem para calcular o reembolso.</p>
+      <div style="font-size:24px;margin-bottom:6px">🏁</div>
+      <div style="font-size:14px;font-weight:700;color:#065F46">Terminou o trajeto?</div>
+      <p style="font-size:13px;color:#047857;margin-top:4px">Quando tiver registrado todas as idas e voltas, finalize para calcular o reembolso.</p>
     </div>
     <button class="bp y" onclick="goFinalizar()">🏁 CHECK-OUT — Finalizar</button>
   </div>
@@ -454,13 +437,12 @@ async function enviarCI(){var erros=[];
   if(!trip||!trip.checkin_foto)erros.push("• Foto do odômetro");
   if(erros.length){alert("Corrija:\n\n"+erros.join("\n"));return}
   var proto="RB-"+Date.now().toString(36).toUpperCase();
-  var ida_plan=parseInt($("ci_ida").value)||1,volta_plan=parseInt($("ci_volta").value,10);if(isNaN(volta_plan))volta_plan=1;
   ld("Enviando foto do odômetro…");var fotoLink;
   try{fotoLink=await uploadFoto(trip.checkin_foto,"odometro_saida")}catch(e){hd();alert("Erro ao enviar a foto: "+e.message);return}
   ld("Registrando check-in…");
   var ins=await sb.from("reembolsos").insert({protocolo:proto,status:"ABERTO",motorista_id:SESSION.user.id,nome:nome,cpf:cpf,rg:rg,orgao:orgao,email:email,telefone:tel,veiculo:veic,placa:placa,checkin_em:trip.checkin_timestamp||new Date().toISOString(),checkin_lat:trip.checkin_lat,checkin_lng:trip.checkin_lng,checkin_foto:fotoLink}).select("id").maybeSingle();
   hd();if(ins.error){alert("Erro ao registrar: "+ins.error.message);return}
-  trip={id:ins.data.id,protocolo:proto,nome:nome,cpf:cpf,veiculo:veic,placa:placa,ida_plan:ida_plan,volta_plan:volta_plan,ida_paradas:[],volta_paradas:[]};saveTrip(trip);
+  trip={id:ins.data.id,protocolo:proto,nome:nome,cpf:cpf,veiculo:veic,placa:placa,ida_paradas:[],volta_paradas:[]};saveTrip(trip);
   $("ci_proto").textContent="Protocolo: "+proto;show("secCIOk")}
 
 // ── VIAGEM ──
@@ -474,34 +456,31 @@ async function goViagem(){trip=loadTrip();if(!trip){show("secHome");return}show(
       (trip.ida_paradas||[]).forEach(function(p){if(p.pending&&!p.id)ida.push(p)});
       (trip.volta_paradas||[]).forEach(function(p){if(p.pending&&!p.id)vol.push(p)});
       trip.ida_paradas=ida;trip.volta_paradas=vol;
-      if(trip.ida_plan==null)trip.ida_plan=Math.max(ida.length,1);
-      if(trip.volta_plan==null)trip.volta_plan=Math.max(vol.length,vol.length?1:1);
       saveTrip(trip);
     }
   }catch(e){}hd();renderViagem()}
+// Fluxo livre: sem planejar quantidade no check-in. O motorista registra
+// quantas paradas de ida e de volta precisar; finaliza quando quiser (≥1 parada).
 function renderViagem(){
   $("viagem_info").innerHTML="Protocolo: "+esc(trip.protocolo)+"<br>"+esc(trip.nome)+" — "+esc(trip.veiculo)+" ("+esc(trip.placa)+")"+(trip.correcao?"<br><b>MODO CORREÇÃO</b>":"");
-  var idaD=trip.ida_paradas||[],idaP=trip.ida_plan||1,idaN=idaD.length;
-  var volD=trip.volta_paradas||[],volP=parseInt(trip.volta_plan,10),volN=volD.length;if(isNaN(volP))volP=1;
-  var idaOk=idaN>=idaP;
-  $("ida_title").textContent="IDA ("+idaN+" de "+idaP+")";$("ida_plan_lbl").textContent=idaP;$("volta_plan_lbl").textContent=volP;
+  var idaD=trip.ida_paradas||[],idaN=idaD.length;
+  var volD=trip.volta_paradas||[],volN=volD.length;
+  $("ida_title").textContent="IDA ("+idaN+(idaN===1?" parada":" paradas")+")";
+  $("volta_title").textContent="VOLTA ("+volN+(volN===1?" parada":" paradas")+")";
   $("ida_list").innerHTML=renderParadaList(idaD,"ida");
-  if(!idaOk){$("btnIda").style.display="flex";$("btnIda").textContent="📍 Parada IDA ("+(idaN+1)+" de "+idaP+")";$("ida_done").style.display="none"}else{$("btnIda").style.display="none";$("ida_done").style.display="block"}
-  if(volP===0){$("volta_card").style.display="none"}
-  else{$("volta_card").style.display=idaOk?"block":"none";$("volta_title").textContent="VOLTA ("+volN+" de "+volP+")";$("volta_list").innerHTML=renderParadaList(volD,"volta");
-    if(!idaOk){$("btnVolta").style.display="none";$("volta_done").style.display="none"}
-    else if(volN<volP){$("btnVolta").style.display="flex";$("btnVolta").textContent="📍 Parada VOLTA ("+(volN+1)+" de "+volP+")";$("volta_done").style.display="none"}
-    else{$("btnVolta").style.display="none";$("volta_done").style.display="block"}}
-  $("finalizar_area").style.display=(idaOk&&(volP===0||volN>=volP))?"block":"none";
+  $("volta_list").innerHTML=renderParadaList(volD,"volta");
+  $("btnIda").textContent="📍 Registrar parada da IDA";
+  $("btnVolta").textContent="📍 Registrar parada da VOLTA";
+  $("finalizar_area").style.display=((idaN+volN)>=1)?"block":"none";
   atualizarSync();}
 function renderParadaList(arr,fase){if(!arr.length)return '<li style="color:var(--text-muted);border-left-color:var(--border)">Nenhuma parada.</li>';var h="";for(var i=0;i<arr.length;i++){var pend=arr[i].pending&&!arr[i].id;h+='<li><strong>'+esc(arr[i].orig)+' → '+esc(arr[i].dest)+'</strong> — '+esc(arr[i].km)+' km'+(pend?' <span style="background:#DBEAFE;color:#1E40AF;font-size:10px;font-weight:700;padding:1px 6px;border-radius:6px">⏳ a enviar</span>':'')+(trip.correcao?'<span class="rmp" onclick="removerParada(\''+fase+'\','+i+')">✕</span>':'')+'</li>';}return h}
 async function removerParada(fase,idx){var arr=fase==="ida"?trip.ida_paradas:trip.volta_paradas;var p=arr[idx];if(!p)return;if(!confirm("Remover esta parada?"))return;if(p.id)await sb.from("paradas").delete().eq("id",p.id);arr.splice(idx,1);saveTrip(trip);renderViagem()}
 function mudarPlano(fase,delta){if(!trip)return;var reg=(fase==="ida"?(trip.ida_paradas||[]):(trip.volta_paradas||[])).length;var cur=parseInt(fase==="ida"?trip.ida_plan:trip.volta_plan,10);if(isNaN(cur))cur=(fase==="ida"?1:0);var min=(fase==="ida")?Math.max(reg,1):Math.max(reg,0);var novo=cur+delta;if(novo<min){alert("Não dá para reduzir: a "+fase+" já tem "+reg+" parada(s).");return}if(novo>12){alert("Máximo de 12 paradas.");return}if(fase==="ida")trip.ida_plan=novo;else trip.volta_plan=novo;saveTrip(trip);renderViagem()}
 
 // ── PARADA ──
-function goParada(fase){curFase=fase;var ps=fase==="ida"?(trip.ida_paradas||[]):(trip.volta_paradas||[]);var plan=fase==="ida"?(trip.ida_plan||1):(trip.volta_plan||1);var done=ps.length;show("secParada");reqGPS("pa_gs","pa_gt");clock("pa_ck");
+function goParada(fase){curFase=fase;var ps=fase==="ida"?(trip.ida_paradas||[]):(trip.volta_paradas||[]);var done=ps.length;show("secParada");reqGPS("pa_gs","pa_gt");clock("pa_ck");
   $("pa_badge").textContent=fase.toUpperCase();$("pa_badge").style.background=fase==="ida"?"#DBEAFE":"#FEF3C7";$("pa_badge").style.color=fase==="ida"?"#1E40AF":"#92400E";
-  $("pa_titulo").textContent="Parada "+(done+1)+" de "+plan;$("pa_orig").value="";$("pa_dest").value="";$("pa_km").value=""}
+  $("pa_titulo").textContent="Parada da "+fase.toUpperCase()+" · Nº "+(done+1);$("pa_orig").value="";$("pa_dest").value="";$("pa_km").value=""}
 // Registro OFFLINE-FIRST: salva a parada no aparelho na hora (com o GPS que
 // houver) e envia ao servidor em segundo plano; se estiver sem internet, fica
 // pendente e sincroniza sozinha quando a conexão voltar.
