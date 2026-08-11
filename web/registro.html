@@ -290,10 +290,49 @@ function esc(s){return String(s==null?"":s).replace(/[&<>"]/g,function(c){return
 function brl(v){if(v==null)return"—";return"R$ "+Number(v).toLocaleString("pt-BR",{minimumFractionDigits:2,maximumFractionDigits:2})}
 function reqGPS(s,t){var e=$(s);e.className="gs p";$(t).textContent="Obtendo…";if(!navigator.geolocation){e.className="gs e";$(t).textContent="GPS indisponível";return}navigator.geolocation.getCurrentPosition(function(p){gps={lat:p.coords.latitude,lng:p.coords.longitude};e.className="gs a";$(t).textContent=p.coords.latitude.toFixed(5)+", "+p.coords.longitude.toFixed(5)+" (±"+Math.round(p.coords.accuracy)+"m)"},function(){e.className="gs e";$(t).textContent="Permita localização"},{enableHighAccuracy:true,timeout:15000})}
 function clock(id){var u=function(){$(id).textContent=fmtD(new Date())};u();clk=setInterval(u,1000)}
-function compress(file){return new Promise(function(ok,no){if(!file){no(new Error("Nenhum arquivo."));return}
-  function desenhar(src,w,h){var c=document.createElement("canvas");if(w>1280){h=Math.round(h*(1280/w));w=1280}c.width=w;c.height=h;c.getContext("2d").drawImage(src,0,0,w,h);var out=c.toDataURL("image/jpeg",.6);c.width=0;c.height=0;return out}
+// ── Conversor HEIC/HEIF (fotos padrão de iPhone/Samsung) — carregado sob demanda ──
+var _heicP=null;
+function carregarHeic(){
+  if(window.heic2any) return Promise.resolve();
+  if(_heicP) return _heicP;
+  _heicP=new Promise(function(res,rej){
+    var s=document.createElement("script");
+    s.src="https://cdn.jsdelivr.net/npm/heic2any@0.0.4/dist/heic2any.min.js";
+    s.onload=function(){res()};
+    s.onerror=function(){_heicP=null;rej(new Error("Sem internet para converter a foto. Conecte-se e tente de novo."))};
+    document.head.appendChild(s);
+  });
+  return _heicP;
+}
+function ehHeic(file){ return /image\/(heic|heif)/i.test(file.type||"") || /\.(heic|heif)$/i.test(file.name||""); }
+async function heicParaJpeg(file){
+  await carregarHeic();
+  var out=await window.heic2any({blob:file,toType:"image/jpeg",quality:0.7});
+  return Array.isArray(out)?out[0]:out;
+}
+function _desenhar(src,w,h){var c=document.createElement("canvas");if(w>1280){h=Math.round(h*(1280/w));w=1280}c.width=w;c.height=h;c.getContext("2d").drawImage(src,0,0,w,h);var out=c.toDataURL("image/jpeg",.6);c.width=0;c.height=0;return out}
+function _blobParaJpeg(blob){return new Promise(function(ok,no){
   var r=new FileReader();r.onerror=function(){no(new Error("Não foi possível ler o arquivo."))};
-  r.onload=function(){var img=new Image();img.onerror=function(){no(new Error("Não foi possível abrir a imagem (formato pode não ser suportado). Tente outra foto."))};img.onload=function(){try{ok(desenhar(img,img.width,img.height))}catch(e){no(new Error("Falha ao processar a imagem."))}};img.src=r.result};r.readAsDataURL(file)})}
+  r.onload=function(){var img=new Image();img.onerror=function(){no(new Error("__DECODE__"))};img.onload=function(){try{ok(_desenhar(img,img.width,img.height))}catch(e){no(new Error("Falha ao processar a imagem."))}};img.src=r.result};
+  r.readAsDataURL(blob)})}
+// Aceita foto de qualquer câmera moderna: converte HEIC/HEIF quando preciso.
+async function compress(file){
+  if(!file) throw new Error("Nenhum arquivo.");
+  var alvo=file;
+  if(ehHeic(file)){ ld("Convertendo a foto…"); try{ alvo=await heicParaJpeg(file); } finally{ hd(); } }
+  try{
+    return await _blobParaJpeg(alvo);
+  }catch(e){
+    if(e && e.message==="__DECODE__"){
+      // formato não reconhecido pelo navegador (ex.: HEIC não detectado) — tenta converter
+      ld("Convertendo a foto…");
+      try{ var jpg=await heicParaJpeg(file); return await _blobParaJpeg(jpg); }
+      catch(e2){ throw new Error("Não foi possível abrir a imagem. Tente tirar a foto novamente — ou, se persistir, envie um print (captura de tela) da foto."); }
+      finally{ hd(); }
+    }
+    throw e;
+  }
+}
 function validarCPF(c){c=c.replace(/\D/g,"");if(c==="00000000000")return true;if(c.length!==11||/^(\d)\1{10}$/.test(c))return false;var s=0,i,r;for(i=0;i<9;i++)s+=parseInt(c[i])*(10-i);r=11-(s%11);var d1=r>=10?0:r;if(parseInt(c[9])!==d1)return false;s=0;for(i=0;i<10;i++)s+=parseInt(c[i])*(11-i);r=11-(s%11);return parseInt(c[10])===(r>=10?0:r)}
 function validarEmail(e){return/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e)}function validarTel(t){return t.replace(/\D/g,"").length>=10}
 function markErr(id){$(id).style.borderColor="var(--danger)";setTimeout(function(){$(id).style.borderColor=""},4000)}
