@@ -20,7 +20,7 @@
 .cl{display:block;cursor:pointer}.cz{border:2px dashed var(--border);border-radius:var(--radius);padding:22px 16px;text-align:center;overflow:hidden;pointer-events:none;transition:all .25s}.cl:active .cz{border-color:var(--accent);background:var(--accent-glow)}.cz.ok{border-style:solid;border-color:var(--success);padding:0;background:#000}.cz .pi{font-size:26px;margin-bottom:4px}.cz .pt{font-size:13px;color:var(--text-secondary);font-weight:500}.cz .ps{font-size:11px;color:var(--text-muted);margin-top:2px}.cz img{width:100%;display:block;border-radius:calc(var(--radius) - 2px)}.chi{position:absolute;width:1px;height:1px;opacity:0;overflow:hidden}
 .cm{margin-top:8px;padding:10px 12px;background:var(--success-bg);border-radius:var(--radius-sm);font-family:'JetBrains Mono',monospace;font-size:11px;color:#065F46;line-height:1.6;display:none}.cm.v{display:block}.cm .mr{display:flex;justify-content:space-between}.cm .ml{font-family:'DM Sans',sans-serif;font-weight:600;font-size:11px;color:#047857}
 .gs{display:flex;align-items:center;gap:8px;padding:10px 14px;border-radius:var(--radius-sm);font-size:13px;font-weight:500;margin-bottom:14px}.gs.p{background:var(--warning-bg);color:#92400E}.gs.a{background:var(--success-bg);color:#065F46}.gs.e{background:var(--danger-bg);color:#991B1B}.gd{width:8px;height:8px;border-radius:50%;flex-shrink:0}.gs.p .gd{background:var(--warning);animation:pl 1.5s infinite}.gs.a .gd{background:var(--success)}.gs.e .gd{background:var(--danger)}@keyframes pl{0%,100%{opacity:1}50%{opacity:.3}}
-.bp{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;padding:16px;border:none;border-radius:var(--radius);background:linear-gradient(135deg,var(--primary),var(--primary-light));color:#fff;font-family:'DM Sans',sans-serif;font-size:16px;font-weight:700;cursor:pointer;box-shadow:var(--shadow-md);transition:transform .15s}.bp:active{transform:scale(.98)}.bp:disabled{opacity:.5;cursor:not-allowed}.bp.g{background:linear-gradient(135deg,#059669,#10B981)}.bp.y{background:linear-gradient(135deg,#D97706,#F59E0B);color:#1E293B}.bp.b{background:linear-gradient(135deg,#2563EB,#0EA5E9)}.bp.purple{background:linear-gradient(135deg,#7C3AED,#8B5CF6)}
+.bp{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;padding:16px;border:none;border-radius:var(--radius);background:linear-gradient(135deg,var(--primary),var(--primary-light));color:#fff;font-family:'DM Sans',sans-serif;font-size:16px;font-weight:700;cursor:pointer;box-shadow:var(--shadow-md);transition:transform .15s}.bp:active{transform:scale(.98)}.bp:disabled{opacity:.5;cursor:not-allowed}.bp.g{background:linear-gradient(135deg,#059669,#10B981)}.bp.y{background:linear-gradient(135deg,#D97706,#F59E0B);color:#1E293B}.bp.b{background:linear-gradient(135deg,#2563EB,#0EA5E9)}.bp.purple{background:linear-gradient(135deg,#7C3AED,#8B5CF6)}.bp.r{background:linear-gradient(135deg,#DC2626,#EF4444)}
 .bs{display:block;width:100%;padding:12px;border:1.5px solid var(--border);border-radius:var(--radius);background:transparent;color:var(--text-secondary);font-family:'DM Sans',sans-serif;font-size:14px;font-weight:600;cursor:pointer;margin-top:10px}
 .mc{background:var(--surface);border-radius:var(--radius);padding:24px 20px;margin-bottom:14px;box-shadow:var(--shadow-sm);border:2px solid var(--border);cursor:pointer;display:flex;align-items:center;gap:16px;animation:fi .4s ease both}.mc:active{transform:scale(.98);border-color:var(--accent)}.mc .mi{width:52px;height:52px;border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:24px;flex-shrink:0}.mc .mn h3{font-size:16px;font-weight:700;margin-bottom:4px}.mc .mn p{font-size:13px;color:var(--text-secondary);line-height:1.4}
 .ob{background:var(--warning-bg);border:1.5px solid #FCD34D;border-radius:var(--radius);padding:14px 16px;margin-bottom:14px;display:none}.ob.v{display:block}.ob .bt{font-size:13px;font-weight:700;color:#92400E;margin-bottom:4px}.ob .bd{font-size:12px;color:#A16207;line-height:1.5}
@@ -72,7 +72,7 @@
   <div class="card" id="instrCard" style="border:2px solid var(--accent);padding:0;overflow:hidden">
     <div onclick="toggleInstr()" style="display:flex;align-items:center;justify-content:space-between;padding:16px 20px;cursor:pointer;background:linear-gradient(135deg,#EFF6FF,#DBEAFE)">
       <div style="display:flex;align-items:center;gap:10px"><span style="font-size:22px">📋</span><span style="font-size:15px;font-weight:700;color:#1E40AF">Como funciona?</span></div>
-      <span id="instrArrow" style="font-size:16px;color:#1E40AF;transition:transform .3s">▶</span>
+      <svg id="instrArrow" width="15" height="15" viewBox="0 0 24 24" fill="none" style="transition:transform .3s;flex-shrink:0"><path d="M9 6l6 6-6 6" stroke="#1E40AF" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
     </div>
     <div id="instrBody" style="max-height:0;overflow:hidden;transition:max-height .4s ease">
       <div style="padding:16px 20px;font-size:13px;color:var(--text-secondary);line-height:1.8">
@@ -89,7 +89,7 @@
   <div class="mc" onclick="goCheckin()" id="cardCI"><div class="mi" style="background:#ECFDF5;color:#059669">🚀</div><div class="mn"><h3>CHECK-IN</h3><p>Registre o odômetro antes de sair.</p></div></div>
   <div class="mc" onclick="goViagem()" id="cardV" style="display:none"><div class="mi" style="background:#EFF6FF;color:#2563EB">🗺️</div><div class="mn"><h3>Viagem em Andamento</h3><p>Registrar paradas ou finalizar.</p></div></div>
 
-  <div class="card"><div class="ct"><span class="ic" style="background:#EFF6FF;color:#2563EB">🔍</span> Recuperar / Acompanhar</div>
+  <div class="card"><div class="ct"><span class="ic" style="background:#EFF6FF;color:#2563EB">📋</span> Viagens Realizadas</div>
     <p style="font-size:13px;color:var(--text-secondary);margin-bottom:12px">Acompanhe a situação dos seus pedidos e corrija os que estão em revisão.</p>
     <div id="meus_pedidos"></div>
   </div>
@@ -97,7 +97,7 @@
   <div class="card" style="border:1.5px solid #FCA5A5;background:#FEF2F2">
     <div class="ct" style="color:#991B1B"><span class="ic" style="background:#FEE2E2;color:#DC2626">🧾</span> Pedágio Pendente</div>
     <p style="font-size:13px;color:#B91C1C;margin-bottom:12px">Usa plano de pedágio (Sem Parar, ConectCar…) e o comprovante chegou <strong>depois</strong> de enviar o reembolso? Adicione o pedágio à sua solicitação aqui.</p>
-    <button class="bp b" style="padding:12px" onclick="togglePedagio()">🧾 Lançar pedágio pendente</button>
+    <button id="ppToggleBtn" class="bp r" style="padding:14px;justify-content:space-between" onclick="togglePedagio()"><span>Lançar pedágio pendente</span><svg id="ppArrow" width="16" height="16" viewBox="0 0 24 24" fill="none" style="transition:transform .3s;flex-shrink:0"><path d="M6 9l6 6 6-6" stroke="#fff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
     <div id="pedPendenteBox"></div>
   </div>
 </div>
@@ -128,7 +128,7 @@
     <div class="cm" id="ci_cm"><div class="mr"><span class="ml">⏱</span><span id="ci_ts">—</span></div><div class="mr"><span class="ml">📍</span><span id="ci_co">—</span></div></div>
   </div>
   <button class="bp g" onclick="enviarCI()">✅ Confirmar CHECK-IN</button>
-  <button class="bs" onclick="show('secHome')">← Voltar</button>
+  <button class="bs" onclick="goHome()">← Voltar</button>
 </div>
 
 <!-- CHECK-IN OK -->
@@ -179,7 +179,7 @@
     </div>
     <button class="bp y" onclick="goFinalizar()">🏁 CHECK-OUT — Finalizar</button>
   </div>
-  <button class="bs" onclick="show('secHome')">← Início</button>
+  <button class="bs" onclick="goHome()">← Início</button>
 </div>
 
 <!-- PARADA -->
@@ -336,6 +336,8 @@ function capFile(inp,pvId,phId,zId){var file=inp.files[0];if(!file)return;compre
 // ── Home / sync ──
 async function sync(){trip=loadTrip();if(trip&&trip.protocolo){try{var r=await sb.from("reembolsos").select("id,status").eq("protocolo",trip.protocolo).maybeSingle();if(!r.data||r.data.status!=="ABERTO"){clearTrip();trip=null}else{trip.id=r.data.id;saveTrip(trip)}}catch(e){}}updateHome();await renderMeusPedidos()}
 function updateHome(){var b=$("openBanner"),ci=$("cardCI"),cv=$("cardV");if(trip&&trip.protocolo){b.classList.add("v");$("openDetail").innerHTML="<strong>"+esc(trip.nome)+"</strong> — "+esc(trip.veiculo)+" ("+esc(trip.placa)+")<br>Protocolo: "+esc(trip.protocolo);ci.style.display="none";cv.style.display="flex"}else{b.classList.remove("v");ci.style.display="flex";cv.style.display="none"}}
+// Volta para a tela inicial sempre com o estado da viagem atualizado (check-in feito → mostra "viagem em andamento").
+function goHome(){trip=loadTrip();updateHome();show("secHome")}
 
 // ── CHECK-IN ──
 function goCheckin(){show("secCI");reqGPS("ci_gs","ci_gt");clock("ci_ck");trip={};
@@ -406,7 +408,7 @@ function setConMode(m){conMode=m;$("tog_con_pad").classList.toggle("on",m==="pad
 function getConsumo(){if(conMode==="custom")return parseFloat($("co_consumo").value)||0;return(trip&&trip.veiculo==="Moto")?49:10}
 var pedN=0;
 function addPed(fase){pedN++;var wrap=$("ped_list_"+fase);var d=document.createElement("div");d.className="dyn-item";
-  d.innerHTML='<button class="rm" onclick="this.parentNode.remove()">✕</button><div class="f" style="margin:0 0 10px"><label>Valor (R$)</label><input type="number" class="ped-val" inputmode="decimal" step="0.01"></div><label class="cl" for="pedf_'+pedN+'"><div class="cz" id="pedz_'+pedN+'" style="padding:14px"><div id="pedh_'+pedN+'"><div class="pi">🧾</div><div class="pt">Comprovante (opcional)</div></div><img id="pedv_'+pedN+'" style="display:none"></div></label><input type="file" accept="image/*" id="pedf_'+pedN+'" class="chi ped-foto" onchange="capFile(this,\'pedv_'+pedN+'\',\'pedh_'+pedN+'\',\'pedz_'+pedN+'\')">';wrap.appendChild(d)}
+  d.innerHTML='<button class="rm" onclick="this.parentNode.remove()">✕</button><div class="f" style="margin:0 0 10px"><label>Valor (R$)</label><input type="number" class="ped-val" inputmode="decimal" step="0.01"></div><label class="cl" for="pedf_'+pedN+'"><div class="cz" id="pedz_'+pedN+'" style="padding:14px"><div id="pedh_'+pedN+'"><div class="pi">🧾</div><div class="pt">Comprovante <span style="color:var(--danger)">*</span></div></div><img id="pedv_'+pedN+'" style="display:none"></div></label><input type="file" accept="image/*" id="pedf_'+pedN+'" class="chi ped-foto" onchange="capFile(this,\'pedv_'+pedN+'\',\'pedh_'+pedN+'\',\'pedz_'+pedN+'\')">';wrap.appendChild(d)}
 function coletarPedagios(){var out=[];["ida","volta"].forEach(function(fase){var items=$("ped_list_"+fase).querySelectorAll(".dyn-item");Array.prototype.forEach.call(items,function(it,i){var v=parseFloat(String(it.querySelector(".ped-val").value).replace(",","."))||0;if(v>0)out.push({fase:fase,ordem:i+1,valor:v,foto:it.querySelector(".ped-foto").dataset.compressed||""})})});return out}
 function addCarona(){var d=document.createElement("div");d.className="dyn-item";d.innerHTML='<button class="rm" onclick="this.parentNode.remove()">✕</button><div class="f" style="margin:0"><label>Nome</label><input type="text" class="carona-nome"></div>';$("carona_list").appendChild(d)}
 function coletarCaronas(){var out=[];Array.prototype.forEach.call($("carona_list").querySelectorAll(".carona-nome"),function(i){if(i.value.trim())out.push(i.value.trim())});return out}
@@ -426,7 +428,9 @@ function calcular(){if(!coCapt.b64){alert("Tire a foto do odômetro de chegada."
   var usarEstim=fuelMode==="estim",precoReal=PB;
   if(!usarEstim){precoReal=parseFloat(String($("co_preco").value).replace(",","."));if(!precoReal||precoReal<=0){alert("Informe o preço do litro.");return}if(!$("co_cupom").dataset.compressed){alert("Anexe o cupom fiscal.");return}}
   if(conMode==="custom"){var cc=parseFloat($("co_consumo").value);if(!cc||cc<=0){alert("Informe o consumo (km/L).");return}if(!$("co_confoto").dataset.compressed){alert("Anexe a foto do painel com o consumo.");return}}
-  var peds=pedDepoisOn()?[]:coletarPedagios(),tPed=0;peds.forEach(function(p){tPed+=p.valor});
+  var peds=pedDepoisOn()?[]:coletarPedagios(),tPed=0;
+  for(var pj=0;pj<peds.length;pj++){if(!peds[pj].foto){alert("Anexe o comprovante de cada pedágio informado. O comprovante é obrigatório.");return}}
+  peds.forEach(function(p){tPed+=p.valor});
   var dIda=0;pI.forEach(function(p){dIda+=parseFloat(String(p.km).replace(",","."))||0});var dVol=0;pV.forEach(function(p){dVol+=parseFloat(String(p.km).replace(",","."))||0});
   var dTot=dIda+dVol,con=getConsumo(),vReal=dTot/con*precoReal,vTot=vReal+tPed,vEst=dTot/con*PB;
   _calc={dTot:dTot,con:con,usarEstim:usarEstim,precoReal:precoReal,peds:peds,vReal:vReal,vTot:vTot,pedDepois:pedDepoisOn()};
@@ -461,14 +465,16 @@ async function abrirCorr(protocolo){ld("Carregando pedido…");var r=await sb.fr
   alert("Modo correção: ajuste as paradas (pode remover e registrar de novo) e refaça o check-out para reenviar.");await goViagem()}
 
 // ── Pedágio pendente ──
-async function togglePedagio(){var box=$("pedPendenteBox");if(box.innerHTML){box.innerHTML="";return}
+async function togglePedagio(){var box=$("pedPendenteBox"),arr=$("ppArrow");if(box.innerHTML){box.innerHTML="";if(arr)arr.style.transform="rotate(0deg)";return}if(arr)arr.style.transform="rotate(180deg)";
   var r=await sb.from("vw_reembolsos").select("id,protocolo,status,criado_em").eq("motorista_id",SESSION.user.id).in("status",["COMPLETO","REVISÃO","CORRIGIDO","APROVADO","PAGO"]).order("criado_em",{ascending:false});
   if(!r.data||!r.data.length){box.innerHTML='<p style="font-size:13px;color:var(--text-muted);margin-top:10px">Você não tem pedidos elegíveis no momento.</p>';return}
   var opts=r.data.map(function(x){return '<option value="'+x.id+'|'+esc(x.protocolo)+'">'+esc(x.protocolo)+' — '+esc(x.status)+'</option>'}).join("");
-  box.innerHTML='<div style="margin-top:14px;border-top:1px dashed var(--border);padding-top:14px"><div class="f"><label>Pedido</label><select id="pp_sel">'+opts+'</select></div><div class="fr"><div class="f"><label>Fase</label><select id="pp_fase"><option value="ida">Ida</option><option value="volta">Volta</option></select></div><div class="f"><label>Valor (R$)</label><input id="pp_val" inputmode="decimal"></div></div><div class="f"><label>Comprovante (opcional)</label><input type="file" accept="image/*" id="pp_foto"></div><button class="bp b" onclick="salvarPedagio()">Adicionar pedágio</button><div id="pp_msg" class="msg"></div></div>'}
+  box.innerHTML='<div style="margin-top:14px;border-top:1px dashed var(--border);padding-top:14px"><div class="f"><label>Pedido</label><select id="pp_sel">'+opts+'</select></div><div class="fr"><div class="f"><label>Fase</label><select id="pp_fase"><option value="ida">Ida</option><option value="volta">Volta</option></select></div><div class="f"><label>Valor (R$)</label><input id="pp_val" inputmode="decimal"></div></div><div class="f"><label>Comprovante <span style="color:var(--danger)">*</span></label><input type="file" accept="image/*" id="pp_foto"></div><button class="bp b" onclick="salvarPedagio()">Adicionar pedágio</button><div id="pp_msg" class="msg"></div></div>'}
 async function salvarPedagio(){var sel=$("pp_sel").value.split("|"),id=sel[0],protocolo=sel[1],mb=$("pp_msg");var val=parseFloat(String($("pp_val").value).replace(",","."))||0;if(val<=0){mb.className="msg show err";mb.textContent="Informe o valor.";return}
-  mb.className="msg show info";mb.textContent="Salvando…";var link=null,fin=$("pp_foto");
-  if(fin&&fin.files&&fin.files[0]){try{var b64=await compress(fin.files[0]);var savedProto=(trip&&trip.protocolo)||"";trip=trip||{};trip.protocolo=protocolo;link=await uploadFoto(b64,"pedagio_pendente");trip.protocolo=savedProto}catch(e){mb.className="msg show err";mb.textContent="Erro na foto: "+e.message;return}}
+  var fin=$("pp_foto");
+  if(!fin||!fin.files||!fin.files[0]){mb.className="msg show err";mb.textContent="Anexe o comprovante do pedágio. O comprovante é obrigatório.";return}
+  mb.className="msg show info";mb.textContent="Salvando…";var link=null;
+  {try{var b64=await compress(fin.files[0]);var savedProto=(trip&&trip.protocolo)||"";trip=trip||{};trip.protocolo=protocolo;link=await uploadFoto(b64,"pedagio_pendente");trip.protocolo=savedProto}catch(e){mb.className="msg show err";mb.textContent="Erro na foto: "+e.message;return}}
   var ex=await sb.from("pedagios").select("id").eq("reembolso_id",id);var ordem=((ex.data&&ex.data.length)||0)+1;
   var r=await sb.from("pedagios").insert({reembolso_id:id,fase:$("pp_fase").value,ordem:ordem,valor:val,comprovante_link:link,pendente:true});
   if(r.error){mb.className="msg show err";mb.textContent="Erro: "+r.error.message;return}
