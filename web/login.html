@@ -98,7 +98,9 @@ async function refreshUI(){
 
   // Lê o próprio perfil (a RLS permite ler a própria linha)
   var { data: perfil } = await sb
-    .from("perfis").select("nome,email,papel").eq("id", session.user.id).maybeSingle();
+    .from("perfis").select("nome,email,papel,ativo").eq("id", session.user.id).maybeSingle();
+
+  if(perfil && perfil.ativo === false){ await sb.auth.signOut(); mostrar("loginCodigo"); return; }
 
   el("lg_nome").textContent  = (perfil && perfil.nome) || session.user.email;
   el("lg_email").textContent = session.user.email;

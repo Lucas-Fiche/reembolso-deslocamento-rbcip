@@ -482,7 +482,8 @@ async function salvarPedagio(){var sel=$("pp_sel").value.split("|"),id=sel[0],pr
 
 // ── Início ──
 async function iniciarApp(){var s=await sb.auth.getSession();if(!s.data.session){show("secLogin");return}SESSION=s.data.session;
-  var p=await sb.from("perfis").select("nome,papel").eq("id",SESSION.user.id).maybeSingle();PERFIL=p.data||{};
+  var p=await sb.from("perfis").select("nome,papel,ativo").eq("id",SESSION.user.id).maybeSingle();PERFIL=p.data||{};
+  if(!p.data || p.data.ativo===false){await sb.auth.signOut();show("secLogin");msg("msgLogin","err","Seu acesso foi removido. Fale com o administrador.");return}
   if(PERFIL.papel==="van"){location.replace("van.html");return}
   $("hm_nome").textContent=PERFIL.nome||SESSION.user.email;$("hm_papel").textContent=PERFIL.papel||"motorista";
   show("secHome");await fetchPreco();await sync()}

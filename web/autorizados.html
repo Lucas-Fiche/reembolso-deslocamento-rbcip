@@ -122,8 +122,9 @@ async function remover(id, email){
   sb = window.supabase.createClient(c.SUPABASE_URL, c.SUPABASE_PUBLISHABLE_KEY);
   var { data:{ session } } = await sb.auth.getSession();
   if(!session){ el("bloqueio").classList.remove("hide"); return; }
-  var { data: perfil } = await sb.from("perfis").select("papel").eq("id",session.user.id).maybeSingle();
-  if(!perfil || perfil.papel !== "admin"){ el("bloqueio").classList.remove("hide"); return; }
+  var { data: perfil } = await sb.from("perfis").select("papel,ativo").eq("id",session.user.id).maybeSingle();
+  if(!perfil || perfil.ativo===false){ await sb.auth.signOut(); el("bloqueio").classList.remove("hide"); return; }
+  if(perfil.papel !== "admin"){ el("bloqueio").classList.remove("hide"); return; }
   el("painel").classList.remove("hide");
   carregar();
 })();

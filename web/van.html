@@ -227,8 +227,9 @@ async function iniciar(){
   var { data:{ session } }=await sb.auth.getSession();
   if(!session){ show("secLogin"); return; }
   SESSION=session;
-  var { data:perfil }=await sb.from("perfis").select("nome,papel").eq("id",session.user.id).maybeSingle();
+  var { data:perfil }=await sb.from("perfis").select("nome,papel,ativo").eq("id",session.user.id).maybeSingle();
   PERFIL=perfil||{};
+  if(!perfil || perfil.ativo===false){ await sb.auth.signOut(); show("secLogin"); return; }
   if(PERFIL.papel!=="van" && PERFIL.papel!=="admin"){ show("secNaoVan"); return; }
   var nm=(PERFIL.nome)||session.user.email;
   el("hm_nome").textContent=nm;
