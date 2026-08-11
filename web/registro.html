@@ -140,6 +140,7 @@
     <div style="font-size:13px;font-weight:600;color:#065F46;margin-bottom:6px">📋 Viagem em andamento</div>
     <div id="viagem_info" style="font-size:12px;color:#047857;line-height:1.6;font-family:'JetBrains Mono',monospace"></div>
   </div>
+  <div id="syncBanner" style="display:none;background:#EFF6FF;border:1px solid #BFDBFE;color:#1E40AF;border-radius:var(--radius);padding:12px 14px;margin-bottom:14px;font-size:13px;line-height:1.5"></div>
   <div class="card" style="border:2px solid #F59E0B;background:#FFFBEB;padding:16px">
     <div style="font-size:14px;font-weight:700;color:#92400E;display:flex;align-items:center;gap:8px;margin-bottom:6px"><span style="font-size:18px">📌</span> Atenção: o que você vai precisar no CHECK-OUT</div>
     <div style="font-size:12px;color:#A16207;line-height:1.5;margin-bottom:12px">Ao finalizar a viagem, será obrigatório anexar os itens abaixo. <strong>Vá guardando durante o trajeto</strong> para não perder nada:</div>
@@ -190,6 +191,7 @@
   </div>
   <div class="card"><div class="ct"><span class="ic" style="background:#ECFDF5;color:#059669">📡</span> Localização</div>
     <div class="gs p" id="pa_gs"><div class="gd"></div><span id="pa_gt">Obtendo…</span></div><div class="lc" id="pa_ck">--:--:--</div>
+    <p style="font-size:12px;color:var(--text-muted);margin-top:8px;line-height:1.5">📴 <strong>Sem sinal ou sem GPS?</strong> Pode registrar assim mesmo: a <strong>origem e o destino</strong> que você digitar já registram o local, e a parada fica <strong>salva no aparelho</strong> — ela é enviada sozinha quando a internet voltar.</p>
   </div>
   <div class="card"><div class="ct"><span class="ic" style="background:#FEF3C7;color:#D97706">🛣️</span> Trecho</div>
     <div class="fr"><div class="f"><label>Origem <span class="rq">*</span></label><input type="text" id="pa_orig"></div><div class="f"><label>Destino <span class="rq">*</span></label><input type="text" id="pa_dest"></div></div>
@@ -365,13 +367,20 @@ async function enviarCI(){var erros=[];
 
 // ── VIAGEM ──
 async function goViagem(){trip=loadTrip();if(!trip){show("secHome");return}show("secViagem");ld("Atualizando…");
+  await sincronizarParadas(); // envia pendentes antes de reler do servidor
   try{if(!trip.id){var rr=await sb.from("reembolsos").select("id,status").eq("protocolo",trip.protocolo).maybeSingle();if(rr.data){trip.id=rr.data.id}}
-    var pr=await sb.from("paradas").select("id,fase,ordem,origem,destino,km").eq("reembolso_id",trip.id).order("fase").order("ordem");
-    var ida=[],vol=[];(pr.data||[]).forEach(function(p){var o={id:p.id,orig:p.origem,dest:p.destino,km:(p.km!=null?String(p.km):"0")};if(p.fase==="volta")vol.push(o);else ida.push(o)});
-    trip.ida_paradas=ida;trip.volta_paradas=vol;
-    if(trip.ida_plan==null)trip.ida_plan=Math.max(ida.length,1);
-    if(trip.volta_plan==null)trip.volta_plan=Math.max(vol.length,vol.length?1:1);
-    saveTrip(trip)}catch(e){}hd();renderViagem()}
+    var pr=await sb.from("paradas").select("id,fase,ordem,origem,destino,km,lat,lng,horario").eq("reembolso_id",trip.id).order("fase").order("ordem");
+    if(!pr.error){
+      var ida=[],vol=[];(pr.data||[]).forEach(function(p){var o={id:p.id,orig:p.origem,dest:p.destino,km:(p.km!=null?String(p.km):"0"),lat:p.lat,lng:p.lng,horario:p.horario};if(p.fase==="volta")vol.push(o);else ida.push(o)});
+      // mantém as paradas ainda não enviadas (registradas offline)
+      (trip.ida_paradas||[]).forEach(function(p){if(p.pending&&!p.id)ida.push(p)});
+      (trip.volta_paradas||[]).forEach(function(p){if(p.pending&&!p.id)vol.push(p)});
+      trip.ida_paradas=ida;trip.volta_paradas=vol;
+      if(trip.ida_plan==null)trip.ida_plan=Math.max(ida.length,1);
+      if(trip.volta_plan==null)trip.volta_plan=Math.max(vol.length,vol.length?1:1);
+      saveTrip(trip);
+    }
+  }catch(e){}hd();renderViagem()}
 function renderViagem(){
   $("viagem_info").innerHTML="Protocolo: "+esc(trip.protocolo)+"<br>"+esc(trip.nome)+" — "+esc(trip.veiculo)+" ("+esc(trip.placa)+")"+(trip.correcao?"<br><b>MODO CORREÇÃO</b>":"");
   var idaD=trip.ida_paradas||[],idaP=trip.ida_plan||1,idaN=idaD.length;
@@ -385,8 +394,9 @@ function renderViagem(){
     if(!idaOk){$("btnVolta").style.display="none";$("volta_done").style.display="none"}
     else if(volN<volP){$("btnVolta").style.display="flex";$("btnVolta").textContent="📍 Parada VOLTA ("+(volN+1)+" de "+volP+")";$("volta_done").style.display="none"}
     else{$("btnVolta").style.display="none";$("volta_done").style.display="block"}}
-  $("finalizar_area").style.display=(idaOk&&(volP===0||volN>=volP))?"block":"none"}
-function renderParadaList(arr,fase){if(!arr.length)return '<li style="color:var(--text-muted);border-left-color:var(--border)">Nenhuma parada.</li>';var h="";for(var i=0;i<arr.length;i++)h+='<li><strong>'+esc(arr[i].orig)+' → '+esc(arr[i].dest)+'</strong> — '+esc(arr[i].km)+' km'+(trip.correcao?'<span class="rmp" onclick="removerParada(\''+fase+'\','+i+')">✕</span>':'')+'</li>';return h}
+  $("finalizar_area").style.display=(idaOk&&(volP===0||volN>=volP))?"block":"none";
+  atualizarSync();}
+function renderParadaList(arr,fase){if(!arr.length)return '<li style="color:var(--text-muted);border-left-color:var(--border)">Nenhuma parada.</li>';var h="";for(var i=0;i<arr.length;i++){var pend=arr[i].pending&&!arr[i].id;h+='<li><strong>'+esc(arr[i].orig)+' → '+esc(arr[i].dest)+'</strong> — '+esc(arr[i].km)+' km'+(pend?' <span style="background:#DBEAFE;color:#1E40AF;font-size:10px;font-weight:700;padding:1px 6px;border-radius:6px">⏳ a enviar</span>':'')+(trip.correcao?'<span class="rmp" onclick="removerParada(\''+fase+'\','+i+')">✕</span>':'')+'</li>';}return h}
 async function removerParada(fase,idx){var arr=fase==="ida"?trip.ida_paradas:trip.volta_paradas;var p=arr[idx];if(!p)return;if(!confirm("Remover esta parada?"))return;if(p.id)await sb.from("paradas").delete().eq("id",p.id);arr.splice(idx,1);saveTrip(trip);renderViagem()}
 function mudarPlano(fase,delta){if(!trip)return;var reg=(fase==="ida"?(trip.ida_paradas||[]):(trip.volta_paradas||[])).length;var cur=parseInt(fase==="ida"?trip.ida_plan:trip.volta_plan,10);if(isNaN(cur))cur=(fase==="ida"?1:0);var min=(fase==="ida")?Math.max(reg,1):Math.max(reg,0);var novo=cur+delta;if(novo<min){alert("Não dá para reduzir: a "+fase+" já tem "+reg+" parada(s).");return}if(novo>12){alert("Máximo de 12 paradas.");return}if(fase==="ida")trip.ida_plan=novo;else trip.volta_plan=novo;saveTrip(trip);renderViagem()}
 
@@ -394,11 +404,48 @@ function mudarPlano(fase,delta){if(!trip)return;var reg=(fase==="ida"?(trip.ida_
 function goParada(fase){curFase=fase;var ps=fase==="ida"?(trip.ida_paradas||[]):(trip.volta_paradas||[]);var plan=fase==="ida"?(trip.ida_plan||1):(trip.volta_plan||1);var done=ps.length;show("secParada");reqGPS("pa_gs","pa_gt");clock("pa_ck");
   $("pa_badge").textContent=fase.toUpperCase();$("pa_badge").style.background=fase==="ida"?"#DBEAFE":"#FEF3C7";$("pa_badge").style.color=fase==="ida"?"#1E40AF":"#92400E";
   $("pa_titulo").textContent="Parada "+(done+1)+" de "+plan;$("pa_orig").value="";$("pa_dest").value="";$("pa_km").value=""}
-async function enviarParada(){var o=$("pa_orig").value.trim(),d=$("pa_dest").value.trim(),k=$("pa_km").value.trim();if(!o||!d||!k){alert("Preencha origem, destino e km.");return}ld("Registrando parada…");var now=new Date();
-  var arr=curFase==="ida"?"ida_paradas":"volta_paradas";var ordem=(trip[arr]||[]).length+1;
-  var ins=await sb.from("paradas").insert({reembolso_id:trip.id,fase:curFase,ordem:ordem,origem:o,destino:d,km:parseFloat(String(k).replace(",","."))||0,lat:gps?gps.lat:null,lng:gps?gps.lng:null,horario:now.toISOString()}).select("id").maybeSingle();
-  hd();if(ins.error){alert("Erro: "+ins.error.message);return}
-  trip[arr]=trip[arr]||[];trip[arr].push({id:ins.data.id,orig:o,dest:d,km:k,time:fmtD(now)});saveTrip(trip);show("secViagem");renderViagem()}
+// Registro OFFLINE-FIRST: salva a parada no aparelho na hora (com o GPS que
+// houver) e envia ao servidor em segundo plano; se estiver sem internet, fica
+// pendente e sincroniza sozinha quando a conexão voltar.
+async function enviarParada(){var o=$("pa_orig").value.trim(),d=$("pa_dest").value.trim(),k=$("pa_km").value.trim();if(!o||!d||!k){alert("Preencha origem, destino e km.");return}
+  var now=new Date();var arr=curFase==="ida"?"ida_paradas":"volta_paradas";var ordem=(trip[arr]||[]).length+1;
+  var local={_localId:"L"+Date.now()+"-"+Math.floor(Math.random()*100000),pending:true,fase:curFase,ordem:ordem,orig:o,dest:d,km:k,lat:gps?gps.lat:null,lng:gps?gps.lng:null,horario:now.toISOString(),time:fmtD(now)};
+  trip[arr]=trip[arr]||[];trip[arr].push(local);saveTrip(trip);
+  show("secViagem");renderViagem();
+  sincronizarParadas(); // tenta enviar em segundo plano (não bloqueia)
+}
+// ── Fila offline de paradas ──
+function contarPendentes(){var n=0;["ida_paradas","volta_paradas"].forEach(function(a){((trip&&trip[a])||[]).forEach(function(p){if(p.pending&&!p.id)n++;});});return n;}
+function atualizarSync(){var b=$("syncBanner");if(!b)return;var pend=contarPendentes(),off=(navigator.onLine===false);
+  if(!pend&&!off){b.style.display="none";return;}
+  b.style.display="block";
+  if(off&&pend)b.innerHTML="📴 Sem internet — <strong>"+pend+" parada(s)</strong> guardada(s) no aparelho. Serão enviadas automaticamente quando a conexão voltar.";
+  else if(off)b.innerHTML="📴 Sem internet no momento. Você pode registrar paradas normalmente — elas ficam salvas e enviam sozinhas depois.";
+  else b.innerHTML="⏳ Enviando "+pend+" parada(s) pendente(s)…";
+}
+var _sincronizando=false;
+async function sincronizarParadas(){
+  if(!trip||!trip.id) return 0;
+  if(_sincronizando){ return contarPendentes(); }
+  _sincronizando=true;
+  try{
+    var arrs=["ida_paradas","volta_paradas"];
+    for(var a=0;a<arrs.length;a++){
+      var list=trip[arrs[a]]||[];
+      for(var i=0;i<list.length;i++){
+        var p=list[i];
+        if(!p||!p.pending||p.id) continue;
+        if(navigator.onLine===false) continue;
+        try{
+          var ins=await sb.from("paradas").insert({reembolso_id:trip.id,fase:p.fase||(arrs[a]==="ida_paradas"?"ida":"volta"),ordem:p.ordem,origem:p.orig,destino:p.dest,km:parseFloat(String(p.km).replace(",","."))||0,lat:p.lat,lng:p.lng,horario:p.horario||new Date().toISOString()}).select("id").maybeSingle();
+          if(!ins.error && ins.data){ p.id=ins.data.id; p.pending=false; saveTrip(trip); }
+        }catch(e){ /* rede caiu: mantém pendente */ }
+      }
+    }
+  } finally { _sincronizando=false; }
+  atualizarSync();
+  return contarPendentes();
+}
 
 // ── FINALIZAR ──
 function togglePedDepois(){var on=$("co_ped_depois").checked;$("co_ped_depois_aviso").style.display=on?"block":"none";$("co_ped_campos").style.display=on?"none":"block"}
@@ -439,6 +486,10 @@ function calcular(){if(!coCapt.b64){alert("Tire a foto do odômetro de chegada."
   $("resumoCard").style.display="block";$("btnCalc").style.display="none";$("btnEnv").style.display="flex";$("resumoCard").scrollIntoView({behavior:"smooth"})}
 async function enviarFinal(){if(!_calc){alert("Calcule primeiro.");return}var c=_calc,pI=trip.ida_paradas||[],pV=trip.volta_paradas||[],i;$("btnEnv").disabled=true;
   try{
+    ld("Enviando paradas pendentes…");
+    var _pend=await sincronizarParadas();
+    if(_pend>0){ hd(); $("btnEnv").disabled=false; alert("Você tem "+_pend+" parada(s) ainda não enviada(s) — provavelmente por falta de internet. Conecte-se e finalize de novo; nada será perdido."); return; }
+    pI=trip.ida_paradas||[]; pV=trip.volta_paradas||[];
     ld("Enviando foto do odômetro…");var odo=await uploadFoto(coCapt.b64,"odometro_chegada");
     for(i=0;i<pI.length;i++){ld("Enviando Maps ida "+(i+1)+"…");var lk=await uploadFoto($("mida_"+i).dataset.compressed,"ida_"+(i+1)+"_maps");if(pI[i].id)await sb.from("paradas").update({maps_link:lk}).eq("id",pI[i].id)}
     for(i=0;i<pV.length;i++){ld("Enviando Maps volta "+(i+1)+"…");var lk2=await uploadFoto($("mvolta_"+i).dataset.compressed,"volta_"+(i+1)+"_maps");if(pV[i].id)await sb.from("paradas").update({maps_link:lk2}).eq("id",pV[i].id)}
@@ -487,7 +538,11 @@ async function iniciarApp(){var s=await sb.auth.getSession();if(!s.data.session)
   if(PERFIL.papel==="van"){location.replace("van.html");return}
   $("hm_nome").textContent=PERFIL.nome||SESSION.user.email;$("hm_papel").textContent=PERFIL.papel||"motorista";
   show("secHome");await fetchPreco();await sync()}
-(function(){var c=window.RBCIP_CONFIG||{};if(!c.SUPABASE_URL||String(c.SUPABASE_URL).indexOf("http")!==0){show("secLogin");msg("msgLogin","err","Configuração ausente (web/config.js).");return}sb=window.supabase.createClient(c.SUPABASE_URL,c.SUPABASE_PUBLISHABLE_KEY);iniciarApp()})();
+(function(){var c=window.RBCIP_CONFIG||{};if(!c.SUPABASE_URL||String(c.SUPABASE_URL).indexOf("http")!==0){show("secLogin");msg("msgLogin","err","Configuração ausente (web/config.js).");return}sb=window.supabase.createClient(c.SUPABASE_URL,c.SUPABASE_PUBLISHABLE_KEY);
+  // quando a internet volta, envia as paradas guardadas offline
+  window.addEventListener("online",function(){ sincronizarParadas(); });
+  window.addEventListener("offline",function(){ atualizarSync(); });
+  iniciarApp()})();
 </script>
 </body>
 </html>
