@@ -89,6 +89,12 @@
   <div class="mc" onclick="goCheckin()" id="cardCI"><div class="mi" style="background:#ECFDF5;color:#059669">🚀</div><div class="mn"><h3>CHECK-IN</h3><p>Registre o odômetro antes de sair.</p></div></div>
   <div class="mc" onclick="goViagem()" id="cardV" style="display:none"><div class="mi" style="background:#EFF6FF;color:#2563EB">🗺️</div><div class="mn"><h3>Viagem em Andamento</h3><p>Registrar paradas ou finalizar.</p></div></div>
 
+  <div class="card" id="recuperarCard" style="display:none;border:1.5px solid #93C5FD;background:#EFF6FF">
+    <div class="ct" style="color:#1E40AF"><span class="ic" style="background:#DBEAFE;color:#2563EB">🔄</span> Retomar viagem em andamento</div>
+    <p style="font-size:13px;color:#1E40AF;margin-bottom:10px">Iniciou uma viagem e o app voltou ao início? Ela está <strong>salva no servidor</strong> — toque para continuar de onde parou.</p>
+    <div id="recuperar_lista"></div>
+  </div>
+
   <div class="card"><div class="ct"><span class="ic" style="background:#EFF6FF;color:#2563EB">📋</span> Viagens Realizadas</div>
     <p style="font-size:13px;color:var(--text-secondary);margin-bottom:12px">Acompanhe a situação dos seus pedidos e corrija os que estão em revisão.</p>
     <div id="meus_pedidos"></div>
@@ -383,11 +389,45 @@ async function sync(){trip=loadTrip();
     if(!r.error){ if(!r.data||r.data.status!=="ABERTO"){clearTrip();trip=null}else{trip.id=r.data.id;saveTrip(trip)} }
     // se r.error (sem internet / falha de rede): mantém o trip local intacto
   }catch(e){}}
+  // Recuperação automática: sem viagem local válida, procura uma ABERTA no servidor
+  // (pela conta logada). Resolve o caso "o app voltou ao início / me deslogou".
+  if((!trip||!trip.protocolo) && SESSION){
+    try{
+      var ab=await sb.from("reembolsos").select("id,protocolo,nome,cpf,veiculo,placa").eq("motorista_id",SESSION.user.id).eq("status","ABERTO").order("criado_em",{ascending:false}).limit(1).maybeSingle();
+      if(ab && !ab.error && ab.data){ trip={id:ab.data.id,protocolo:ab.data.protocolo,nome:ab.data.nome,cpf:ab.data.cpf,veiculo:ab.data.veiculo,placa:ab.data.placa,ida_plan:null,volta_plan:null,ida_paradas:[],volta_paradas:[]}; saveTrip(trip); }
+    }catch(e){}
+  }
   if(trip&&trip.id) sincronizarParadas();
-  updateHome();await renderMeusPedidos()}
+  updateHome(); await carregarAbertas(); await renderMeusPedidos()}
 function updateHome(){var b=$("openBanner"),ci=$("cardCI"),cv=$("cardV");if(trip&&trip.protocolo){b.classList.add("v");$("openDetail").innerHTML="<strong>"+esc(trip.nome)+"</strong> — "+esc(trip.veiculo)+" ("+esc(trip.placa)+")<br>Protocolo: "+esc(trip.protocolo);ci.style.display="none";cv.style.display="flex"}else{b.classList.remove("v");ci.style.display="flex";cv.style.display="none"}}
 // Volta para a tela inicial sempre com o estado da viagem atualizado (check-in feito → mostra "viagem em andamento").
-function goHome(){trip=loadTrip();updateHome();show("secHome")}
+function goHome(){trip=loadTrip();updateHome();show("secHome");carregarAbertas()}
+// ── Recuperar viagem em andamento (busca no servidor pela conta logada) ──
+function fmtDataCurta(iso){ var d=new Date(iso); return isNaN(d)?"—":fmtD(d); }
+async function carregarAbertas(){
+  var card=$("recuperarCard"), box=$("recuperar_lista"); if(!card||!box||!SESSION) return;
+  try{
+    var r=await sb.from("reembolsos").select("id,protocolo,veiculo,placa,checkin_em").eq("motorista_id",SESSION.user.id).eq("status","ABERTO").order("criado_em",{ascending:false});
+    // não repete a viagem que já está ativa (essa aparece no card "Viagem em Andamento")
+    var abertas=(r.data||[]).filter(function(a){ return !(trip&&trip.id===a.id); });
+    if(r.error || !abertas.length){ card.style.display="none"; return; }
+    card.style.display="block";
+    box.innerHTML=abertas.map(function(a){
+      return '<div style="border:1px solid #BFDBFE;border-radius:10px;padding:10px 12px;margin-bottom:8px;background:#fff"><div style="font-weight:700">'+esc(a.protocolo)+'</div><div style="font-size:12px;color:var(--text-secondary);margin-top:2px">'+esc(a.veiculo||"")+(a.placa?" · "+esc(a.placa):"")+(a.checkin_em?' · iniciada '+fmtDataCurta(a.checkin_em):"")+'</div><button class="bp b" style="margin-top:8px;padding:10px;font-size:14px" onclick="continuarViagem(\''+a.id+'\')">▶️ Continuar esta viagem</button></div>';
+    }).join("");
+  }catch(e){ card.style.display="none"; }
+}
+async function continuarViagem(id){
+  ld("Abrindo viagem…");
+  var r=await sb.from("reembolsos").select("id,protocolo,nome,cpf,veiculo,placa,status").eq("id",id).maybeSingle();
+  hd();
+  if(!r.data){ alert("Viagem não encontrada."); carregarAbertas(); return; }
+  if(r.data.status!=="ABERTO"){ alert("Esta viagem já foi finalizada (status: "+r.data.status+")."); carregarAbertas(); return; }
+  var keepPlan=(trip&&trip.id===id);
+  trip={id:r.data.id,protocolo:r.data.protocolo,nome:r.data.nome,cpf:r.data.cpf,veiculo:r.data.veiculo,placa:r.data.placa,ida_plan:keepPlan?trip.ida_plan:null,volta_plan:keepPlan?trip.volta_plan:null,ida_paradas:[],volta_paradas:[]};
+  saveTrip(trip);
+  await goViagem();
+}
 
 // ── CHECK-IN ──
 function goCheckin(){show("secCI");reqGPS("ci_gs","ci_gt");clock("ci_ck");trip={};
