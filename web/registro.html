@@ -336,7 +336,16 @@ function capFoto(inp,prefix){var file=inp.files[0];if(!file)return;compress(file
 function capFile(inp,pvId,phId,zId){var file=inp.files[0];if(!file)return;compress(file).then(function(c){$(pvId).src=c;$(pvId).style.display="block";$(phId).style.display="none";$(zId).classList.add("ok");inp.dataset.compressed=c}).catch(function(e){alert("Erro: "+e.message)})}
 
 // ── Home / sync ──
-async function sync(){trip=loadTrip();if(trip&&trip.protocolo){try{var r=await sb.from("reembolsos").select("id,status").eq("protocolo",trip.protocolo).maybeSingle();if(!r.data||r.data.status!=="ABERTO"){clearTrip();trip=null}else{trip.id=r.data.id;saveTrip(trip)}}catch(e){}}updateHome();await renderMeusPedidos()}
+// IMPORTANTE: só descarta o trip local com uma resposta DEFINITIVA do servidor.
+// Offline, a consulta volta com erro (data nula) — nesse caso NÃO limpamos nada,
+// senão perderíamos paradas registradas offline. Também tentamos enviá-las.
+async function sync(){trip=loadTrip();
+  if(trip&&trip.protocolo){try{var r=await sb.from("reembolsos").select("id,status").eq("protocolo",trip.protocolo).maybeSingle();
+    if(!r.error){ if(!r.data||r.data.status!=="ABERTO"){clearTrip();trip=null}else{trip.id=r.data.id;saveTrip(trip)} }
+    // se r.error (sem internet / falha de rede): mantém o trip local intacto
+  }catch(e){}}
+  if(trip&&trip.id) sincronizarParadas();
+  updateHome();await renderMeusPedidos()}
 function updateHome(){var b=$("openBanner"),ci=$("cardCI"),cv=$("cardV");if(trip&&trip.protocolo){b.classList.add("v");$("openDetail").innerHTML="<strong>"+esc(trip.nome)+"</strong> — "+esc(trip.veiculo)+" ("+esc(trip.placa)+")<br>Protocolo: "+esc(trip.protocolo);ci.style.display="none";cv.style.display="flex"}else{b.classList.remove("v");ci.style.display="flex";cv.style.display="none"}}
 // Volta para a tela inicial sempre com o estado da viagem atualizado (check-in feito → mostra "viagem em andamento").
 function goHome(){trip=loadTrip();updateHome();show("secHome")}
@@ -542,6 +551,8 @@ async function iniciarApp(){var s=await sb.auth.getSession();if(!s.data.session)
   // quando a internet volta, envia as paradas guardadas offline
   window.addEventListener("online",function(){ sincronizarParadas(); });
   window.addEventListener("offline",function(){ atualizarSync(); });
+  // rede de segurança: a cada 30s tenta enviar o que ainda estiver pendente
+  setInterval(function(){ if(contarPendentes()>0) sincronizarParadas(); }, 30000);
   iniciarApp()})();
 </script>
 </body>
