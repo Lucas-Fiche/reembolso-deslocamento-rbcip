@@ -214,7 +214,7 @@ function enviarAvisoStatus(d){
   var instrucao = "";
   if(novo === "REVISÃO"){
     instrucao = '<div style="background:#DBEAFE;padding:12px;border-radius:8px;margin-top:12px;border:1px solid #93C5FD">'
-      + '<p style="font-size:13px;color:#1E40AF;margin:0">📋 <strong>O que fazer:</strong> Acesse o app de registro, busque seu CPF na seção "Recuperar Viagem" e corrija os dados solicitados.</p></div>';
+      + '<p style="font-size:13px;color:#1E40AF;margin:0">📋 <strong>O que fazer:</strong> Acesse o sistema e entre com o seu e-mail. Na seção <strong>"Viagens Realizadas"</strong>, toque em <strong>"🔄 Corrigir"</strong> na solicitação em revisão, ajuste o que foi pedido e reenvie.</p></div>';
   } else if(novo === "REPROVADO" || novo === "REJEITADO"){
     instrucao = '<div style="background:#FEF2F2;padding:12px;border-radius:8px;margin-top:12px;border:1px solid #FECACA">'
       + '<p style="font-size:13px;color:#991B1B;margin:0">Se discordar da decisão, entre em contato com o setor administrativo.</p></div>';

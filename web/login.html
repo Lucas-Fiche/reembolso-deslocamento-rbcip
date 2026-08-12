@@ -29,6 +29,15 @@
     <a id="lg_admin" class="hide" href="autorizados.html"><button class="ghost" style="margin-top:16px">Gerir e-mails autorizados →</button></a>
     <a id="lg_painel" class="hide" href="painel.html"><button class="ghost">📊 Painel</button></a>
     <a href="registro.html"><button class="ghost">📝 Registrar deslocamento</button></a>
+
+    <div id="lg_senha_box" class="hide" style="margin-top:14px;border-top:1px solid #E2E8F0;padding-top:14px">
+      <label>Definir / alterar senha</label>
+      <p class="muted" style="margin:2px 0 8px">Defina uma senha para poder entrar com <b>e-mail e senha</b> (sem depender do código).</p>
+      <input id="lg_nova_senha" type="password" placeholder="Nova senha (mínimo 6 caracteres)" autocomplete="new-password">
+      <button id="btnSenhaSet" onclick="definirSenha()">Salvar senha</button>
+      <div id="lg_senha_msg" class="msg"></div>
+    </div>
+
     <button class="ghost" onclick="sair()">Sair</button>
   </div>
 
@@ -107,7 +116,20 @@ async function refreshUI(){
   el("lg_papel").textContent = (perfil && perfil.papel) || "—";
   el("lg_admin").classList.toggle("hide", !(perfil && perfil.papel === "admin"));
   el("lg_painel").classList.toggle("hide", !(perfil && perfil.papel === "admin"));
+  el("lg_senha_box").classList.toggle("hide", !(perfil && perfil.papel === "admin"));
   mostrar("logado");
+}
+
+// Define/altera a senha do próprio usuário logado (para login por senha).
+async function definirSenha(){
+  var s = el("lg_nova_senha").value;
+  if(!s || s.length < 6){ msg("lg_senha_msg","err","A senha precisa de ao menos 6 caracteres."); return; }
+  el("btnSenhaSet").disabled = true; el("btnSenhaSet").textContent = "Salvando…";
+  var { error } = await sb.auth.updateUser({ password: s });
+  el("btnSenhaSet").disabled = false; el("btnSenhaSet").textContent = "Salvar senha";
+  if(error){ msg("lg_senha_msg","err", error.message); return; }
+  el("lg_nova_senha").value = "";
+  msg("lg_senha_msg","ok","Senha definida! Agora você pode entrar com e-mail e senha.");
 }
 
 // ── Login por código ──
