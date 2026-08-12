@@ -302,7 +302,7 @@ async function carregar(fromBtn){
   try{
     var { data, error } = await sb.from("vw_reembolsos")
       .select("id,protocolo,status,motorista_id,nome,cpf,rg,orgao,email,telefone,veiculo,placa,checkin_em,checkin_lat,checkin_lng,checkin_foto,checkout_em,checkout_lat,checkout_lng,checkout_foto,dist_total,consumo,usou_estimativa,preco_base,preco_real,cupom_foto,foto_consumo,caronas,validacao,recibo_link,val_estimado,val_real,val_pedagios,val_total,qtd_pedagios,qtd_paradas,qtd_ped_pendentes,criado_em")
-      .order("criado_em",{ascending:false});
+      .order("criado_em",{ascending:true});
     if(error){ msgTopo("Erro ao atualizar: "+error.message, true); return; }
     DADOS = data||[];
     render();
@@ -507,7 +507,7 @@ function renderActions(){
     "REVISÃO":'<button class="abtn amber" onclick="mudarStatus(\''+id+'\',\'REVISÃO\')">Solicitar Revisão</button>',
     "REPROVADO":'<button class="abtn red" onclick="mudarStatus(\''+id+'\',\'REPROVADO\')">Reprovar</button>'
   };
-  h+='<textarea id="obs-'+id+'" class="obs-ta" placeholder="Observação (opcional) — fica registrada na validação"></textarea>';
+  h+='<textarea id="obs-'+id+'" class="obs-ta" placeholder="Motivo / observação — obrigatório para Revisão e Reprovação (enviado ao motorista)"></textarea>';
   h+='<div class="action-btns">';
   ["APROVADO","PAGO","REVISÃO","REPROVADO"].forEach(function(k){ if(k!==st)h+=btns[k]; });
   h+='</div>'+editBtn+reciboBtn;
@@ -540,7 +540,13 @@ function renderMap(){
 async function mudarStatus(id, novo){
   var reg=DADOS.filter(function(x){return x.id===id;})[0]||{};
   var obsEl=el("obs-"+id); var obs=obsEl?obsEl.value.trim():"";
-  if(!confirm('Confirmar: mudar '+reg.protocolo+' para "'+novo+'"?'+(obs?'\n\nObservação: '+obs:''))) return;
+  // Revisão e Reprovação exigem motivo — ele é enviado ao e-mail do motorista.
+  if((novo==="REVISÃO"||novo==="REPROVADO") && !obs){
+    alert("Informe o motivo "+(novo==="REVISÃO"?"da revisão":"da reprovação")+". Ele será enviado ao e-mail do motorista.");
+    if(obsEl) obsEl.focus();
+    return;
+  }
+  if(!confirm('Confirmar: mudar '+reg.protocolo+' para "'+novo+'"?'+(obs?'\n\nMotivo: '+obs:''))) return;
   var upd={status:novo};
   if(obs){
     var cur=await sb.from("reembolsos").select("validacao").eq("id",id).maybeSingle();
