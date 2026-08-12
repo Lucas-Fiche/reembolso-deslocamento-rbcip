@@ -156,27 +156,37 @@ def q(v):
     return "'"+str(v).replace("'","''")+"'"
 
 lines=["-- MIGRAÇÃO RBCIP planilha->Supabase (gerado). Contém dados pessoais.",
-       "begin;"]
+       "-- IDEMPOTENTE: pode rodar sobre um banco que já tem dados. Só INSERE o que",
+       "-- ainda não existe (por protocolo). Não altera nem duplica o que já está lá",
+       "-- (inclusive os registros criados no sistema novo, que não estão na planilha).",
+       "begin;",
+       "-- fotografia dos protocolos JÁ existentes ANTES desta importação;",
+       "-- serve para não reinserir paradas/pedágios de reembolsos que já estavam no banco.",
+       "create temp table _existentes on commit drop as select protocolo from reembolsos;"]
 for x in recs:
+    proto_q = q(x['protocolo'])
+    guard = f" where not exists (select 1 from _existentes where protocolo={proto_q})"
     lines.append(f"insert into reembolsos (id,protocolo,status,checkin_em,checkin_lat,checkin_lng,checkin_foto,checkout_em,checkout_lat,checkout_lng,checkout_foto,nome,cpf,email,telefone,veiculo,placa,rg,orgao,dist_total,consumo,usou_estimativa,preco_base,preco_real,cupom_foto,validacao,recibo_link,caronas,foto_consumo,val_total_planilha,criado_em) values ("
         + ",".join(q(x[k]) for k in ["id","protocolo","status","checkin_em","checkin_lat","checkin_lng","checkin_foto","checkout_em","checkout_lat","checkout_lng","checkout_foto","nome","cpf","email","telefone","veiculo","placa","rg","orgao","dist_total","consumo","usou_estimativa","preco_base","preco_real","cupom_foto","validacao","recibo_link","caronas","foto_consumo","val_total_planilha","criado_em"])
-        + ");")
+        + ") on conflict (protocolo) do nothing;")
     for p in x["paradas"]:
-        lines.append(f"insert into paradas (reembolso_id,fase,ordem,origem,destino,km,horario,lat,lng,maps_link) values ("
-            + ",".join([q(x['id']),q(p['fase']),q(p['ordem']),q(p['origem']),q(p['destino']),q(p['km']),q(p['horario']),q(p['lat']),q(p['lng']),q(p['maps_link'])]) + ");")
+        lines.append(f"insert into paradas (reembolso_id,fase,ordem,origem,destino,km,horario,lat,lng,maps_link) select "
+            + ",".join([q(x['id']),q(p['fase']),q(p['ordem']),q(p['origem']),q(p['destino']),q(p['km']),q(p['horario']),q(p['lat']),q(p['lng']),q(p['maps_link'])]) + guard + ";")
     for p in x["pedagios"]:
-        lines.append(f"insert into pedagios (reembolso_id,fase,ordem,valor,comprovante_link) values ("
-            + ",".join([q(x['id']),q(p['fase']),q(p['ordem']),q(p['valor']),q(p['comprovante_link'])]) + ");")
+        lines.append(f"insert into pedagios (reembolso_id,fase,ordem,valor,comprovante_link) select "
+            + ",".join([q(x['id']),q(p['fase']),q(p['ordem']),q(p['valor']),q(p['comprovante_link'])]) + guard + ";")
     if x["auditoria_txt"]:
-        lines.append(f"insert into auditoria (reembolso_id,usuario,acao) values ({q(x['id'])},'migracao',{q(x['auditoria_txt'])});")
-# preços gasolina
+        lines.append(f"insert into auditoria (reembolso_id,usuario,acao) select {q(x['id'])},'migracao',{q(x['auditoria_txt'])}" + guard + ";")
+# preços gasolina — só insere período (inicio+valor) que ainda não existe (evita duplicar)
 wp=wb["Preços Gasolina"]
 for r in wp.iter_rows(min_row=2, values_only=True):
     if not r or r[2] is None: continue
     ini=dt_iso(r[0]); fim=dt_iso(r[1]); val=num(r[2]); reg=r[3]
     ini = ini.split(" ")[0] if ini else None
     fim = fim.split(" ")[0] if fim else None
-    lines.append(f"insert into precos_gasolina (inicio,fim,valor,registrado_por) values ({q(ini)},{q(fim)},{q(val)},{q(reg)});")
+    lines.append(f"insert into precos_gasolina (inicio,fim,valor,registrado_por) select {q(ini)},{q(fim)},{q(val)},{q(reg)} where not exists (select 1 from precos_gasolina where inicio={q(ini)} and valor={q(val)});")
+# relatório: quantos reembolsos foram efetivamente adicionados nesta rodada
+lines.append("select (select count(*) from reembolsos) - (select count(*) from _existentes) as reembolsos_novos_importados, (select count(*) from reembolsos) as total_no_banco;")
 lines.append("commit;")
 open(OUT,"w").write("\n".join(lines))
 print(f"\nSQL gerado em: {OUT}  ({len(lines)} linhas)")
