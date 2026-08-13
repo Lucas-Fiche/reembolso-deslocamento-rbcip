@@ -351,8 +351,19 @@ async function sair(){await sb.auth.signOut();location.reload()}
 // ── Upload de foto via carteiro ──
 async function uploadFoto(b64,name){var cfg=window.RBCIP_CONFIG||{};if(!cfg.CARTEIRO_URL)throw new Error("uploader não configurado");
   var s=await sb.auth.getSession();var jwt=s.data.session.access_token;
-  var resp=await fetch(cfg.CARTEIRO_URL,{method:"POST",redirect:"follow",headers:{"Content-Type":"text/plain"},body:JSON.stringify({action:"upload_imagem",jwt:jwt,base64:b64,name:name,protocolo:(trip&&trip.protocolo)||""})});
-  var out={};try{out=JSON.parse(await resp.text())}catch(_){}if(!out.success||!out.link)throw new Error(out.error||"falha no upload");return out.link}
+  var lastErr="";
+  // Tenta até 3x (falhas transitórias/cota do carteiro). Se a resposta não for
+  // JSON (ex.: página de erro do Google), mostra o status/trecho real p/ diagnóstico.
+  for(var tent=1;tent<=3;tent++){
+    try{
+      var resp=await fetch(cfg.CARTEIRO_URL,{method:"POST",redirect:"follow",headers:{"Content-Type":"text/plain"},body:JSON.stringify({action:"upload_imagem",jwt:jwt,base64:b64,name:name,protocolo:(trip&&trip.protocolo)||""})});
+      var txt=await resp.text(); var out={}; try{out=JSON.parse(txt)}catch(_){}
+      if(out.success && out.link) return out.link;
+      lastErr = out.error || ("servidor de fotos respondeu inesperado (HTTP "+resp.status+")"+(txt?": "+String(txt).replace(/<[^>]+>/g," ").replace(/\s+/g," ").trim().slice(0,140):""));
+    }catch(e){ lastErr = (e&&e.message)||String(e); }
+    if(tent<3){ ld("Reenviando foto… (tentativa "+(tent+1)+" de 3)"); await new Promise(function(r){setTimeout(r, tent*2000)}); }
+  }
+  throw new Error(lastErr||"falha no upload");}
 async function fetchPreco(){try{var today=new Date().toISOString().slice(0,10);
   var r=await sb.from("precos_gasolina").select("valor,inicio,fim").lte("inicio",today).order("inicio",{ascending:false}).limit(20);
   if(r.data && r.data.length){
