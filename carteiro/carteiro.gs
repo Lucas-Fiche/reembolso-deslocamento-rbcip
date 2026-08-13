@@ -31,6 +31,7 @@ function doPost(e){
     if(d.action === "enviar_aviso_status") return enviarAvisoStatus(d);
     if(d.action === "enviar_confirmacao_registro") return enviarConfirmacao(d);
     if(d.action === "upload_imagem") return uploadImagem(d);
+    if(d.action === "upload_imagens") return uploadImagens(d);
     if(d.action === "gerar_recibo") return gerarReciboAction(d);
     return _jr({success:false, error:"Ação desconhecida"});
   }catch(err){ return _jr({success:false, error:String(err && err.message || err)}); }
@@ -80,7 +81,36 @@ function uploadImagem(d){
   }
 }
 
-function doGet(){ return _jr({status:"ok", carteiro:"rbcip", v:"1.1"}); }
+// Upload de VÁRIAS imagens numa única execução (o formulário manda todas as
+// fotos do check-out juntas — menos requisições = mais robusto sob carga).
+// items: [{name, base64}, ...]  → devolve { links: { name: url, ... } }.
+function uploadImagens(d){
+  if(!d.jwt || !d.items || !d.items.length) return _jr({success:false, error:"Dados incompletos."});
+  var perfil = _sbGet("perfis?select=papel", d.jwt);
+  if(!perfil || !perfil.length) return _jr({success:false, error:"Não autorizado."});
+  var folderId = _props().getProperty("DRIVE_FOLDER_ID");
+  if(!folderId) return _jr({success:false, error:"DRIVE_FOLDER_ID não configurado no carteiro."});
+  try{
+    var folder = DriveApp.getFolderById(folderId);
+    var links = {};
+    for(var i=0;i<d.items.length;i++){
+      var it = d.items[i];
+      if(!it || !it.base64) continue;
+      var b64 = String(it.base64).replace(/^data:[^;]+;base64,/, "");
+      var bytes = Utilities.base64Decode(b64);
+      var key = it.name || ("foto"+i);
+      var nome = (d.protocolo?d.protocolo+"_":"") + key + ".jpg";
+      var file = folder.createFile(Utilities.newBlob(bytes, "image/jpeg", nome));
+      file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+      links[key] = file.getUrl();
+    }
+    return _jr({success:true, links:links});
+  }catch(err){
+    return _jr({success:false, error:"Falha no upload: " + String(err && err.message || err)});
+  }
+}
+
+function doGet(){ return _jr({status:"ok", carteiro:"rbcip", v:"1.2"}); }
 
 // Rode UMA vez no editor (menu ▶ Executar) para autorizar Drive + Docs.
 function autorizar(){

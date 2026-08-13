@@ -364,6 +364,31 @@ async function uploadFoto(b64,name){var cfg=window.RBCIP_CONFIG||{};if(!cfg.CART
     if(tent<3){ ld("Reenviando foto… (tentativa "+(tent+1)+" de 3)"); await new Promise(function(r){setTimeout(r, tent*2000)}); }
   }
   throw new Error(lastErr||"falha no upload");}
+// Envia TODAS as fotos numa ÚNICA chamada (menos requisições = menos falha por
+// carga no fim do dia). Se o carteiro ainda não tiver o modo em lote, cai
+// automaticamente para o modo antigo (1 por vez). Retorna { nome: link }.
+async function uploadTodas(items){
+  items=(items||[]).filter(function(it){return it && it.b64;});
+  if(!items.length) return {};
+  var cfg=window.RBCIP_CONFIG||{};if(!cfg.CARTEIRO_URL)throw new Error("uploader não configurado");
+  var s=await sb.auth.getSession();var jwt=s.data.session.access_token;
+  var lastErr="", desconhecida=false;
+  for(var tent=1;tent<=4;tent++){
+    try{
+      var resp=await fetch(cfg.CARTEIRO_URL,{method:"POST",redirect:"follow",headers:{"Content-Type":"text/plain"},body:JSON.stringify({action:"upload_imagens",jwt:jwt,protocolo:(trip&&trip.protocolo)||"",items:items.map(function(it){return {name:it.name,base64:it.b64};})})});
+      var txt=await resp.text();var out={};try{out=JSON.parse(txt)}catch(_){}
+      if(out.success && out.links) return out.links;
+      if(out.error && /desconhecida/i.test(out.error)){ desconhecida=true; break; }
+      lastErr = out.error || ("servidor de fotos respondeu inesperado (HTTP "+resp.status+")"+(txt?": "+String(txt).replace(/<[^>]+>/g," ").replace(/\s+/g," ").trim().slice(0,140):""));
+    }catch(e){ lastErr=(e&&e.message)||String(e); }
+    if(tent<4){ ld("Reenviando fotos… (tentativa "+(tent+1)+" de 4)"); await new Promise(function(r){setTimeout(r, tent*2500)}); }
+  }
+  if(desconhecida){ // carteiro ainda sem o modo em lote → envia uma a uma
+    var links={};
+    for(var j=0;j<items.length;j++){ ld("Enviando foto "+(j+1)+" de "+items.length+"…"); links[items[j].name]=await uploadFoto(items[j].b64, items[j].name); }
+    return links;
+  }
+  throw new Error(lastErr||"falha no upload");}
 async function fetchPreco(){try{var today=new Date().toISOString().slice(0,10);
   var r=await sb.from("precos_gasolina").select("valor,inicio,fim").lte("inicio",today).order("inicio",{ascending:false}).limit(20);
   if(r.data && r.data.length){
@@ -578,12 +603,21 @@ async function enviarFinal(){if(!_calc){alert("Calcule primeiro.");return}var c=
     var _pend=await sincronizarParadas();
     if(_pend>0){ hd(); $("btnEnv").disabled=false; alert("Você tem "+_pend+" parada(s) ainda não enviada(s) — provavelmente por falta de internet. Conecte-se e finalize de novo; nada será perdido."); return; }
     pI=trip.ida_paradas||[]; pV=trip.volta_paradas||[];
-    ld("Enviando foto do odômetro…");var odo=await uploadFoto(coCapt.b64,"odometro_chegada");
-    for(i=0;i<pI.length;i++){ld("Enviando Maps ida "+(i+1)+"…");var lk=await uploadFoto($("mida_"+i).dataset.compressed,"ida_"+(i+1)+"_maps");if(pI[i].id)await sb.from("paradas").update({maps_link:lk}).eq("id",pI[i].id)}
-    for(i=0;i<pV.length;i++){ld("Enviando Maps volta "+(i+1)+"…");var lk2=await uploadFoto($("mvolta_"+i).dataset.compressed,"volta_"+(i+1)+"_maps");if(pV[i].id)await sb.from("paradas").update({maps_link:lk2}).eq("id",pV[i].id)}
-    var cupomLink=null;if(!c.usarEstim){ld("Enviando cupom…");cupomLink=await uploadFoto($("co_cupom").dataset.compressed,"cupom")}
-    var conLink=null;if(conMode==="custom"){ld("Enviando foto do consumo…");conLink=await uploadFoto($("co_confoto").dataset.compressed,"consumo")}
-    for(i=0;i<c.peds.length;i++){var pl=null;if(c.peds[i].foto){ld("Enviando comprovante pedágio "+(i+1)+"…");pl=await uploadFoto(c.peds[i].foto,"pedagio_"+(i+1))}var rp=await sb.from("pedagios").insert({reembolso_id:trip.id,fase:c.peds[i].fase,ordem:c.peds[i].ordem,valor:c.peds[i].valor,comprovante_link:pl,pendente:false});if(rp.error)throw new Error(rp.error.message)}
+    // Junta TODAS as fotos e envia numa única chamada (robusto sob carga).
+    var items=[{name:"odometro_chegada",b64:coCapt.b64}];
+    for(i=0;i<pI.length;i++) items.push({name:"ida_"+(i+1)+"_maps",b64:$("mida_"+i).dataset.compressed});
+    for(i=0;i<pV.length;i++) items.push({name:"volta_"+(i+1)+"_maps",b64:$("mvolta_"+i).dataset.compressed});
+    if(!c.usarEstim) items.push({name:"cupom",b64:$("co_cupom").dataset.compressed});
+    if(conMode==="custom") items.push({name:"consumo",b64:$("co_confoto").dataset.compressed});
+    for(i=0;i<c.peds.length;i++){ if(c.peds[i].foto) items.push({name:"pedagio_"+(i+1),b64:c.peds[i].foto}); }
+    ld("Enviando fotos…");
+    var L=await uploadTodas(items);
+    var odo=L["odometro_chegada"]||null;
+    for(i=0;i<pI.length;i++){ var lk=L["ida_"+(i+1)+"_maps"]; if(lk && pI[i].id) await sb.from("paradas").update({maps_link:lk}).eq("id",pI[i].id); }
+    for(i=0;i<pV.length;i++){ var lk2=L["volta_"+(i+1)+"_maps"]; if(lk2 && pV[i].id) await sb.from("paradas").update({maps_link:lk2}).eq("id",pV[i].id); }
+    var cupomLink=(!c.usarEstim)?(L["cupom"]||null):null;
+    var conLink=(conMode==="custom")?(L["consumo"]||null):null;
+    for(i=0;i<c.peds.length;i++){ var pl=c.peds[i].foto?(L["pedagio_"+(i+1)]||null):null; var rp=await sb.from("pedagios").insert({reembolso_id:trip.id,fase:c.peds[i].fase,ordem:c.peds[i].ordem,valor:c.peds[i].valor,comprovante_link:pl,pendente:false});if(rp.error)throw new Error(rp.error.message); }
     ld("Finalizando…");
     var upd={status:trip.correcao?"CORRIGIDO":"COMPLETO",checkout_em:coCapt.ts||new Date().toISOString(),checkout_lat:coCapt.lat,checkout_lng:coCapt.lng,checkout_foto:odo,dist_total:c.dTot,consumo:c.con,usou_estimativa:c.usarEstim,preco_base:PB,preco_real:c.usarEstim?null:c.precoReal,cupom_foto:cupomLink,foto_consumo:conLink,caronas:coletarCaronas().join(", ")||null};
     var r1=await sb.from("reembolsos").update(upd).eq("id",trip.id);if(r1.error)throw new Error(r1.error.message);
