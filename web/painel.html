@@ -165,6 +165,14 @@ tbody tr.sel{background:var(--primary-light)}
 .edp-row .edp-orig,.edp-row .edp-dest{flex:1 1 90px}
 .edp-row .edp-km{flex:0 0 64px;text-align:right}
 .edp-row .edp-rm{flex:0 0 auto;width:30px;height:30px;border:none;background:var(--danger-light);color:var(--danger);border-radius:6px;cursor:pointer;font-weight:700}
+/* Modal de imagem (lightbox) para os anexos */
+.img-modal{position:fixed;inset:0;background:rgba(0,0,0,.86);z-index:700;display:flex;align-items:center;justify-content:center;padding:16px}
+.img-modal-inner{max-width:96vw;max-height:94vh;display:flex;flex-direction:column;gap:10px}
+.img-modal-bar{display:flex;justify-content:space-between;align-items:center;gap:10px;color:#fff;font-size:13px}
+.img-modal-bar a.btn,.img-modal-bar button.btn{text-decoration:none}
+.img-modal-body{overflow:auto;text-align:center;background:#fff;border-radius:8px}
+.img-modal-body img{max-width:96vw;max-height:82vh;display:block;margin:0 auto}
+.img-modal-body .load{color:#334155;padding:40px;font-size:13px}
 
 @media(max-width:900px){
   .detail-modal{padding:0}
@@ -271,6 +279,16 @@ tbody tr.sel{background:var(--primary-light)}
   </div>
 </div>
 
+<div id="modalImg" class="img-modal hide" onclick="fecharImg()">
+  <div class="img-modal-inner" onclick="event.stopPropagation()">
+    <div class="img-modal-bar">
+      <span id="img_titulo" style="font-weight:600"></span>
+      <span style="display:flex;gap:8px;flex:0 0 auto"><a id="img_drive" href="#" target="_blank" class="btn">Abrir no Drive ↗</a><button class="btn" onclick="fecharImg()">Fechar ✕</button></span>
+    </div>
+    <div class="img-modal-body"><img id="img_el" alt="anexo"></div>
+  </div>
+</div>
+
 <div id="modalStats" class="modal-bg hide">
   <div class="modal wide">
     <div style="display:flex;justify-content:space-between;align-items:flex-start">
@@ -317,6 +335,27 @@ function toggleTema(){
 }
 // aplica o ícone certo já no carregamento (o tema em si já foi setado no <head>)
 aplicarTema(document.documentElement.getAttribute("data-theme")==="dark"?"dark":"light");
+
+// ── Anexos: link direto (lh3) + modal (lightbox) ──
+function driveId(u){ var m=String(u||"").match(/(?:\/d\/|[?&]id=)([A-Za-z0-9_-]{20,})/); return m?m[1]:""; }
+function driveImg(u){ var id=driveId(u); return id?("https://lh3.googleusercontent.com/d/"+id):String(u||""); }
+// link de anexo que abre no modal (usa data-drive; o handler global intercepta)
+function imgA(url,label){ return '<a href="'+esc(driveImg(url))+'" target="_blank" data-drive="'+esc(url)+'" data-tit="'+esc(label)+'">'+esc(label)+'</a>'; }
+function abrirImg(url,titulo){
+  var id=driveId(url);
+  var img=el("img_el");
+  img.onerror=function(){ img.onerror=null; if(id) img.src="https://drive.google.com/thumbnail?id="+id+"&sz=w1600"; };
+  img.src=driveImg(url);
+  el("img_titulo").textContent=titulo||"Imagem";
+  el("img_drive").href=id?("https://drive.google.com/file/d/"+id+"/view"):url;
+  el("modalImg").classList.remove("hide");
+}
+function fecharImg(){ el("modalImg").classList.add("hide"); var img=el("img_el"); img.onerror=null; img.removeAttribute("src"); }
+document.addEventListener("click", function(ev){
+  var t=ev.target; var a=(t&&t.closest)?t.closest("a[data-drive]"):null;
+  if(a){ ev.preventDefault(); abrirImg(a.getAttribute("data-drive"), a.getAttribute("data-tit")); }
+});
+document.addEventListener("keydown", function(ev){ if(ev.key==="Escape"){ fecharImg(); } });
 
 function brl(v){ if(v==null||v==="")return "—"; return "R$ "+Number(v).toLocaleString("pt-BR",{minimumFractionDigits:2,maximumFractionDigits:2}); }
 function brlv(v){ return "R$ "+(Number(v)||0).toLocaleString("pt-BR",{minimumFractionDigits:2,maximumFractionDigits:2}); }
@@ -491,7 +530,7 @@ function renderDetail(){
     h+='<div class="detail-section"><div class="detail-section-title" style="color:#B45309;background:#FFFBEB">⚠️ Pedágios pendentes — solicitação a analisar</div>';
     h+=ppend.map(function(p){
       return '<div class="ped-pend"><span>'+(p.fase?'['+esc(p.fase)+'] ':'')+'<b>'+brlv(p.valor)+'</b>'
-        +(p.comprovante_link?' · <a href="'+esc(p.comprovante_link)+'" target="_blank" style="color:var(--primary)">comprovante</a>':' · sem comprovante')+'</span>'
+        +(p.comprovante_link?' · <a href="'+esc(driveImg(p.comprovante_link))+'" target="_blank" data-drive="'+esc(p.comprovante_link)+'" data-tit="🧾 Comprovante do pedágio" style="color:var(--primary)">comprovante</a>':' · sem comprovante')+'</span>'
         +'<span style="display:flex;gap:6px;flex:0 0 auto"><button class="pp-ok" onclick="aprovarPedagio(\''+p.id+'\',\''+d.id+'\')">Aprovar</button>'
         +'<button class="pp-no" onclick="recusarPedagio(\''+p.id+'\',\''+d.id+'\')">Recusar</button></span></div>';
     }).join("");
@@ -513,13 +552,13 @@ function renderDetail(){
 
   // ANEXOS
   var links=[];
-  if(d.checkin_foto)links.push('<a href="'+esc(d.checkin_foto)+'" target="_blank">📷 Odômetro — saída</a>');
-  if(d.checkout_foto)links.push('<a href="'+esc(d.checkout_foto)+'" target="_blank">📷 Odômetro — chegada</a>');
-  ida.forEach(function(p,i){ if(p.maps_link)links.push('<a href="'+esc(p.maps_link)+'" target="_blank">🗺️ Maps ida '+(i+1)+'</a>'); });
-  vol.forEach(function(p,i){ if(p.maps_link)links.push('<a href="'+esc(p.maps_link)+'" target="_blank">🗺️ Maps volta '+(i+1)+'</a>'); });
-  if(d.cupom_foto)links.push('<a href="'+esc(d.cupom_foto)+'" target="_blank">⛽ Cupom fiscal — combustível</a>');
-  if(d.foto_consumo)links.push('<a href="'+esc(d.foto_consumo)+'" target="_blank">🚗 Painel — consumo</a>');
-  DET_PEDAGIOS.forEach(function(p,i){ if(p.comprovante_link)links.push('<a href="'+esc(p.comprovante_link)+'" target="_blank">🧾 Pedágio '+(i+1)+(p.fase?' ('+esc(p.fase)+')':'')+' — '+brlv(p.valor)+'</a>'); });
+  if(d.checkin_foto)links.push(imgA(d.checkin_foto,"📷 Odômetro — saída"));
+  if(d.checkout_foto)links.push(imgA(d.checkout_foto,"📷 Odômetro — chegada"));
+  ida.forEach(function(p,i){ if(p.maps_link)links.push(imgA(p.maps_link,"🗺️ Maps ida "+(i+1))); });
+  vol.forEach(function(p,i){ if(p.maps_link)links.push(imgA(p.maps_link,"🗺️ Maps volta "+(i+1))); });
+  if(d.cupom_foto)links.push(imgA(d.cupom_foto,"⛽ Cupom fiscal — combustível"));
+  if(d.foto_consumo)links.push(imgA(d.foto_consumo,"🚗 Painel — consumo"));
+  DET_PEDAGIOS.forEach(function(p,i){ if(p.comprovante_link)links.push(imgA(p.comprovante_link,"🧾 Pedágio "+(i+1)+(p.fase?' ('+esc(p.fase)+')':'')+' — '+brlv(p.valor))); });
   if(d.recibo_link)links.push('<a href="'+esc(d.recibo_link)+'" target="_blank">📄 Recibo (PDF)</a>');
   if(links.length){
     h+='<div class="detail-section"><div class="detail-section-title">Anexos</div><div class="detail-links">'+links.join("")+'</div></div>';
