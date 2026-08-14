@@ -487,7 +487,7 @@ async function goViagem(){trip=loadTrip();if(!trip){show("secHome");return}show(
   try{if(!trip.id){var rr=await sb.from("reembolsos").select("id,status").eq("protocolo",trip.protocolo).maybeSingle();if(rr.data){trip.id=rr.data.id}}
     var pr=await sb.from("paradas").select("id,fase,ordem,origem,destino,km,lat,lng,horario").eq("reembolso_id",trip.id).order("fase").order("ordem");
     if(!pr.error){
-      var ida=[],vol=[];(pr.data||[]).forEach(function(p){var o={id:p.id,orig:p.origem,dest:p.destino,km:(p.km!=null?String(p.km):"0"),lat:p.lat,lng:p.lng,horario:p.horario};if(p.fase==="volta")vol.push(o);else ida.push(o)});
+      var ida=[],vol=[];(pr.data||[]).forEach(function(p){var o={id:p.id,orig:p.origem,dest:p.destino,km:(p.km!=null?String(p.km):"0"),ordem:p.ordem,lat:p.lat,lng:p.lng,horario:p.horario};if(p.fase==="volta")vol.push(o);else ida.push(o)});
       // mantém as paradas ainda não enviadas (registradas offline)
       (trip.ida_paradas||[]).forEach(function(p){if(p.pending&&!p.id)ida.push(p)});
       (trip.volta_paradas||[]).forEach(function(p){if(p.pending&&!p.id)vol.push(p)});
@@ -509,7 +509,7 @@ function renderViagem(){
   $("btnVolta").textContent="📍 Registrar parada da VOLTA";
   $("finalizar_area").style.display=((idaN+volN)>=1)?"block":"none";
   atualizarSync();}
-function renderParadaList(arr,fase){if(!arr.length)return '<li style="color:var(--text-muted);border-left-color:var(--border)">Nenhuma parada.</li>';var h="";for(var i=0;i<arr.length;i++){var pend=arr[i].pending&&!arr[i].id;h+='<li><strong>'+esc(arr[i].orig)+' → '+esc(arr[i].dest)+'</strong> — '+esc(arr[i].km)+' km'+(pend?' <span style="background:#DBEAFE;color:#1E40AF;font-size:10px;font-weight:700;padding:1px 6px;border-radius:6px">⏳ a enviar</span>':'')+(trip.correcao?'<span class="rmp" onclick="removerParada(\''+fase+'\','+i+')">✕</span>':'')+'</li>';}return h}
+function renderParadaList(arr,fase){if(!arr.length)return '<li style="color:var(--text-muted);border-left-color:var(--border)">Nenhuma parada.</li>';var h="";for(var i=0;i<arr.length;i++){var pend=arr[i].pending&&!arr[i].id;h+='<li><strong>'+esc(arr[i].orig)+' → '+esc(arr[i].dest)+'</strong> — '+esc(arr[i].km)+' km'+(pend?' <span style="background:#DBEAFE;color:#1E40AF;font-size:10px;font-weight:700;padding:1px 6px;border-radius:6px">⏳ a enviar</span>':'')+'<span class="rmp" title="Remover esta parada" onclick="removerParada(\''+fase+'\','+i+')">✕</span></li>';}return h}
 async function removerParada(fase,idx){var arr=fase==="ida"?trip.ida_paradas:trip.volta_paradas;var p=arr[idx];if(!p)return;if(!confirm("Remover esta parada?"))return;if(p.id)await sb.from("paradas").delete().eq("id",p.id);arr.splice(idx,1);saveTrip(trip);renderViagem()}
 function mudarPlano(fase,delta){if(!trip)return;var reg=(fase==="ida"?(trip.ida_paradas||[]):(trip.volta_paradas||[])).length;var cur=parseInt(fase==="ida"?trip.ida_plan:trip.volta_plan,10);if(isNaN(cur))cur=(fase==="ida"?1:0);var min=(fase==="ida")?Math.max(reg,1):Math.max(reg,0);var novo=cur+delta;if(novo<min){alert("Não dá para reduzir: a "+fase+" já tem "+reg+" parada(s).");return}if(novo>12){alert("Máximo de 12 paradas.");return}if(fase==="ida")trip.ida_plan=novo;else trip.volta_plan=novo;saveTrip(trip);renderViagem()}
 
@@ -521,7 +521,9 @@ function goParada(fase){curFase=fase;var ps=fase==="ida"?(trip.ida_paradas||[]):
 // houver) e envia ao servidor em segundo plano; se estiver sem internet, fica
 // pendente e sincroniza sozinha quando a conexão voltar.
 async function enviarParada(){var o=$("pa_orig").value.trim(),d=$("pa_dest").value.trim(),k=$("pa_km").value.trim();if(!o||!d||!k){alert("Preencha origem, destino e km.");return}
-  var now=new Date();var arr=curFase==="ida"?"ida_paradas":"volta_paradas";var ordem=(trip[arr]||[]).length+1;
+  var now=new Date();var arr=curFase==="ida"?"ida_paradas":"volta_paradas";
+  // ordem = maior ordem já usada + 1 (evita colisão depois de remover uma parada)
+  var _ex=trip[arr]||[],_max=0;_ex.forEach(function(pp,ix){var o=parseInt(pp.ordem,10);if(isNaN(o))o=ix+1;if(o>_max)_max=o;});var ordem=_max+1;
   var local={_localId:"L"+Date.now()+"-"+Math.floor(Math.random()*100000),pending:true,fase:curFase,ordem:ordem,orig:o,dest:d,km:k,lat:gps?gps.lat:null,lng:gps?gps.lng:null,horario:now.toISOString(),time:fmtD(now)};
   trip[arr]=trip[arr]||[];trip[arr].push(local);saveTrip(trip);
   show("secViagem");renderViagem();
