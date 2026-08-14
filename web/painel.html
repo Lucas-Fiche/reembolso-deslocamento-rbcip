@@ -147,6 +147,17 @@ tbody tr.sel{background:var(--primary-light)}
 .edit-inline{background:var(--surface);border:1px dashed var(--border);border-radius:8px;padding:12px;margin-top:6px}
 .edit-inline input{width:100%;padding:7px 9px;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--text);font-family:inherit;font-size:13px}
 .edit-inline label{display:block;font-size:11px;color:var(--text3);margin-top:6px}
+/* Edição em modal (dados + paradas) */
+.ed-grid{display:grid;grid-template-columns:1fr 1fr;gap:0 12px}
+.ed-grid label{display:block;font-size:11px;color:var(--text2);font-weight:600;margin:10px 0 4px}
+.ed-grid input{width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:6px;background:var(--bg);color:var(--text);font-family:inherit;font-size:14px}
+.ed-sec-title{font-size:12px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;margin:16px 0 8px;display:flex;justify-content:space-between;align-items:center;gap:8px}
+.edp-row{display:flex;gap:6px;align-items:center;margin-bottom:8px}
+.edp-row select,.edp-row input{padding:8px 8px;border:1px solid var(--border);border-radius:6px;font-family:inherit;font-size:13px;background:var(--bg);color:var(--text);min-width:0}
+.edp-row .edp-fase{flex:0 0 78px}
+.edp-row .edp-orig,.edp-row .edp-dest{flex:1 1 90px}
+.edp-row .edp-km{flex:0 0 64px;text-align:right}
+.edp-row .edp-rm{flex:0 0 auto;width:30px;height:30px;border:none;background:var(--danger-light);color:var(--danger);border-radius:6px;cursor:pointer;font-weight:700}
 
 @media(max-width:900px){
   .detail-modal{padding:0}
@@ -238,6 +249,16 @@ tbody tr.sel{background:var(--primary-light)}
         <div class="loading">Carregando…</div>
       </div>
     </div>
+  </div>
+</div>
+
+<div id="modalEdit" class="modal-bg hide" style="z-index:500">
+  <div class="modal wide">
+    <div style="display:flex;justify-content:space-between;align-items:center">
+      <h3>✏️ Editar solicitação</h3>
+      <button class="btn" onclick="fecharEdit()">Fechar</button>
+    </div>
+    <div id="edit_corpo"></div>
   </div>
 </div>
 
@@ -541,12 +562,12 @@ async function mudarStatus(id, novo){
   var reg=DADOS.filter(function(x){return x.id===id;})[0]||{};
   var obsEl=el("obs-"+id); var obs=obsEl?obsEl.value.trim():"";
   // Revisão e Reprovação exigem motivo — ele é enviado ao e-mail do motorista.
+  // (É o único caso que interrompe a ação; as demais vão direto, sem confirmação.)
   if((novo==="REVISÃO"||novo==="REPROVADO") && !obs){
     alert("Informe o motivo "+(novo==="REVISÃO"?"da revisão":"da reprovação")+". Ele será enviado ao e-mail do motorista.");
     if(obsEl) obsEl.focus();
     return;
   }
-  if(!confirm('Confirmar: mudar '+reg.protocolo+' para "'+novo+'"?'+(obs?'\n\nMotivo: '+obs:''))) return;
   var upd={status:novo};
   if(obs){
     var cur=await sb.from("reembolsos").select("validacao").eq("id",id).maybeSingle();
@@ -679,23 +700,43 @@ async function recusarPedagio(pedId, reembolsoId){
 }
 
 // ── Edição de dados pelo admin ──
+// Edição em MODAL: dados do reembolso + paradas (adicionar/editar/remover).
+var _editParadas=[]; // paradas originais (para saber quais apagar)
+function fecharEdit(){ el("modalEdit").classList.add("hide"); }
+function edParadaRow(p){
+  p=p||{}; var box=el("edit_paradas"); if(!box) return;
+  var d=document.createElement("div"); d.className="edp-row"; d.dataset.id=p.id||"";
+  d.innerHTML='<select class="edp-fase"><option value="ida"'+(p.fase!=="volta"?" selected":"")+'>Ida</option><option value="volta"'+(p.fase==="volta"?" selected":"")+'>Volta</option></select>'
+    +'<input class="edp-orig" placeholder="Origem" value="'+esc(p.origem==null?"":p.origem)+'">'
+    +'<input class="edp-dest" placeholder="Destino" value="'+esc(p.destino==null?"":p.destino)+'">'
+    +'<input class="edp-km" placeholder="km" inputmode="decimal" value="'+esc(p.km==null?"":p.km)+'">'
+    +'<button class="edp-rm" title="Remover parada" onclick="this.parentNode.remove()">✕</button>';
+  box.appendChild(d);
+}
+function edAddParada(){ edParadaRow({fase:"ida"}); }
+function edSomarKm(id){
+  var soma=0; Array.prototype.forEach.call(document.querySelectorAll("#edit_paradas .edp-km"),function(i){ soma+=parseFloat(String(i.value).replace(",","."))||0; });
+  var e=el("ed-dist_total-"+id); if(e) e.value=(Math.round(soma*10)/10);
+}
 async function editarDados(id){
-  var box=el("editbox-"+id); if(!box)return;
-  if(box.innerHTML){ box.innerHTML=""; return; } // toggle
-  var q=await sb.from("reembolsos").select("nome,cpf,rg,orgao,email,telefone,veiculo,placa,dist_total,consumo,preco_base,preco_real,usou_estimativa").eq("id",id).maybeSingle();
+  var q=await sb.from("reembolsos").select("protocolo,nome,cpf,rg,orgao,email,telefone,veiculo,placa,dist_total,consumo,preco_base,preco_real,usou_estimativa").eq("id",id).maybeSingle();
   var r=(q&&q.data)||{};
-  function f(lbl,key,val,extra){ return '<label>'+lbl+'</label><input id="ed-'+key+'-'+id+'" value="'+esc(val==null?"":val)+'" '+(extra||"")+'>'; }
-  var h='<div class="edit-inline">';
-  h+='<div style="font-weight:600;margin-bottom:4px">✏️ Editar dados</div>';
-  h+='<div style="display:grid;grid-template-columns:1fr 1fr;gap:0 10px">';
+  var pr=await sb.from("paradas").select("id,fase,ordem,origem,destino,km").eq("reembolso_id",id).order("fase").order("ordem");
+  _editParadas=(pr.data||[]);
+  function f(lbl,key,val,extra){ return '<div><label>'+lbl+'</label><input id="ed-'+key+'-'+id+'" value="'+esc(val==null?"":val)+'" '+(extra||"")+'></div>'; }
+  var h='<div style="font-size:12px;color:var(--text3);margin:8px 0 4px">Protocolo <b>'+esc(r.protocolo||"")+'</b> · os valores em R$ são recalculados pelo banco a partir de distância, consumo e preço.</div>';
+  h+='<div class="ed-grid">';
   h+=f("Nome","nome",r.nome)+f("CPF","cpf",r.cpf)+f("RG","rg",r.rg)+f("Órgão","orgao",r.orgao)+f("E-mail","email",r.email)+f("Telefone","telefone",r.telefone)+f("Veículo","veiculo",r.veiculo)+f("Placa","placa",r.placa);
   h+=f("Distância (km)","dist_total",r.dist_total,'inputmode="decimal"')+f("Consumo (km/L)","consumo",r.consumo,'inputmode="decimal"')+f("Preço base","preco_base",r.preco_base,'inputmode="decimal"')+f("Preço real","preco_real",r.preco_real,'inputmode="decimal"');
   h+='</div>';
-  h+='<label style="font-size:12px;margin-top:8px;color:var(--text2)"><input type="checkbox" id="ed-usou-'+id+'" '+(r.usou_estimativa?"checked":"")+' style="width:auto;margin-right:6px">Usou estimativa (o valor usa o preço base, não o preço real)</label>';
-  h+='<div style="font-size:11px;color:var(--text3);margin-top:6px">Os valores em R$ são recalculados pelo banco a partir de distância, consumo e preço.</div>';
-  h+='<div style="margin-top:10px"><button style="background:var(--primary);color:#fff;border:none;padding:8px 14px;border-radius:6px;font-family:inherit;font-size:13px;font-weight:600;cursor:pointer" onclick="salvarEdicao(\''+id+'\')">Salvar alterações</button></div>';
-  h+='</div>';
-  box.innerHTML=h;
+  h+='<label style="display:block;font-size:12px;margin-top:10px;color:var(--text2)"><input type="checkbox" id="ed-usou-'+id+'" '+(r.usou_estimativa?"checked":"")+' style="width:auto;margin-right:6px">Usou estimativa (o valor usa o preço base, não o preço real)</label>';
+  h+='<div class="ed-sec-title"><span>Paradas / trechos</span><button class="btn" onclick="edSomarKm(\''+id+'\')">Σ Somar km → Distância</button></div>';
+  h+='<div id="edit_paradas"></div>';
+  h+='<button class="btn" style="width:100%;margin-top:4px" onclick="edAddParada()">+ Adicionar parada</button>';
+  h+='<div style="margin-top:16px;display:flex;gap:8px;justify-content:flex-end"><button class="btn" onclick="fecharEdit()">Cancelar</button><button class="btn" style="background:var(--primary);color:#fff;border-color:var(--primary)" onclick="salvarEdicao(\''+id+'\')">Salvar alterações</button></div>';
+  el("edit_corpo").innerHTML=h;
+  Array.prototype.forEach.call(_editParadas, function(p){ edParadaRow(p); });
+  el("modalEdit").classList.remove("hide");
 }
 async function salvarEdicao(id){
   function v(key){ var e=el("ed-"+key+"-"+id); return e?e.value.trim():null; }
@@ -705,7 +746,24 @@ async function salvarEdicao(id){
     usou_estimativa: el("ed-usou-"+id)?el("ed-usou-"+id).checked:false };
   var { error }=await sb.from("reembolsos").update(upd).eq("id",id);
   if(error){ alert("Erro ao salvar: "+error.message); return; }
+  // ── Paradas: atualiza existentes, insere novas, apaga as removidas ──
+  var rows=Array.prototype.slice.call(document.querySelectorAll("#edit_paradas .edp-row"));
+  var mantidos={}, idaOrd=0, volOrd=0;
+  for(var k=0;k<rows.length;k++){
+    var row=rows[k];
+    var fase=row.querySelector(".edp-fase").value;
+    var orig=row.querySelector(".edp-orig").value.trim();
+    var dest=row.querySelector(".edp-dest").value.trim();
+    var km=parseFloat(String(row.querySelector(".edp-km").value).replace(",","."))||0;
+    if(!orig && !dest && !km){ continue; } // linha vazia: ignora
+    var ordem=(fase==="volta")?(++volOrd):(++idaOrd);
+    var pid=row.dataset.id;
+    if(pid){ mantidos[pid]=true; var u=await sb.from("paradas").update({fase:fase,ordem:ordem,origem:orig,destino:dest,km:km}).eq("id",pid); if(u.error){ alert("Erro ao salvar parada: "+u.error.message); return; } }
+    else { var ins=await sb.from("paradas").insert({reembolso_id:id,fase:fase,ordem:ordem,origem:orig,destino:dest,km:km}); if(ins.error){ alert("Erro ao inserir parada: "+ins.error.message); return; } }
+  }
+  for(var m=0;m<_editParadas.length;m++){ var op=_editParadas[m]; if(op.id && !mantidos[op.id]){ await sb.from("paradas").delete().eq("id",op.id); } }
   msgTopo("Dados atualizados ✓");
+  fecharEdit();
   await carregar(); abrirDetalhe(id);
 }
 async function carregarPrecos(){
