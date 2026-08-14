@@ -15,6 +15,13 @@
   --text:#0F172A;--text2:#475569;--text3:#94A3B8;--border:#E2E8F0;
   --radius:8px;--radius-sm:6px;--shadow-sm:0 1px 2px rgba(0,0,0,.06);--shadow:0 1px 3px rgba(0,0,0,.1),0 1px 2px rgba(0,0,0,.06);
 }
+/* Modo noturno — escurece trocando as variáveis de cor */
+:root[data-theme="dark"]{
+  --bg:#0B1220;--surface:#1E293B;--surface2:#172032;--primary-light:#1E3A5F;
+  --success-light:#12331E;--warning-bg:#3A2C10;--danger-light:#3A1A1A;
+  --text:#E5EDF7;--text2:#B7C2D0;--text3:#8595A8;--border:#334155;
+  --shadow-sm:0 1px 2px rgba(0,0,0,.45);--shadow:0 2px 8px rgba(0,0,0,.55);
+}
 *{margin:0;padding:0;box-sizing:border-box}
 body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--text);font-size:14px}
 .hide{display:none!important}
@@ -168,6 +175,7 @@ tbody tr.sel{background:var(--primary-light)}
   .action-bar{max-height:none}
 }
 </style>
+<script>try{var _t=localStorage.getItem("rbcip_tema")||((window.matchMedia&&matchMedia("(prefers-color-scheme: dark)").matches)?"dark":"light");document.documentElement.setAttribute("data-theme",_t);}catch(e){}</script>
 </head>
 <body>
 
@@ -191,6 +199,7 @@ tbody tr.sel{background:var(--primary-light)}
     </div>
     <div class="hdr-right">
       <span id="quem"></span>
+      <button class="btn" id="temaBtn" onclick="toggleTema()" title="Alternar modo claro/escuro">🌙</button>
       <button class="btn" onclick="location.href='login.html'">🏠 Início</button>
       <button class="btn" onclick="location.href='painel-van.html'">🚐 Vans</button>
       <button class="btn" onclick="abrirStats()">📊 Estatísticas</button>
@@ -294,6 +303,20 @@ tbody tr.sel{background:var(--primary-light)}
 var sb=null, DADOS=[], FILTRADOS=[], sel=null, QUEM="", DET_PARADAS=[], DET_PEDAGIOS=[];
 function el(id){return document.getElementById(id);}
 function show(id){["carregando","semAcesso","painel"].forEach(function(s){el(s).classList.add("hide");});el(id).classList.remove("hide");}
+
+// ── Modo noturno (claro/escuro) ──
+function aplicarTema(t){
+  document.documentElement.setAttribute("data-theme", t==="dark"?"dark":"light");
+  var b=el("temaBtn"); if(b) b.textContent = (t==="dark"?"☀️":"🌙");
+}
+function toggleTema(){
+  var atual=document.documentElement.getAttribute("data-theme")==="dark"?"dark":"light";
+  var novo=atual==="dark"?"light":"dark";
+  try{ localStorage.setItem("rbcip_tema", novo); }catch(e){}
+  aplicarTema(novo);
+}
+// aplica o ícone certo já no carregamento (o tema em si já foi setado no <head>)
+aplicarTema(document.documentElement.getAttribute("data-theme")==="dark"?"dark":"light");
 
 function brl(v){ if(v==null||v==="")return "—"; return "R$ "+Number(v).toLocaleString("pt-BR",{minimumFractionDigits:2,maximumFractionDigits:2}); }
 function brlv(v){ return "R$ "+(Number(v)||0).toLocaleString("pt-BR",{minimumFractionDigits:2,maximumFractionDigits:2}); }
