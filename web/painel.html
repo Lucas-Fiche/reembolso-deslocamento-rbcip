@@ -173,6 +173,12 @@ tbody tr.sel{background:var(--primary-light)}
 .img-modal-body{overflow:auto;text-align:center;background:#fff;border-radius:8px}
 .img-modal-body img{max-width:96vw;max-height:82vh;display:block;margin:0 auto}
 .img-modal-body .load{color:#334155;padding:40px;font-size:13px}
+/* Overlay bloqueante (trava a tela durante ações lentas: pago/recibo) */
+#busy{position:fixed;inset:0;background:rgba(15,23,42,.6);z-index:900;display:none;align-items:center;justify-content:center;flex-direction:column;gap:16px;backdrop-filter:blur(2px);-webkit-backdrop-filter:blur(2px)}
+#busy.on{display:flex}
+#busy .sp{width:46px;height:46px;border:4px solid rgba(255,255,255,.25);border-top-color:#fff;border-radius:50%;animation:busyspin .8s linear infinite}
+#busy .msg{color:#fff;font-size:14px;font-weight:600;max-width:82vw;text-align:center;padding:0 16px;line-height:1.5}
+@keyframes busyspin{to{transform:rotate(360deg)}}
 
 @media(max-width:900px){
   .detail-modal{padding:0}
@@ -188,6 +194,7 @@ tbody tr.sel{background:var(--primary-light)}
 <body>
 
 <div id="toast" class="hide"></div>
+<div id="busy"><div class="sp"></div><div class="msg" id="busyMsg">Processando…</div></div>
 
 <!-- Estados de acesso -->
 <div id="carregando" class="center"><div class="loading">Carregando…</div></div>
@@ -360,6 +367,32 @@ document.addEventListener("click", function(ev){
   if(a){ ev.preventDefault(); abrirImg(a.getAttribute("data-drive"), a.getAttribute("data-tit")); }
 });
 document.addEventListener("keydown", function(ev){ if(ev.key==="Escape"){ fecharImg(); } });
+
+// ── Overlay bloqueante + fetch com timeout (ações lentas: pago/recibo) ──
+function bloquear(msg){ el("busyMsg").textContent=msg||"Processando…"; el("busy").classList.add("on"); }
+function atualizarBusy(msg){ el("busyMsg").textContent=msg||"Processando…"; }
+function desbloquear(){ el("busy").classList.remove("on"); }
+function fetchTimeout(url, opts, ms){
+  var o={}; for(var k in opts) o[k]=opts[k];
+  var ctrl=(typeof AbortController!=="undefined")?new AbortController():null, to=null;
+  if(ctrl){ o.signal=ctrl.signal; to=setTimeout(function(){ try{ctrl.abort();}catch(e){} }, ms||30000); }
+  return fetch(url,o).then(function(r){ if(to)clearTimeout(to); return r; }, function(e){ if(to)clearTimeout(to); throw (e&&e.name==="AbortError"?new Error("tempo esgotado"):e); });
+}
+// Gera o recibo com até 3 tentativas (resiliente a picos de carga no carteiro).
+async function _gerarReciboRetry(protocolo, id){
+  var cfg=window.RBCIP_CONFIG||{}, lastErr="";
+  for(var t=1;t<=3;t++){
+    try{
+      var sr=await sb.auth.getSession();
+      var rr=await fetchTimeout(cfg.CARTEIRO_URL,{method:"POST",redirect:"follow",headers:{"Content-Type":"text/plain"},body:JSON.stringify({action:"gerar_recibo", jwt:sr.data.session.access_token, protocolo:protocolo})},60000);
+      var txt=await rr.text(); var ro={}; try{ ro=JSON.parse(txt); }catch(_){}
+      if(ro.success && ro.link){ await sb.from("reembolsos").update({recibo_link:ro.link}).eq("id",id); return {ok:true, numero:ro.numero||""}; }
+      lastErr = ro.error || ("resposta inesperada do carteiro (HTTP "+rr.status+")");
+    }catch(e){ lastErr=(e&&e.message)||String(e); }
+    if(t<3){ atualizarBusy("O recibo demorou; tentando de novo… ("+(t+1)+"/3)"); await new Promise(function(r){setTimeout(r, t*3000)}); }
+  }
+  return {ok:false, erro:lastErr};
+}
 
 function brl(v){ if(v==null||v==="")return "—"; return "R$ "+Number(v).toLocaleString("pt-BR",{minimumFractionDigits:2,maximumFractionDigits:2}); }
 function brlv(v){ return "R$ "+(Number(v)||0).toLocaleString("pt-BR",{minimumFractionDigits:2,maximumFractionDigits:2}); }
@@ -634,61 +667,60 @@ async function mudarStatus(id, novo){
     if(obsEl) obsEl.focus();
     return;
   }
-  var upd={status:novo};
-  if(obs){
-    var cur=await sb.from("reembolsos").select("validacao").eq("id",id).maybeSingle();
-    var base=(cur && cur.data && cur.data.validacao)?cur.data.validacao+" | ":"";
-    upd.validacao=base+"ADMIN ("+(QUEM||"admin")+"): "+obs;
-  }
-  var { error }=await sb.from("reembolsos").update(upd).eq("id",id);
-  if(error){ alert("Erro ao atualizar: "+error.message); return; }
+  bloquear(novo==="PAGO" ? "Marcando como pago…" : "Salvando status…");
+  try{
+    var upd={status:novo};
+    if(obs){
+      var cur=await sb.from("reembolsos").select("validacao").eq("id",id).maybeSingle();
+      var base=(cur && cur.data && cur.data.validacao)?cur.data.validacao+" | ":"";
+      upd.validacao=base+"ADMIN ("+(QUEM||"admin")+"): "+obs;
+    }
+    var { error }=await sb.from("reembolsos").update(upd).eq("id",id);
+    if(error){ msgTopo("Erro ao atualizar: "+error.message, true); return; }
 
-  var cfg=window.RBCIP_CONFIG||{};
-  if(cfg.CARTEIRO_URL && novo!=="COMPLETO"){
-    try{
-      var { data:{ session } } = await sb.auth.getSession();
-      var resp = await fetch(cfg.CARTEIRO_URL, {
-        method:"POST", redirect:"follow", headers:{"Content-Type":"text/plain"},
-        body: JSON.stringify({action:"enviar_aviso_status", jwt: session.access_token, protocolo: reg.protocolo, novo_status: novo, observacao: obs})
-      });
-      var out={}; try{ out=JSON.parse(await resp.text()); }catch(_){}
-      if(out.enviado) msgTopo("Status salvo e e-mail enviado ao pesquisador ✉️");
-      else if(out.success) msgTopo("Status salvo. (Sem e-mail: "+(out.motivo||"—")+")");
-      else msgTopo("Status salvo, mas o e-mail pode não ter saído: "+(out.error||"erro"), true);
-    }catch(e){ msgTopo("Status salvo, mas não consegui falar com o carteiro.", true); }
-  } else {
-    msgTopo("Status salvo ✓");
-  }
+    var cfg=window.RBCIP_CONFIG||{};
+    if(cfg.CARTEIRO_URL && novo!=="COMPLETO"){
+      try{
+        var s1=await sb.auth.getSession();
+        var resp = await fetchTimeout(cfg.CARTEIRO_URL, {
+          method:"POST", redirect:"follow", headers:{"Content-Type":"text/plain"},
+          body: JSON.stringify({action:"enviar_aviso_status", jwt: s1.data.session.access_token, protocolo: reg.protocolo, novo_status: novo, observacao: obs})
+        }, 30000);
+        var out={}; try{ out=JSON.parse(await resp.text()); }catch(_){}
+        if(out.enviado) msgTopo("Status salvo e e-mail enviado ao pesquisador ✉️");
+        else if(out.success) msgTopo("Status salvo. (Sem e-mail: "+(out.motivo||"—")+")");
+        else msgTopo("Status salvo, mas o e-mail pode não ter saído.", true);
+      }catch(e){ msgTopo("Status salvo (não consegui confirmar o e-mail).", true); }
+    } else {
+      msgTopo("Status salvo ✓");
+    }
 
-  if(cfg.CARTEIRO_URL && novo==="PAGO"){
-    try{
-      msgTopo("Gerando recibo…");
-      var sr=await sb.auth.getSession();
-      var rr=await fetch(cfg.CARTEIRO_URL,{method:"POST",redirect:"follow",headers:{"Content-Type":"text/plain"},
-        body:JSON.stringify({action:"gerar_recibo", jwt:sr.data.session.access_token, protocolo:reg.protocolo})});
-      var ro={}; try{ ro=JSON.parse(await rr.text()); }catch(_){}
-      if(ro.success && ro.link){ await sb.from("reembolsos").update({recibo_link:ro.link}).eq("id",id); msgTopo("Recibo Nº "+(ro.numero||"")+" gerado e enviado aos e-mails internos ✅"); }
-      else { msgTopo("Status salvo, mas o recibo falhou: "+(ro.error||"erro"), true); }
-    }catch(e){ msgTopo("Status salvo, mas não gerei o recibo: "+e.message, true); }
+    if(cfg.CARTEIRO_URL && novo==="PAGO"){
+      atualizarBusy("Gerando recibo… pode levar alguns segundos. Não feche a página.");
+      var res=await _gerarReciboRetry(reg.protocolo, id);
+      if(res.ok) msgTopo("Recibo Nº "+res.numero+" gerado e enviado aos e-mails internos ✅");
+      else msgTopo("Pago salvo, mas o recibo falhou ("+res.erro+"). Você pode gerar depois em 'Gerar recibo'.", true);
+    }
+  } finally {
+    try{ await carregar(); await abrirDetalhe(id); }catch(e){}
+    desbloquear();
   }
-
-  await carregar(); abrirDetalhe(id);
 }
 
 async function gerarRecibo(id){
   var reg=DADOS.filter(function(x){return x.id===id;})[0]||{};
   var cfg=window.RBCIP_CONFIG||{};
   if(!cfg.CARTEIRO_URL){ msgTopo("Carteiro não configurado.",true); return; }
-  if(!confirm("Gerar recibo em PDF para "+reg.protocolo+"?")) return;
+  if(!confirm("Gerar um recibo em PDF para "+reg.protocolo+"? (gera um novo número e envia ao financeiro)")) return;
+  bloquear("Gerando recibo… pode levar alguns segundos. Não feche a página.");
   try{
-    msgTopo("Gerando recibo…");
-    var sr=await sb.auth.getSession();
-    var rr=await fetch(cfg.CARTEIRO_URL,{method:"POST",redirect:"follow",headers:{"Content-Type":"text/plain"},
-      body:JSON.stringify({action:"gerar_recibo", jwt:sr.data.session.access_token, protocolo:reg.protocolo})});
-    var ro={}; try{ ro=JSON.parse(await rr.text()); }catch(_){}
-    if(ro.success && ro.link){ await sb.from("reembolsos").update({recibo_link:ro.link}).eq("id",id); msgTopo("Recibo Nº "+(ro.numero||"")+" gerado ✅"); await carregar(); abrirDetalhe(id); }
-    else msgTopo("Falha ao gerar recibo: "+(ro.error||"erro"), true);
-  }catch(e){ msgTopo("Erro ao gerar recibo: "+e.message, true); }
+    var res=await _gerarReciboRetry(reg.protocolo, id);
+    if(res.ok) msgTopo("Recibo Nº "+res.numero+" gerado ✅");
+    else msgTopo("Falha ao gerar recibo: "+res.erro, true);
+  } finally {
+    try{ await carregar(); await abrirDetalhe(id); }catch(e){}
+    desbloquear();
+  }
 }
 
 async function sair(){ await sb.auth.signOut(); location.href="login.html"; }
