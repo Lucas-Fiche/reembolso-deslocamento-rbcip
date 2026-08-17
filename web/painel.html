@@ -202,12 +202,12 @@ tbody tr.sel{background:var(--primary-light)}
 <div id="painel" class="hide">
   <div class="hdr">
     <div class="hdr-left">
-      <img src="assets/logo.png" alt="RBCIP" style="height:28px;width:auto">
+      <img id="hdrLogo" src="assets/logo.png" alt="RBCIP" style="height:28px;width:auto">
       <h1>Painel de Reembolsos</h1>
     </div>
     <div class="hdr-right">
       <span id="quem"></span>
-      <button class="btn" id="temaBtn" onclick="toggleTema()" title="Alternar modo claro/escuro">🌙</button>
+      <button class="btn" id="temaBtn" onclick="toggleTema()" title="Alternar modo claro/escuro" aria-label="Alternar modo claro/escuro" style="display:inline-flex;align-items:center;justify-content:center;padding:7px 10px"></button>
       <button class="btn" onclick="location.href='login.html'">🏠 Início</button>
       <button class="btn" onclick="location.href='painel-van.html'">🚐 Vans</button>
       <button class="btn" onclick="abrirStats()">📊 Estatísticas</button>
@@ -323,9 +323,13 @@ function el(id){return document.getElementById(id);}
 function show(id){["carregando","semAcesso","painel"].forEach(function(s){el(s).classList.add("hide");});el(id).classList.remove("hide");}
 
 // ── Modo noturno (claro/escuro) ──
+var _SVG_LUA='<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>';
+var _SVG_SOL='<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4.2"/><line x1="12" y1="2" x2="12" y2="4.5"/><line x1="12" y1="19.5" x2="12" y2="22"/><line x1="3.5" y1="12" x2="6" y2="12"/><line x1="18" y1="12" x2="20.5" y2="12"/><line x1="5.6" y1="5.6" x2="7.4" y2="7.4"/><line x1="16.6" y1="16.6" x2="18.4" y2="18.4"/><line x1="5.6" y1="18.4" x2="7.4" y2="16.6"/><line x1="16.6" y1="7.4" x2="18.4" y2="5.6"/></svg>';
 function aplicarTema(t){
-  document.documentElement.setAttribute("data-theme", t==="dark"?"dark":"light");
-  var b=el("temaBtn"); if(b) b.textContent = (t==="dark"?"☀️":"🌙");
+  var dark = (t==="dark");
+  document.documentElement.setAttribute("data-theme", dark?"dark":"light");
+  var b=el("temaBtn"); if(b) b.innerHTML = dark ? _SVG_SOL : _SVG_LUA;
+  var lg=el("hdrLogo"); if(lg) lg.src = dark ? "assets/logo-branca.png" : "assets/logo.png";
 }
 function toggleTema(){
   var atual=document.documentElement.getAttribute("data-theme")==="dark"?"dark":"light";
