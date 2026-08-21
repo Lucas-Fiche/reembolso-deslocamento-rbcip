@@ -71,8 +71,8 @@
     <div id="hm_turno"></div>
     <div class="card" id="hm_novo">
       <div class="card-h"><span class="ic">🚐</span> Novo turno</div>
-      <p class="muted" style="margin:8px 0 12px">Inicie o turno ao começar o deslocamento. Durante o percurso você registra os pontos (com GPS) e os passageiros.</p>
-      <button class="btn-hero" onclick="iniciarTurno()">Iniciar turno</button>
+      <p class="muted" style="margin:8px 0 12px">Toque em <b>Iniciar turno</b> ao começar o deslocamento. Já registramos o <b>GPS e o horário do início</b> (como um check-in). Depois, a cada parada você registra o local (com GPS) e adiciona os passageiros.</p>
+      <button class="btn-hero" id="btnIniciar" onclick="iniciarTurno()">🚐 Iniciar turno</button>
     </div>
     <div class="card">
       <div class="card-h"><span class="ic">📋</span> Meus turnos</div>
@@ -86,19 +86,34 @@
       <div class="card-h"><span class="ic">🕐</span> Turno em andamento</div>
       <div id="t_info" class="muted" style="margin-top:8px"></div>
     </div>
-    <div class="card">
-      <div class="card-h"><span class="ic">👥</span> Passageiros <span class="pill" id="pax_qtd">0</span></div>
-      <div style="display:flex;gap:8px;margin-top:10px"><input id="pax_nome" placeholder="Nome do passageiro" style="flex:1;margin:0" onkeydown="if(event.key==='Enter')addPax()"><button onclick="addPax()" style="width:auto;margin:0;padding:12px 20px;flex:0 0 auto">Adicionar</button></div>
-      <div id="pax_list" style="margin-top:10px"></div>
+
+    <div class="card" style="border:1.5px solid #BFDBFE;background:#EFF6FF">
+      <div class="card-h" style="color:#1E40AF"><span class="ic" style="background:#DBEAFE">ℹ️</span> Como registrar</div>
+      <ul style="margin:10px 0 0;padding-left:18px;font-size:13.5px;color:#1E3A5F;line-height:1.75">
+        <li>O <b>início do turno</b> já foi registrado com GPS e horário. ✓</li>
+        <li>A cada <b>parada</b> (embarque ou desembarque), digite o local e toque em <b>Registrar parada</b> — o GPS e o horário são salvos na hora.</li>
+        <li>Adicione os <b>passageiros</b> que estão na van.</li>
+        <li>Ao terminar, toque em <b>Encerrar turno</b>.</li>
+      </ul>
     </div>
+
     <div class="card">
-      <div class="card-h"><span class="ic">📍</span> Pontos do percurso <span class="pill" id="pt_qtd">0</span></div>
-      <label style="margin-top:10px">Local do ponto</label>
-      <input id="pt_local" placeholder="Ex.: Terminal Central">
-      <div class="gs" id="pt_gs" style="margin-top:10px"><span class="gd"></span><span id="pt_gt">GPS será capturado ao registrar</span></div>
-      <button class="btn-hero" onclick="addPonto()">📍 Registrar ponto (com GPS)</button>
+      <div class="card-h"><span class="ic">📍</span> Paradas do percurso <span class="pill" id="pt_qtd">0</span></div>
+      <p class="muted" style="margin:8px 0 10px">Registre <b>cada parada</b> da van. O horário e o GPS são salvos automaticamente ao registrar.</p>
+      <label>Local da parada</label>
+      <input id="pt_local" placeholder="Ex.: Terminal Central" onkeydown="if(event.key==='Enter')addPonto()">
+      <div class="gs" id="pt_gs" style="margin-top:10px"><span class="gd"></span><span id="pt_gt">O GPS é capturado quando você registrar</span></div>
+      <button class="btn-hero" onclick="addPonto()">📍 Registrar parada (com GPS)</button>
       <div id="pt_list" style="margin-top:12px"></div>
     </div>
+
+    <div class="card">
+      <div class="card-h"><span class="ic">👥</span> Passageiros <span class="pill" id="pax_qtd">0</span></div>
+      <p class="muted" style="margin:8px 0 10px">Quem está na van neste turno.</p>
+      <div style="display:flex;gap:8px"><input id="pax_nome" placeholder="Nome do passageiro" style="flex:1;margin:0" onkeydown="if(event.key==='Enter')addPax()"><button onclick="addPax()" style="width:auto;margin:0;padding:12px 20px;flex:0 0 auto">Adicionar</button></div>
+      <div id="pax_list" style="margin-top:10px"></div>
+    </div>
+
     <div class="card">
       <label>Observação (opcional)</label>
       <textarea id="t_obs" placeholder="Alguma anotação sobre o turno…"></textarea>
@@ -147,17 +162,24 @@ function voltarEmail(){el("passoCodigo").classList.add("hide");el("passoEmail").
 async function sair(){ await sb.auth.signOut(); location.reload(); }
 
 // ── Turno ──
+function pegarGPS(){ return new Promise(function(res){ if(!navigator.geolocation){res({lat:null,lng:null});return;} navigator.geolocation.getCurrentPosition(function(p){res({lat:p.coords.latitude,lng:p.coords.longitude});}, function(){res({lat:null,lng:null});}, {enableHighAccuracy:true,timeout:12000}); }); }
 async function iniciarTurno(){
-  var { data, error }=await sb.from("van_viagens").insert({motorista_id:SESSION.user.id, inicio_turno:new Date().toISOString()}).select("id,inicio_turno").maybeSingle();
-  if(error){ alert("Erro ao iniciar: "+error.message); return; }
+  var btn=el("btnIniciar"); if(btn){ btn.disabled=true; btn.textContent="Iniciando… (obtendo GPS)"; }
+  var pos=await pegarGPS();                       // captura o GPS do início (como um check-in)
+  var agora=new Date().toISOString();
+  var { data, error }=await sb.from("van_viagens").insert({motorista_id:SESSION.user.id, inicio_turno:agora}).select("id,inicio_turno").maybeSingle();
+  if(error){ if(btn){ btn.disabled=false; btn.textContent="🚐 Iniciar turno"; } alert("Erro ao iniciar: "+error.message); return; }
   TURNO={id:data.id, inicio:data.inicio_turno};
+  // primeira parada = início do turno, já com GPS e horário
+  try{ await sb.from("van_pontos").insert({viagem_id:TURNO.id, ordem:1, local:"Início do turno", horario:agora, lat:pos.lat, lng:pos.lng}); }catch(e){}
+  if(btn){ btn.disabled=false; btn.textContent="🚐 Iniciar turno"; }
   abrirTurno();
 }
 function abrirTurno(){
   show("secTurno");
   el("t_info").textContent="Início: "+dt(TURNO.inicio);
   el("t_obs").value=""; el("pt_local").value=""; el("pax_nome").value="";
-  el("pt_gs").className="gs"; el("pt_gt").textContent="GPS será capturado ao registrar";
+  el("pt_gs").className="gs"; el("pt_gt").textContent="O GPS é capturado quando você registrar";
   renderPax(); renderPontos();
 }
 async function renderPax(){
@@ -181,14 +203,14 @@ async function renderPontos(){
 async function rmPonto(id){ await sb.from("van_pontos").delete().eq("id",id); renderPontos(); }
 function addPonto(){
   var local=el("pt_local").value.trim();
-  if(!local){ msg("msgTurno","err","Informe o local do ponto."); return; }
+  if(!local){ msg("msgTurno","err","Informe o local da parada."); return; }
   el("pt_gs").className="gs"; el("pt_gt").textContent="Obtendo GPS…";
   function salvar(lat,lng){
     sb.from("van_pontos").select("id").eq("viagem_id",TURNO.id).then(function(r){
       var ordem=((r.data&&r.data.length)||0)+1;
       sb.from("van_pontos").insert({viagem_id:TURNO.id, ordem:ordem, local:local, horario:new Date().toISOString(), lat:lat, lng:lng}).then(function(res){
         if(res.error){ msg("msgTurno","err","Erro: "+res.error.message); return; }
-        limpaMsg("msgTurno"); el("pt_local").value=""; el("pt_gs").className="gs"; el("pt_gt").textContent="Ponto registrado ✓"; renderPontos();
+        limpaMsg("msgTurno"); el("pt_local").value=""; el("pt_gs").className="gs a"; el("pt_gt").textContent="Parada registrada ✓"; renderPontos();
       });
     });
   }
