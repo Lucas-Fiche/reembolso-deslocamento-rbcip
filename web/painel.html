@@ -352,7 +352,8 @@ function show(id){["carregando","semAcesso","painel"].forEach(function(s){el(s).
 // ── Verificação automática de "suspeita" (mesmas regras do sistema antigo) ──
 function _hav(la1,lo1,la2,lo2){ function r(x){return x*Math.PI/180;} var R=6371,dLa=r(la2-la1),dLo=r(lo2-lo1); var a=Math.sin(dLa/2)*Math.sin(dLa/2)+Math.cos(r(la1))*Math.cos(r(la2))*Math.sin(dLo/2)*Math.sin(dLo/2); return R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a)); }
 function suspeita(r){
-  if(!r || r.status==="ABERTO") return [];
+  // Some quando a decisão já foi tomada (PAGO/REPROVADO) e enquanto está aberta.
+  if(!r || r.status==="ABERTO" || r.status==="PAGO" || r.status==="REPROVADO") return [];
   var fl=[], ciLat=r.checkin_lat, ciLng=r.checkin_lng, coLat=r.checkout_lat, coLng=r.checkout_lng;
   if(ciLat==null || coLat==null) fl.push("GPS ausente");
   if(ciLat!=null && coLat!=null){ var gD=_hav(Number(ciLat),Number(ciLng),Number(coLat),Number(coLng)); if(gD<0.5 && (Number(r.qtd_paradas)||0)===0) fl.push("Mesmo local sem paradas"); }
