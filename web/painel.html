@@ -22,6 +22,9 @@
   --text:#E5EDF7;--text2:#B7C2D0;--text3:#8595A8;--border:#334155;
   --shadow-sm:0 1px 2px rgba(0,0,0,.45);--shadow:0 2px 8px rgba(0,0,0,.55);
 }
+/* protocolo (azul) fica pouco legível no escuro → azul mais claro */
+:root[data-theme="dark"] .proto{color:#7FB4FF}
+:root[data-theme="dark"] .detail-links a{color:#7FB4FF}
 *{margin:0;padding:0;box-sizing:border-box}
 body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--text);font-size:14px}
 .hide{display:none!important}
@@ -237,6 +240,7 @@ tbody tr.sel{background:var(--primary-light)}
       <option value="PAGO">Pago</option>
       <option value="REPROVADO">Reprovado</option>
       <option value="__PEND">⚠️ Com pedágio pendente</option>
+      <option value="__SUSP">🔎 Suspeitas (verificação)</option>
     </select>
     <input type="date" id="fDe" onchange="render()" title="Data inicial (check-in)">
     <input type="date" id="fAte" onchange="render()" title="Data final (check-in)">
@@ -272,6 +276,22 @@ tbody tr.sel{background:var(--primary-light)}
       <div class="detail" id="detail">
         <div class="loading">Carregando…</div>
       </div>
+    </div>
+  </div>
+</div>
+
+<div id="modalMotivo" class="modal-bg hide" style="z-index:520">
+  <div class="modal">
+    <div style="display:flex;justify-content:space-between;align-items:center">
+      <h3 id="mot_titulo">Motivo</h3>
+      <button class="btn" onclick="fecharMotivo()">Fechar</button>
+    </div>
+    <p id="mot_sub" style="color:var(--text3);font-size:12.5px;margin:8px 0 0"></p>
+    <label style="display:block;font-size:11px;color:var(--text2);font-weight:600;margin:12px 0 4px">Motivo / observação</label>
+    <textarea id="mot_texto" style="width:100%;min-height:96px;padding:10px 12px;border:1px solid var(--border);border-radius:8px;font-family:inherit;font-size:14px;background:var(--bg);color:var(--text);resize:vertical"></textarea>
+    <div style="margin-top:14px;display:flex;gap:8px;justify-content:flex-end">
+      <button class="btn" onclick="fecharMotivo()">Cancelar</button>
+      <button class="btn" id="mot_ok" style="color:#fff;border-color:transparent" onclick="confirmarMotivo()">Confirmar e enviar</button>
     </div>
   </div>
 </div>
@@ -328,6 +348,41 @@ tbody tr.sel{background:var(--primary-light)}
 var sb=null, DADOS=[], FILTRADOS=[], sel=null, QUEM="", DET_PARADAS=[], DET_PEDAGIOS=[];
 function el(id){return document.getElementById(id);}
 function show(id){["carregando","semAcesso","painel"].forEach(function(s){el(s).classList.add("hide");});el(id).classList.remove("hide");}
+
+// ── Verificação automática de "suspeita" (mesmas regras do sistema antigo) ──
+function _hav(la1,lo1,la2,lo2){ function r(x){return x*Math.PI/180;} var R=6371,dLa=r(la2-la1),dLo=r(lo2-lo1); var a=Math.sin(dLa/2)*Math.sin(dLa/2)+Math.cos(r(la1))*Math.cos(r(la2))*Math.sin(dLo/2)*Math.sin(dLo/2); return R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a)); }
+function suspeita(r){
+  if(!r || r.status==="ABERTO") return [];
+  var fl=[], ciLat=r.checkin_lat, ciLng=r.checkin_lng, coLat=r.checkout_lat, coLng=r.checkout_lng;
+  if(ciLat==null || coLat==null) fl.push("GPS ausente");
+  if(ciLat!=null && coLat!=null){ var gD=_hav(Number(ciLat),Number(ciLng),Number(coLat),Number(coLng)); if(gD<0.5 && (Number(r.qtd_paradas)||0)===0) fl.push("Mesmo local sem paradas"); }
+  if(r.checkin_em && r.checkout_em){ var dm=(new Date(r.checkout_em)-new Date(r.checkin_em))/60000; if(!isNaN(dm) && dm>=0 && dm<15) fl.push("Tempo < 15 min"); }
+  if(Number(r.val_total)>500) fl.push("Valor > R$ 500");
+  if(!r.usou_estimativa && r.preco_real!=null && r.preco_base!=null && Number(r.preco_real) > Number(r.preco_base)*1.3) fl.push("Preço/L 30%+ acima do base");
+  return fl;
+}
+
+// ── Modal de motivo (Revisão / Reprovação) — como no sistema antigo ──
+var _motCtx=null;
+function abrirMotivo(id, novo){
+  _motCtx={id:id, novo:novo};
+  var reg=DADOS.filter(function(x){return x.id===id;})[0]||{};
+  var rev=(novo==="REVISÃO");
+  el("mot_titulo").textContent = rev ? "Solicitar revisão" : "Reprovar solicitação";
+  el("mot_sub").textContent = "Protocolo "+(reg.protocolo||"")+" · o motivo será enviado ao e-mail do motorista.";
+  var ta=el("mot_texto"); ta.value=""; ta.placeholder = rev ? "Descreva o que o motorista precisa corrigir…" : "Descreva o motivo da reprovação…";
+  var ok=el("mot_ok"); ok.style.background = rev ? "#D97706" : "var(--danger)"; ok.textContent = rev ? "Solicitar revisão" : "Reprovar";
+  el("modalMotivo").classList.remove("hide");
+  setTimeout(function(){ ta.focus(); }, 60);
+}
+function fecharMotivo(){ el("modalMotivo").classList.add("hide"); }
+function confirmarMotivo(){
+  if(!_motCtx) return;
+  var motivo=el("mot_texto").value.trim();
+  if(!motivo){ el("mot_texto").focus(); msgTopo("Escreva o motivo antes de confirmar.", true); return; }
+  var ctx=_motCtx; _motCtx=null; fecharMotivo();
+  mudarStatus(ctx.id, ctx.novo, motivo);
+}
 
 // ── Modo noturno (claro/escuro) ──
 var _SVG_LUA='<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>';
@@ -437,6 +492,7 @@ function aplicarFiltro(){
   var de=el("fDe").value, ate=el("fAte").value;
   FILTRADOS = DADOS.filter(function(r){
     if(st==="__PEND"){ if(!(r.qtd_ped_pendentes>0)) return false; }
+    else if(st==="__SUSP"){ if(!suspeita(r).length) return false; }
     else if(st && r.status!==st) return false;
     if(de||ate){ var dia=ymd(r.checkin_em); if(de&&(!dia||dia<de))return false; if(ate&&(!dia||dia>ate))return false; }
     if(q){ var hay=((r.protocolo||"")+" "+(r.nome||"")+" "+(r.cpf||"")).toLowerCase(); if(hay.indexOf(q)<0) return false; }
@@ -456,10 +512,11 @@ function limparData(){ el("fDe").value=""; el("fAte").value=""; render(); }
 function contarCards(){
   var base=FILTRADOS; // reflete os filtros aplicados (status/data/busca)
   var c={ABERTO:0,COMPLETO:0,"REVISÃO":0,CORRIGIDO:0,APROVADO:0,PAGO:0,REPROVADO:0};
-  var somaPagos=0, kmSemRep=0, valSemRep=0, pendCount=0;
+  var somaPagos=0, kmSemRep=0, valSemRep=0, pendCount=0, suspCount=0;
   base.forEach(function(r){
     if(c[r.status]!=null)c[r.status]++;
     if(r.qtd_ped_pendentes>0) pendCount++;
+    if(suspeita(r).length) suspCount++;
     if(r.status==="PAGO" && r.val_total) somaPagos+=Number(r.val_total);
     if(r.status!=="REPROVADO"){ if(r.dist_total)kmSemRep+=Number(r.dist_total); if(r.val_total)valSemRep+=Number(r.val_total); }
   });
@@ -477,6 +534,7 @@ function contarCards(){
     {k:"Valor total",v:brl(valSemRep),sub:"Sem reprovados",acc:"#16A34A"}
   ];
   if(pendCount>0) defs.splice(1,0,{k:"⚠️ Pedágio pendente",v:pendCount,sub:"Solicitações a analisar",acc:"#D97706"});
+  if(suspCount>0) defs.splice(1,0,{k:"🔎 Suspeitas",v:suspCount,sub:"Verificação automática",acc:"var(--danger)"});
   el("cards").innerHTML = defs.map(function(d){
     return '<div class="card"><div class="acc" style="background:'+d.acc+'"></div><div class="label">'+d.k+'</div><div class="val">'+d.v+'</div>'+(d.sub?'<div class="sub">'+d.sub+'</div>':'')+'</div>';
   }).join("");
@@ -490,7 +548,7 @@ function render(){
   el("tbody").innerHTML = rows.map(function(r){
     return '<tr class="clk'+(sel&&sel.id===r.id?" sel":"")+'" onclick="abrirDetalhe(\''+r.id+'\')">'
       +'<td class="proto">'+esc(r.protocolo)+'</td>'
-      +'<td><span class="st st-'+esc(r.status)+'">'+esc(r.status)+'</span>'+(r.qtd_ped_pendentes>0?' <span class="st" style="background:#FEF3C7;color:#92400E">⚠️ pedágio</span>':'')+'</td>'
+      +'<td><span class="st st-'+esc(r.status)+'">'+esc(r.status)+'</span>'+(r.qtd_ped_pendentes>0?' <span class="st" style="background:#FEF3C7;color:#92400E">⚠️ pedágio</span>':'')+(suspeita(r).length?' <span class="st" style="background:#FEE2E2;color:#991B1B" title="'+esc(suspeita(r).join(" · "))+'">🔎 suspeita</span>':'')+'</td>'
       +'<td>'+esc(r.nome||"—")+'</td>'
       +'<td>'+esc(r.veiculo||"—")+(r.placa?" · "+esc(r.placa):"")+'</td>'
       +'<td class="mono">'+dt(r.checkin_em)+'</td>'
@@ -522,6 +580,14 @@ function renderDetail(){
   var d=sel, h='';
   var ida=DET_PARADAS.filter(function(p){return p.fase!=="volta";});
   var vol=DET_PARADAS.filter(function(p){return p.fase==="volta";});
+
+  // VERIFICAÇÃO AUTOMÁTICA (suspeita) — alerta no topo, como no sistema antigo
+  var _susp=suspeita(d);
+  if(_susp.length){
+    h+='<div class="detail-section" style="border-color:#FCA5A5"><div class="detail-section-title" style="color:#991B1B;background:#FEF2F2">🔎 Verificação automática — pontos de atenção</div>';
+    _susp.forEach(function(f){ h+='<div class="segment" style="color:#991B1B">⚠️ '+esc(f)+'</div>'; });
+    h+='</div>';
+  }
 
   // IDENTIFICAÇÃO
   h+='<div class="detail-section"><div class="detail-section-title">Identificação</div>';
@@ -624,10 +690,9 @@ function renderActions(){
   var btns={
     "PAGO":'<button class="abtn teal" onclick="mudarStatus(\''+id+'\',\'PAGO\')">Pago</button>',
     "APROVADO":'<button class="abtn green" onclick="mudarStatus(\''+id+'\',\'APROVADO\')">Aprovar</button>',
-    "REVISÃO":'<button class="abtn amber" onclick="mudarStatus(\''+id+'\',\'REVISÃO\')">Solicitar Revisão</button>',
-    "REPROVADO":'<button class="abtn red" onclick="mudarStatus(\''+id+'\',\'REPROVADO\')">Reprovar</button>'
+    "REVISÃO":'<button class="abtn amber" onclick="abrirMotivo(\''+id+'\',\'REVISÃO\')">Solicitar Revisão</button>',
+    "REPROVADO":'<button class="abtn red" onclick="abrirMotivo(\''+id+'\',\'REPROVADO\')">Reprovar</button>'
   };
-  h+='<textarea id="obs-'+id+'" class="obs-ta" placeholder="Motivo / observação — obrigatório para Revisão e Reprovação (enviado ao motorista)"></textarea>';
   h+='<div class="action-btns">';
   ["APROVADO","PAGO","REVISÃO","REPROVADO"].forEach(function(k){ if(k!==st)h+=btns[k]; });
   h+='</div>'+editBtn+reciboBtn;
@@ -657,16 +722,11 @@ function renderMap(){
   }catch(e){}
 }
 
-async function mudarStatus(id, novo){
+async function mudarStatus(id, novo, obsArg){
   var reg=DADOS.filter(function(x){return x.id===id;})[0]||{};
-  var obsEl=el("obs-"+id); var obs=obsEl?obsEl.value.trim():"";
-  // Revisão e Reprovação exigem motivo — ele é enviado ao e-mail do motorista.
-  // (É o único caso que interrompe a ação; as demais vão direto, sem confirmação.)
-  if((novo==="REVISÃO"||novo==="REPROVADO") && !obs){
-    alert("Informe o motivo "+(novo==="REVISÃO"?"da revisão":"da reprovação")+". Ele será enviado ao e-mail do motorista.");
-    if(obsEl) obsEl.focus();
-    return;
-  }
+  var obs=(obsArg!=null)?String(obsArg).trim():"";
+  // Revisão e Reprovação exigem motivo — abre a janela para digitar (e enviar ao motorista).
+  if((novo==="REVISÃO"||novo==="REPROVADO") && !obs){ abrirMotivo(id, novo); return; }
   bloquear(novo==="PAGO" ? "Marcando como pago…" : "Salvando status…");
   try{
     var upd={status:novo};
