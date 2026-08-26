@@ -209,6 +209,8 @@
   <div class="card"><div class="ct"><span class="ic" style="background:#F0FDF4;color:#16A34A">🗺️</span> Prints do Maps por trecho</div>
     <p style="font-size:12px;color:var(--text-secondary);margin-bottom:12px">Anexe o print do Google Maps de <strong>cada parada registrada</strong> (ida e volta).</p>
     <div id="maps_list"></div>
+    <div id="trecho_form"></div>
+    <button class="add-btn" onclick="abrirTrechoEsquecido()" style="margin-top:10px;margin-bottom:0">+ Esqueci uma parada — adicionar trecho</button>
   </div>
   <div class="card"><div class="ct"><span class="ic" style="background:#FEF2F2;color:#DC2626">🧾</span> Pedágios</div>
     <label style="display:flex;align-items:center;gap:8px;cursor:pointer;margin-bottom:12px;font-size:13px;font-weight:600;color:var(--text)"><input type="checkbox" id="co_ped_depois" onchange="togglePedDepois()" style="width:18px;height:18px;flex-shrink:0"> Vou lançar os pedágios depois (plano de pedágio)</label>
@@ -583,6 +585,41 @@ function goFinalizar(){show("secFinal");reqGPS("co_gs","co_gt");clock("co_ck");c
   $("co_confv").style.display="none";$("co_confh").style.display="block";$("co_confz").classList.remove("ok");_calc=null;renderMapsList()}
 function renderMapsList(){var pI=trip.ida_paradas||[],pV=trip.volta_paradas||[],h="";for(var i=0;i<pI.length;i++)h+=mapsItem("mida_"+i,"IDA — Parada "+(i+1),pI[i]);for(var i=0;i<pV.length;i++)h+=mapsItem("mvolta_"+i,"VOLTA — Parada "+(i+1),pV[i]);if(!pI.length&&!pV.length)h='<p style="font-size:13px;color:var(--text-muted)">Nenhuma parada registrada.</p>';$("maps_list").innerHTML=h}
 function mapsItem(id,label,p){var sub=(p?(esc(p.orig)+" → "+esc(p.dest)+" · "+esc(p.km)+" km"):"");return '<div class="maps-item"><div class="maps-head"><span class="maps-tag">'+label+'</span><span class="maps-sub">'+sub+'</span></div><label class="cl" for="'+id+'"><div class="cz" id="'+id+'_z"><div id="'+id+'_p"><div class="pi">🗺️</div><div class="pt">Anexar print do Maps</div></div><img id="'+id+'_v" style="display:none"></div></label><input type="file" accept="image/*" id="'+id+'" class="chi" onchange="capFile(this,\''+id+'_v\',\''+id+'_p\',\''+id+'_z\')"></div>'}
+// ── Parada esquecida: adicionar o trecho aqui no check-out (sem GPS do momento) ──
+var _teFase="ida";
+function cancelarTrechoEsquecido(){ $("trecho_form").innerHTML=""; }
+function teFase(f){ _teFase=f; $("te_ida").classList.toggle("on",f==="ida"); $("te_volta").classList.toggle("on",f==="volta"); }
+function abrirTrechoEsquecido(){
+  _teFase="ida";
+  $("trecho_form").innerHTML='<div style="border:1.5px dashed var(--accent);border-radius:var(--radius-sm);padding:14px;margin:10px 0;background:var(--accent-glow)">'
+    +'<div style="font-weight:700;font-size:13px;margin-bottom:8px">Adicionar parada esquecida</div>'
+    +'<div class="tog-row"><button type="button" class="tog-btn on" id="te_ida" onclick="teFase(\'ida\')">Ida</button><button type="button" class="tog-btn" id="te_volta" onclick="teFase(\'volta\')">Volta</button></div>'
+    +'<div class="fr"><div class="f"><label>Origem</label><input id="te_orig" type="text"></div><div class="f"><label>Destino</label><input id="te_dest" type="text"></div></div>'
+    +'<div class="f"><label>Distância (km)</label><input id="te_km" type="number" inputmode="decimal" step="0.1"></div>'
+    +'<p style="font-size:11px;color:var(--text-muted);margin:2px 0 10px">Sem GPS do momento — será marcada como <strong>adicionada no check-out</strong>. O print do Maps deste trecho será obrigatório.</p>'
+    +'<button class="bp b" style="padding:12px" onclick="salvarTrechoEsquecido()">Adicionar trecho</button>'
+    +'<button class="bs" onclick="cancelarTrechoEsquecido()">Cancelar</button></div>';
+}
+async function salvarTrechoEsquecido(){
+  var fase=_teFase||"ida", o=$("te_orig").value.trim(), d=$("te_dest").value.trim(), k=$("te_km").value.trim();
+  if(!o||!d||!k){ alert("Preencha origem, destino e km."); return; }
+  if(!trip||!trip.id){ alert("Viagem não encontrada."); return; }
+  var arr=fase==="ida"?"ida_paradas":"volta_paradas";
+  var ex=trip[arr]||[], maxOrd=0; ex.forEach(function(p,ix){var oo=parseInt(p.ordem,10);if(isNaN(oo))oo=ix+1;if(oo>maxOrd)maxOrd=oo;}); var ordem=maxOrd+1;
+  ld("Adicionando trecho…");
+  var ins=await sb.from("paradas").insert({reembolso_id:trip.id,fase:fase,ordem:ordem,origem:o,destino:d,km:parseFloat(String(k).replace(",","."))||0,horario:null,lat:null,lng:null,adicionada_checkout:true}).select("id").maybeSingle();
+  hd();
+  if(ins.error){ alert("Erro ao adicionar: "+ins.error.message); return; }
+  trip[arr]=trip[arr]||[]; trip[arr].push({id:ins.data.id,orig:o,dest:d,km:k,ordem:ordem,lat:null,lng:null,horario:null});
+  saveTrip(trip); cancelarTrechoEsquecido();
+  // adiciona o slot de print do novo trecho SEM apagar os prints já anexados
+  var idx=trip[arr].length-1, pref=(fase==="ida"?"mida_":"mvolta_"), label=(fase==="ida"?"IDA":"VOLTA")+" — Parada "+(idx+1);
+  if($("maps_list").querySelector("input[type=file]")) $("maps_list").insertAdjacentHTML("beforeend", mapsItem(pref+idx, label, {orig:o,dest:d,km:k}));
+  else renderMapsList();
+  // o km mudou → força recalcular
+  _calc=null; $("resumoCard").style.display="none"; $("btnEnv").style.display="none"; $("btnCalc").style.display="flex";
+  alert("Trecho adicionado. Anexe o print do Maps dele e toque em Calcular Reembolso de novo.");
+}
 function calcular(){if(!coCapt.b64){alert("Tire a foto do odômetro de chegada.");return}
   var pI=trip.ida_paradas||[],pV=trip.volta_paradas||[],i;
   for(i=0;i<pI.length;i++){var e=$("mida_"+i);if(!e||!e.dataset.compressed){alert("Anexe o print do Maps da Parada "+(i+1)+" da IDA.");return}}
