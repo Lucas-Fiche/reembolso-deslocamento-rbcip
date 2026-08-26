@@ -111,6 +111,7 @@
 <!-- CHECK-IN -->
 <div class="sec" id="secCI">
   <div class="card"><div class="ct"><span class="ic" style="background:#EFF6FF;color:#2563EB">👤</span> Identificação</div>
+    <p id="ci_prefill_hint" style="display:none;font-size:12px;color:#065F46;background:var(--success-bg);border:1px solid #A7F3D0;border-radius:8px;padding:8px 10px;margin-bottom:12px">✅ Preenchemos seus dados da última viagem. <strong>Confira</strong> e ajuste o que mudou (ex.: placa).</p>
     <div class="f"><label>Nome completo <span class="rq">*</span></label><input type="text" id="ci_nome" autocomplete="name"></div>
     <div class="f"><label>CPF <span class="rq">*</span></label><input type="text" id="ci_cpf" inputmode="numeric" maxlength="14"></div>
     <div class="fr"><div class="f"><label>RG <span class="rq">*</span></label><input type="text" id="ci_rg" maxlength="20"></div><div class="f"><label>Órgão emissor <span class="rq">*</span></label><input type="text" id="ci_orgao" placeholder="Ex: SSP/SP" maxlength="20"></div></div>
@@ -272,7 +273,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="config.js"></script>
 <script>
-var sb=null,SESSION=null,PERFIL=null,PB=4.67,gps=null,trip=null,coCapt={ts:null,lat:null,lng:null,b64:null},clk=null,curFase="ida",fuelMode="cupom",conMode="padrao",_calc=null,_meus=[],_meusShow=5;
+var sb=null,SESSION=null,PERFIL=null,PB=4.67,gps=null,trip=null,coCapt={ts:null,lat:null,lng:null,b64:null},clk=null,curFase="ida",fuelMode="cupom",conMode="padrao",_calc=null,_meus=[],_meusShow=5,ULT_DADOS=null;
 function $(id){return document.getElementById(id);}
 function pad(n){return("0"+n).slice(-2)}function fmtD(d){return pad(d.getDate())+"/"+pad(d.getMonth()+1)+"/"+d.getFullYear()+" "+pad(d.getHours())+":"+pad(d.getMinutes())+":"+pad(d.getSeconds())}
 function show(id){var s=document.querySelectorAll(".sec");for(var i=0;i<s.length;i++)s[i].classList.remove("a");$(id).classList.add("a");window.scrollTo(0,0);if(clk){clearInterval(clk);clk=null}}
@@ -463,7 +464,21 @@ async function continuarViagem(id){
 // ── CHECK-IN ──
 function goCheckin(){show("secCI");reqGPS("ci_gs","ci_gt");clock("ci_ck");trip={};
   $("ci_pv").style.display="none";$("ci_ph").style.display="block";$("ci_cz").classList.remove("ok");$("ci_cm").classList.remove("v");
-  if(PERFIL&&PERFIL.nome&&!$("ci_nome").value)$("ci_nome").value=PERFIL.nome;if(SESSION&&!$("ci_email").value)$("ci_email").value=SESSION.user.email}
+  preencherDadosMotorista();}
+// Pré-preenche os dados do motorista com base na última solicitação dele (ele só confere/ajusta).
+function preencherDadosMotorista(){
+  var u=ULT_DADOS||{};
+  function set(id,val){ var e=$(id); if(e && !e.value && val!=null && val!=="") e.value=val; }
+  set("ci_nome", u.nome || (PERFIL&&PERFIL.nome) || "");
+  set("ci_cpf", u.cpf);
+  set("ci_rg", u.rg);
+  set("ci_orgao", u.orgao);
+  set("ci_email", u.email || (SESSION&&SESSION.user.email) || "");
+  set("ci_tel", u.telefone);
+  set("ci_placa", u.placa);
+  var v=$("ci_veic"); if(v && !v.value && u.veiculo) v.value=u.veiculo;
+  var hint=$("ci_prefill_hint"); if(hint) hint.style.display = (ULT_DADOS && (u.cpf||u.rg||u.telefone||u.placa)) ? "block" : "none";
+}
 async function enviarCI(){var erros=[];
   var nome=$("ci_nome").value.trim(),cpf=$("ci_cpf").value.trim(),rg=$("ci_rg").value.trim(),orgao=$("ci_orgao").value.trim(),email=$("ci_email").value.trim(),tel=$("ci_tel").value.trim(),veic=$("ci_veic").value,placa=$("ci_placa").value.trim().toUpperCase();
   if(!nome){markErr("ci_nome");erros.push("• Nome")}
@@ -698,6 +713,8 @@ async function iniciarApp(){var s=await sb.auth.getSession();if(!s.data.session)
   if(!p.data || p.data.ativo===false){await sb.auth.signOut();show("secLogin");msg("msgLogin","err","Seu acesso foi removido. Fale com o administrador.");return}
   if(PERFIL.papel==="van"){location.replace("van.html");return}
   $("hm_nome").textContent=PERFIL.nome||SESSION.user.email;$("hm_papel").textContent=PERFIL.papel||"motorista";
+  // dados da última solicitação, para pré-preencher o check-in
+  try{ var ud=await sb.from("reembolsos").select("nome,cpf,rg,orgao,email,telefone,veiculo,placa").eq("motorista_id",SESSION.user.id).order("criado_em",{ascending:false}).limit(1).maybeSingle(); ULT_DADOS=(ud&&ud.data)||null; }catch(e){}
   show("secHome");await fetchPreco();await sync()}
 (function(){var c=window.RBCIP_CONFIG||{};if(!c.SUPABASE_URL||String(c.SUPABASE_URL).indexOf("http")!==0){show("secLogin");msg("msgLogin","err","Configuração ausente (web/config.js).");return}sb=window.supabase.createClient(c.SUPABASE_URL,c.SUPABASE_PUBLISHABLE_KEY);
   // quando a internet volta, envia as paradas guardadas offline
