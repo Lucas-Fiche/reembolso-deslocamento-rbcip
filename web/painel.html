@@ -566,7 +566,7 @@ async function abrirDetalhe(id){
   el("detailModal").classList.add("show");
   el("detail").innerHTML='<div class="loading">Carregando detalhes…</div>';
   el("actionBar").innerHTML='<div class="action-bar-label">Ações</div><div class="action-bar-empty">Carregando…</div>';
-  var par = await sb.from("paradas").select("fase,ordem,origem,destino,km,horario,maps_link,lat,lng,adicionada_checkout").eq("reembolso_id",id).order("fase").order("ordem");
+  var par = await sb.from("paradas").select("fase,ordem,origem,destino,km,horario,maps_link,lat,lng,adicionada_checkout,justificativa").eq("reembolso_id",id).order("fase").order("ordem");
   var ped = await sb.from("pedagios").select("id,fase,ordem,valor,comprovante_link,pendente").eq("reembolso_id",id).order("ordem");
   DET_PARADAS = par.data||[]; DET_PEDAGIOS = ped.data||[];
   renderDetail(); renderActions();
@@ -644,13 +644,13 @@ function renderDetail(){
   // ROTA DE IDA
   if(ida.length){
     h+='<div class="detail-section"><div class="detail-section-title">Rota de Ida ('+ida.length+' paradas)</div>';
-    ida.forEach(function(p,i){ h+='<div class="segment"><span class="seg-label">Trecho '+(i+1)+(p.adicionada_checkout?' · <span style="color:#B45309;font-weight:700">adicionada no check-out</span>':'')+'</span>'+esc(p.origem||"?")+" → "+esc(p.destino||"?")+" ("+km1(p.km||0)+" km)</div>"; });
+    ida.forEach(function(p,i){ h+='<div class="segment"><span class="seg-label">Trecho '+(i+1)+(p.adicionada_checkout?' · <span style="color:#B45309;font-weight:700">adicionada no check-out</span>':'')+'</span>'+esc(p.origem||"?")+" → "+esc(p.destino||"?")+" ("+km1(p.km||0)+" km)"+(p.adicionada_checkout&&p.justificativa?'<div style="font-size:11px;color:#92400E;margin-top:3px">📝 Justificativa: '+esc(p.justificativa)+'</div>':'')+"</div>"; });
     h+='</div>';
   }
   // ROTA DE VOLTA
   if(vol.length){
     h+='<div class="detail-section"><div class="detail-section-title">Rota de Volta ('+vol.length+' paradas)</div>';
-    vol.forEach(function(p,i){ h+='<div class="segment"><span class="seg-label">Trecho '+(i+1)+(p.adicionada_checkout?' · <span style="color:#B45309;font-weight:700">adicionada no check-out</span>':'')+'</span>'+esc(p.origem||"?")+" → "+esc(p.destino||"?")+" ("+km1(p.km||0)+" km)</div>"; });
+    vol.forEach(function(p,i){ h+='<div class="segment"><span class="seg-label">Trecho '+(i+1)+(p.adicionada_checkout?' · <span style="color:#B45309;font-weight:700">adicionada no check-out</span>':'')+'</span>'+esc(p.origem||"?")+" → "+esc(p.destino||"?")+" ("+km1(p.km||0)+" km)"+(p.adicionada_checkout&&p.justificativa?'<div style="font-size:11px;color:#92400E;margin-top:3px">📝 Justificativa: '+esc(p.justificativa)+'</div>':'')+"</div>"; });
     h+='</div>';
   }
 
