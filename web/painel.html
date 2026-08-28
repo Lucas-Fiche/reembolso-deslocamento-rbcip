@@ -323,6 +323,14 @@ tbody tr.sel{background:var(--primary-light)}
       <div><h3>📅 Extrato mensal por motorista</h3><div id="extrato_lbl" style="font-size:13px;color:var(--text3);margin-top:4px"></div></div>
       <div style="display:flex;gap:8px;flex:0 0 auto"><button class="btn" style="background:var(--primary);color:#fff;border-color:var(--primary)" onclick="baixarExtratoCSV()">⬇️ Baixar CSV</button><button class="btn" onclick="fecharExtrato()">Fechar</button></div>
     </div>
+    <div style="margin-top:12px;display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+      <label style="font-size:12px;color:var(--text2);font-weight:600">Considerar:</label>
+      <select id="extrato_status" onchange="renderExtrato()" style="background:var(--bg);border:1px solid var(--border);color:var(--text);padding:6px 10px;border-radius:6px;font-family:inherit;font-size:13px">
+        <option value="pago">Somente pagas</option>
+        <option value="apagar">Pagas + a pagar (aprovadas)</option>
+        <option value="todas">Todas (exceto reprovadas)</option>
+      </select>
+    </div>
     <div id="extrato_corpo"></div>
   </div>
 </div>
@@ -817,17 +825,26 @@ function _mesYM(iso){ var d=new Date(iso); if(isNaN(d))return "0000-00"; return 
 function _mesBR(ym){ var p=String(ym).split("-"); if(p.length<2)return ym; var nm=["jan","fev","mar","abr","mai","jun","jul","ago","set","out","nov","dez"]; return (nm[parseInt(p[1],10)-1]||p[1])+"/"+p[0]; }
 function renderExtrato(){
   aplicarFiltro();
-  var base=FILTRADOS.filter(function(r){ return r.status!=="REPROVADO"; });
+  var modo=(el("extrato_status") && el("extrato_status").value) || "pago";
+  var base=FILTRADOS.filter(function(r){
+    if(modo==="pago") return r.status==="PAGO";
+    if(modo==="apagar") return r.status==="PAGO" || r.status==="APROVADO";
+    return r.status!=="REPROVADO"; // "todas"
+  });
   var byDriver={};
   base.forEach(function(r){
-    var dk=(r.cpf||r.nome||"?");
+    // agrupa por CPF (só os dígitos, para não duplicar por formatação); sem CPF, usa o nome
+    var cpfDig=String(r.cpf||"").replace(/\D/g,"");
+    var dk = cpfDig ? ("cpf:"+cpfDig) : ("nome:"+String(r.nome||"?").trim().toLowerCase());
     if(!byDriver[dk]) byDriver[dk]={nome:r.nome||"—", cpf:r.cpf||"", meses:{}};
+    if(!byDriver[dk].cpf && r.cpf) byDriver[dk].cpf=r.cpf;
     var m=_mesYM(r.checkin_em||r.criado_em);
     if(!byDriver[dk].meses[m]) byDriver[dk].meses[m]={viagens:0,km:0,valor:0};
     var mm=byDriver[dk].meses[m]; mm.viagens++; mm.km+=Number(r.dist_total)||0; mm.valor+=Number(r.val_total)||0;
   });
   var drivers=Object.keys(byDriver).map(function(k){return byDriver[k];}).sort(function(a,b){return (a.nome||"").localeCompare(b.nome||"");});
-  el("extrato_lbl").textContent="Filtro atual, sem reprovados · "+drivers.length+" motorista(s)";
+  var modoTxt = modo==="pago" ? "somente pagas" : (modo==="apagar" ? "pagas + a pagar (aprovadas)" : "todas, exceto reprovadas");
+  el("extrato_lbl").textContent = modoTxt+" · filtro atual do painel · "+drivers.length+" motorista(s)";
   _extratoRows=[];
   var h="", gN=0, gK=0, gV=0;
   drivers.forEach(function(dr){
