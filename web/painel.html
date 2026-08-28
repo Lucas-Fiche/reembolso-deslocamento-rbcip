@@ -221,6 +221,7 @@ tbody tr.sel{background:var(--primary-light)}
       <button class="btn" onclick="location.href='login.html'">🏠 Início</button>
       <button class="btn" onclick="location.href='painel-van.html'">🚐 Vans</button>
       <button class="btn" onclick="abrirStats()">📊 Estatísticas</button>
+      <button class="btn" onclick="abrirExtrato()">📅 Extrato</button>
       <button class="btn" onclick="abrirPrecos()">⛽ Gasolina</button>
       <button class="btn" onclick="carregar(this)">↻ Atualizar</button>
       <button class="btn" onclick="sair()">Sair</button>
@@ -313,6 +314,16 @@ tbody tr.sel{background:var(--primary-light)}
       <span style="display:flex;gap:8px;flex:0 0 auto"><a id="img_drive" href="#" target="_blank" class="btn">Abrir no Drive ↗</a><button class="btn" onclick="fecharImg()">Fechar ✕</button></span>
     </div>
     <div class="img-modal-body"><img id="img_el" alt="anexo"></div>
+  </div>
+</div>
+
+<div id="modalExtrato" class="modal-bg hide">
+  <div class="modal wide">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;flex-wrap:wrap">
+      <div><h3>📅 Extrato mensal por motorista</h3><div id="extrato_lbl" style="font-size:13px;color:var(--text3);margin-top:4px"></div></div>
+      <div style="display:flex;gap:8px;flex:0 0 auto"><button class="btn" style="background:var(--primary);color:#fff;border-color:var(--primary)" onclick="baixarExtratoCSV()">⬇️ Baixar CSV</button><button class="btn" onclick="fecharExtrato()">Fechar</button></div>
+    </div>
+    <div id="extrato_corpo"></div>
   </div>
 </div>
 
@@ -797,6 +808,57 @@ function fecharPrecos(){ el("modalPrecos").classList.add("hide"); }
 // ── Estatísticas (respeita o filtro atual, sem reprovados) ──
 function abrirStats(){ el("modalStats").classList.remove("hide"); renderStats(); }
 function fecharStats(){ el("modalStats").classList.add("hide"); }
+
+// ── Extrato mensal por motorista (respeita o filtro atual, sem reprovados) ──
+var _extratoRows=[];
+function abrirExtrato(){ el("modalExtrato").classList.remove("hide"); renderExtrato(); }
+function fecharExtrato(){ el("modalExtrato").classList.add("hide"); }
+function _mesYM(iso){ var d=new Date(iso); if(isNaN(d))return "0000-00"; return d.getFullYear()+"-"+("0"+(d.getMonth()+1)).slice(-2); }
+function _mesBR(ym){ var p=String(ym).split("-"); if(p.length<2)return ym; var nm=["jan","fev","mar","abr","mai","jun","jul","ago","set","out","nov","dez"]; return (nm[parseInt(p[1],10)-1]||p[1])+"/"+p[0]; }
+function renderExtrato(){
+  aplicarFiltro();
+  var base=FILTRADOS.filter(function(r){ return r.status!=="REPROVADO"; });
+  var byDriver={};
+  base.forEach(function(r){
+    var dk=(r.cpf||r.nome||"?");
+    if(!byDriver[dk]) byDriver[dk]={nome:r.nome||"—", cpf:r.cpf||"", meses:{}};
+    var m=_mesYM(r.checkin_em||r.criado_em);
+    if(!byDriver[dk].meses[m]) byDriver[dk].meses[m]={viagens:0,km:0,valor:0};
+    var mm=byDriver[dk].meses[m]; mm.viagens++; mm.km+=Number(r.dist_total)||0; mm.valor+=Number(r.val_total)||0;
+  });
+  var drivers=Object.keys(byDriver).map(function(k){return byDriver[k];}).sort(function(a,b){return (a.nome||"").localeCompare(b.nome||"");});
+  el("extrato_lbl").textContent="Filtro atual, sem reprovados · "+drivers.length+" motorista(s)";
+  _extratoRows=[];
+  var h="", gN=0, gK=0, gV=0;
+  drivers.forEach(function(dr){
+    var meses=Object.keys(dr.meses).sort(), subN=0, subK=0, subV=0;
+    h+='<div class="grp-title" style="margin-top:18px">'+esc(dr.nome)+(dr.cpf?' <span style="color:var(--text3);font-weight:400">· '+esc(dr.cpf)+'</span>':'')+'</div>';
+    h+='<div style="overflow-x:auto"><table><thead><tr><th>Mês</th><th class="right">Viagens</th><th class="right">KM</th><th class="right">Valor</th></tr></thead><tbody>';
+    meses.forEach(function(m){
+      var mm=dr.meses[m]; subN+=mm.viagens; subK+=mm.km; subV+=mm.valor;
+      _extratoRows.push({motorista:dr.nome, cpf:dr.cpf, mes:_mesBR(m), viagens:mm.viagens, km:mm.km, valor:mm.valor});
+      h+='<tr><td>'+_mesBR(m)+'</td><td class="right">'+mm.viagens+'</td><td class="right">'+km1(mm.km)+' km</td><td class="right">'+brlv(mm.valor)+'</td></tr>';
+    });
+    h+='<tr style="font-weight:700;border-top:2px solid var(--border)"><td>Total do motorista</td><td class="right">'+subN+'</td><td class="right">'+km1(subK)+' km</td><td class="right">'+brlv(subV)+'</td></tr>';
+    h+='</tbody></table></div>';
+    gN+=subN; gK+=subK; gV+=subV;
+  });
+  if(!drivers.length) el("extrato_corpo").innerHTML='<p style="color:var(--text3);margin-top:12px">Sem dados para o filtro atual.</p>';
+  else el("extrato_corpo").innerHTML='<div style="margin:12px 0;padding:10px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;font-size:14px"><b>Total geral:</b> '+gN+' viagens · '+km1(gK)+' km · '+brlv(gV)+'</div>'+h;
+}
+function _csv(s){ s=String(s==null?"":s); return /[";\n]/.test(s) ? '"'+s.replace(/"/g,'""')+'"' : s; }
+function baixarExtratoCSV(){
+  if(!_extratoRows.length){ msgTopo("Nada para exportar.", true); return; }
+  var linhas=["Motorista;CPF;Mês;Viagens;KM;Valor (R$)"];
+  _extratoRows.forEach(function(r){
+    linhas.push([_csv(r.motorista), _csv(r.cpf), _csv(r.mes), r.viagens, (Number(r.km)||0).toFixed(1).replace(".",","), (Number(r.valor)||0).toFixed(2).replace(".",",")].join(";"));
+  });
+  var blob=new Blob(["﻿"+linhas.join("\r\n")], {type:"text/csv;charset=utf-8;"});
+  var url=URL.createObjectURL(blob), a=document.createElement("a");
+  a.href=url; a.download="extrato_mensal_motoristas.csv"; document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  setTimeout(function(){ URL.revokeObjectURL(url); }, 1500);
+  msgTopo("Extrato exportado (CSV) ✓");
+}
 function renderStats(){
   aplicarFiltro();
   var base=FILTRADOS;
