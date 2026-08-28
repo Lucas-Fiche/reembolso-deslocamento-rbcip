@@ -202,6 +202,11 @@
   <div class="card"><div class="ct"><span class="ic" style="background:#ECFDF5;color:#059669">📡</span> Localização</div>
     <div class="gs p" id="co_gs"><div class="gd"></div><span id="co_gt">Obtendo…</span></div><div class="lc" id="co_ck">--:--:--</div>
   </div>
+  <div class="card" id="corrSaidaCard" style="display:none;border:1.5px solid #FCD34D;background:#FFFBEB"><div class="ct" style="color:#92400E"><span class="ic" style="background:#FEF3C7;color:#D97706">📸</span> Odômetro — SAÍDA (corrigir)</div>
+    <p style="font-size:12px;color:#A16207;margin-bottom:10px">Só na correção: se a foto do odômetro de <strong>saída</strong> estiver errada, anexe a correta aqui. Se não precisar, deixe em branco.</p>
+    <label class="cl" for="cs_foto"><div class="cz" id="cs_cz"><div id="cs_ph"><div class="pi">📷</div><div class="pt">Trocar foto do odômetro de saída</div></div><img id="cs_pv" style="display:none"></div></label>
+    <input type="file" accept="image/*" id="cs_foto" class="chi" onchange="capFile(this,'cs_pv','cs_ph','cs_cz')">
+  </div>
   <div class="card"><div class="ct"><span class="ic" style="background:#FEF3C7;color:#D97706">📸</span> Odômetro — CHEGADA</div>
     <label class="cl" for="co_foto"><div class="cz" id="co_cz"><div id="co_ph"><div class="pi">📷</div><div class="pt">Fotografar painel</div></div><img id="co_pv" style="display:none"></div></label>
     <input type="file" accept="image/*" id="co_foto" class="chi" onchange="capFoto(this,'co')">
@@ -597,7 +602,11 @@ function goFinalizar(){show("secFinal");reqGPS("co_gs","co_gt");clock("co_ck");c
   $("resumoCard").style.display="none";$("btnEnv").style.display="none";$("btnCalc").style.display="flex";$("btnEnv").disabled=false;
   $("ped_list_ida").innerHTML="";$("ped_list_volta").innerHTML="";$("co_ped_depois").checked=false;togglePedDepois();$("co_preco").value="";fuelMode="cupom";setFuelMode("cupom");
   $("carona_list").innerHTML="";conMode="padrao";setConMode("padrao");$("con_padrao_val").textContent=((trip&&trip.veiculo==="Moto")?"49":"10")+" km/L";$("co_consumo").value="";$("co_confoto").dataset.compressed="";
-  $("co_confv").style.display="none";$("co_confh").style.display="block";$("co_confz").classList.remove("ok");_calc=null;renderMapsList()}
+  $("co_confv").style.display="none";$("co_confh").style.display="block";$("co_confz").classList.remove("ok");
+  // correção: permite trocar a foto do odômetro de SAÍDA
+  var cs=$("corrSaidaCard"); if(cs){ cs.style.display=(trip&&trip.correcao)?"block":"none"; }
+  $("cs_pv").style.display="none";$("cs_ph").style.display="block";$("cs_cz").classList.remove("ok");$("cs_foto").dataset.compressed="";$("cs_foto").value="";
+  _calc=null;renderMapsList()}
 function renderMapsList(){var pI=trip.ida_paradas||[],pV=trip.volta_paradas||[],h="";for(var i=0;i<pI.length;i++)h+=mapsItem("mida_"+i,"IDA — Parada "+(i+1),pI[i]);for(var i=0;i<pV.length;i++)h+=mapsItem("mvolta_"+i,"VOLTA — Parada "+(i+1),pV[i]);if(!pI.length&&!pV.length)h='<p style="font-size:13px;color:var(--text-muted)">Nenhuma parada registrada.</p>';$("maps_list").innerHTML=h}
 function mapsItem(id,label,p){var sub=(p?(esc(p.orig)+" → "+esc(p.dest)+" · "+esc(p.km)+" km"):"");return '<div class="maps-item"><div class="maps-head"><span class="maps-tag">'+label+'</span><span class="maps-sub">'+sub+'</span></div><label class="cl" for="'+id+'"><div class="cz" id="'+id+'_z"><div id="'+id+'_p"><div class="pi">🗺️</div><div class="pt">Anexar print do Maps</div></div><img id="'+id+'_v" style="display:none"></div></label><input type="file" accept="image/*" id="'+id+'" class="chi" onchange="capFile(this,\''+id+'_v\',\''+id+'_p\',\''+id+'_z\')"></div>'}
 // ── Parada esquecida: adicionar o trecho aqui no check-out (sem GPS do momento) ──
@@ -666,9 +675,12 @@ async function enviarFinal(){if(!_calc){alert("Calcule primeiro.");return}var c=
     if(!c.usarEstim) items.push({name:"cupom",b64:$("co_cupom").dataset.compressed});
     if(conMode==="custom") items.push({name:"consumo",b64:$("co_confoto").dataset.compressed});
     for(i=0;i<c.peds.length;i++){ if(c.peds[i].foto) items.push({name:"pedagio_"+(i+1),b64:c.peds[i].foto}); }
+    var novaSaidaB64=(trip.correcao && $("cs_foto") && $("cs_foto").dataset.compressed)?$("cs_foto").dataset.compressed:null;
+    if(novaSaidaB64) items.push({name:"odometro_saida",b64:novaSaidaB64});
     ld("Enviando fotos…");
     var L=await uploadTodas(items);
     var odo=L["odometro_chegada"]||null;
+    var saidaLink=novaSaidaB64?(L["odometro_saida"]||null):null;
     for(i=0;i<pI.length;i++){ var lk=L["ida_"+(i+1)+"_maps"]; if(lk && pI[i].id) await sb.from("paradas").update({maps_link:lk}).eq("id",pI[i].id); }
     for(i=0;i<pV.length;i++){ var lk2=L["volta_"+(i+1)+"_maps"]; if(lk2 && pV[i].id) await sb.from("paradas").update({maps_link:lk2}).eq("id",pV[i].id); }
     var cupomLink=(!c.usarEstim)?(L["cupom"]||null):null;
@@ -676,6 +688,7 @@ async function enviarFinal(){if(!_calc){alert("Calcule primeiro.");return}var c=
     for(i=0;i<c.peds.length;i++){ var pl=c.peds[i].foto?(L["pedagio_"+(i+1)]||null):null; var rp=await sb.from("pedagios").insert({reembolso_id:trip.id,fase:c.peds[i].fase,ordem:c.peds[i].ordem,valor:c.peds[i].valor,comprovante_link:pl,pendente:false});if(rp.error)throw new Error(rp.error.message); }
     ld("Finalizando…");
     var upd={status:trip.correcao?"CORRIGIDO":"COMPLETO",checkout_em:coCapt.ts||new Date().toISOString(),checkout_lat:coCapt.lat,checkout_lng:coCapt.lng,checkout_foto:odo,dist_total:c.dTot,consumo:c.con,usou_estimativa:c.usarEstim,preco_base:PB,preco_real:c.usarEstim?null:c.precoReal,cupom_foto:cupomLink,foto_consumo:conLink,caronas:coletarCaronas().join(", ")||null};
+    if(saidaLink) upd.checkin_foto=saidaLink; // correção da foto do odômetro de saída
     var r1=await sb.from("reembolsos").update(upd).eq("id",trip.id);if(r1.error)throw new Error(r1.error.message);
     var wasCorr=trip.correcao;
     if(!wasCorr){try{var s=await sb.auth.getSession();await fetch(window.RBCIP_CONFIG.CARTEIRO_URL,{method:"POST",redirect:"follow",headers:{"Content-Type":"text/plain"},body:JSON.stringify({action:"enviar_confirmacao_registro",jwt:s.data.session.access_token,protocolo:trip.protocolo})})}catch(e){}}
