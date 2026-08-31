@@ -141,12 +141,15 @@ if km_mismatch:
     print("\n-- km divergente (até 10) [proto, dist_total, soma_trechos] --")
     for x in km_mismatch[:10]: print("  •",x)
 
-# amostra 1 registro completo
-ex=next(x for x in recs if x["status"]=="PAGO" and x["pedagios"] and len(x["paradas"])>=2)
-print("\n-- EXEMPLO de 1 reembolso decomposto --")
-print("  reembolso:",ex["protocolo"],"| nome:",ex["nome"],"| dist:",ex["dist_total"],"| total_planilha:",ex["val_total_planilha"])
-for p in ex["paradas"]: print("   parada:",p["fase"],p["ordem"],p["origem"],"→",p["destino"],"|",p["km"],"km |",p["horario"])
-for p in ex["pedagios"]: print("   pedágio:",p["fase"],p["ordem"],"R$",p["valor"])
+# amostra 1 registro completo (apenas informativo — não interrompe se não achar)
+ex=next((x for x in recs if x["status"]=="PAGO" and x["pedagios"] and len(x["paradas"])>=2), None) \
+   or next((x for x in recs if x["paradas"]), None) \
+   or (recs[0] if recs else None)
+if ex:
+    print("\n-- EXEMPLO de 1 reembolso decomposto --")
+    print("  reembolso:",ex["protocolo"],"| nome:",ex["nome"],"| dist:",ex["dist_total"],"| total_planilha:",ex["val_total_planilha"])
+    for p in ex["paradas"]: print("   parada:",p["fase"],p["ordem"],p["origem"],"→",p["destino"],"|",p["km"],"km |",p["horario"])
+    for p in ex["pedagios"]: print("   pedágio:",p["fase"],p["ordem"],"R$",p["valor"])
 
 # ---- gera SQL ----
 def q(v):
