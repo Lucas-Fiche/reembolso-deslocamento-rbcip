@@ -330,6 +330,11 @@ tbody tr.sel{background:var(--primary-light)}
         <option value="apagar">Pagas + a pagar (aprovadas)</option>
         <option value="todas">Todas (exceto reprovadas)</option>
       </select>
+      <label style="font-size:12px;color:var(--text2);font-weight:600;margin-left:8px">Agrupar por:</label>
+      <select id="extrato_grupo" onchange="renderExtrato()" style="background:var(--bg);border:1px solid var(--border);color:var(--text);padding:6px 10px;border-radius:6px;font-family:inherit;font-size:13px">
+        <option value="motorista">Motorista × mês</option>
+        <option value="dia">Por dia (combustível)</option>
+      </select>
     </div>
     <div id="extrato_corpo"></div>
   </div>
@@ -823,14 +828,19 @@ function abrirExtrato(){ el("modalExtrato").classList.remove("hide"); renderExtr
 function fecharExtrato(){ el("modalExtrato").classList.add("hide"); }
 function _mesYM(iso){ var d=new Date(iso); if(isNaN(d))return "0000-00"; return d.getFullYear()+"-"+("0"+(d.getMonth()+1)).slice(-2); }
 function _mesBR(ym){ var p=String(ym).split("-"); if(p.length<2)return ym; var nm=["jan","fev","mar","abr","mai","jun","jul","ago","set","out","nov","dez"]; return (nm[parseInt(p[1],10)-1]||p[1])+"/"+p[0]; }
+var _extratoModo="motorista";
 function renderExtrato(){
   aplicarFiltro();
   var modo=(el("extrato_status") && el("extrato_status").value) || "pago";
+  var grupo=(el("extrato_grupo") && el("extrato_grupo").value) || "motorista";
+  _extratoModo=grupo;
   var base=FILTRADOS.filter(function(r){
     if(modo==="pago") return r.status==="PAGO";
     if(modo==="apagar") return r.status==="PAGO" || r.status==="APROVADO";
     return r.status!=="REPROVADO"; // "todas"
   });
+  var modoTxt = modo==="pago" ? "somente pagas" : (modo==="apagar" ? "pagas + a pagar (aprovadas)" : "todas, exceto reprovadas");
+  if(grupo==="dia"){ return renderExtratoDia(base, modoTxt); }
   var byDriver={};
   base.forEach(function(r){
     // agrupa por CPF (só os dígitos, para não duplicar por formatação); sem CPF, usa o nome
@@ -843,7 +853,6 @@ function renderExtrato(){
     var g=byDriver[dk].grupos[key]; g.viagens++; g.km+=Number(r.dist_total)||0; g.valor+=Number(r.val_total)||0;
   });
   var drivers=Object.keys(byDriver).map(function(k){return byDriver[k];}).sort(function(a,b){return (a.nome||"").localeCompare(b.nome||"");});
-  var modoTxt = modo==="pago" ? "somente pagas" : (modo==="apagar" ? "pagas + a pagar (aprovadas)" : "todas, exceto reprovadas");
   el("extrato_lbl").textContent = modoTxt+" · filtro atual do painel · "+drivers.length+" motorista(s)";
   _extratoRows=[];
   var h="", gN=0, gK=0, gV=0;
@@ -864,18 +873,53 @@ function renderExtrato(){
   if(!drivers.length) el("extrato_corpo").innerHTML='<p style="color:var(--text3);margin-top:12px">Sem dados para o filtro atual.</p>';
   else el("extrato_corpo").innerHTML='<div style="margin:12px 0;padding:10px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;font-size:14px"><b>Total geral:</b> '+gN+' viagens · '+km1(gK)+' km · '+brlv(gV)+'</div>'+h;
 }
+function _diaBR(y){ var p=String(y).split("-"); return p.length===3 ? (p[2]+"/"+p[1]+"/"+p[0]) : y; }
+// Extrato "por dia": gasto de COMBUSTÍVEL (val_real) por dia, com pedágios e total.
+function renderExtratoDia(base, modoTxt){
+  var byDia={};
+  base.forEach(function(r){
+    var dia=ymd(r.checkin_em||r.criado_em); if(!dia) return;
+    if(!byDia[dia]) byDia[dia]={dia:dia, viagens:0, km:0, comb:0, ped:0, total:0};
+    var g=byDia[dia];
+    g.viagens++; g.km+=Number(r.dist_total)||0; g.comb+=Number(r.val_real)||0; g.ped+=Number(r.val_pedagios)||0; g.total+=Number(r.val_total)||0;
+  });
+  var dias=Object.keys(byDia).sort().map(function(k){return byDia[k];});
+  el("extrato_lbl").textContent = "combustível por dia · "+modoTxt+" · filtro atual do painel · "+dias.length+" dia(s)";
+  _extratoRows=[];
+  var gN=0,gK=0,gC=0,gP=0,gT=0;
+  var h='<div style="overflow-x:auto"><table><thead><tr><th>Dia</th><th class="right">Viagens</th><th class="right">KM</th><th class="right">Combustível</th><th class="right">Pedágios</th><th class="right">Total</th></tr></thead><tbody>';
+  dias.forEach(function(g){
+    gN+=g.viagens; gK+=g.km; gC+=g.comb; gP+=g.ped; gT+=g.total;
+    _extratoRows.push({dia:_diaBR(g.dia), viagens:g.viagens, km:g.km, comb:g.comb, ped:g.ped, total:g.total});
+    h+='<tr><td>'+_diaBR(g.dia)+'</td><td class="right">'+g.viagens+'</td><td class="right">'+km1(g.km)+' km</td><td class="right">'+brlv(g.comb)+'</td><td class="right">'+brlv(g.ped)+'</td><td class="right">'+brlv(g.total)+'</td></tr>';
+  });
+  h+='<tr style="font-weight:700;border-top:2px solid var(--border)"><td>Total</td><td class="right">'+gN+'</td><td class="right">'+km1(gK)+' km</td><td class="right">'+brlv(gC)+'</td><td class="right">'+brlv(gP)+'</td><td class="right">'+brlv(gT)+'</td></tr>';
+  h+='</tbody></table></div>';
+  if(!dias.length) el("extrato_corpo").innerHTML='<p style="color:var(--text3);margin-top:12px">Sem dados para o filtro atual.</p>';
+  else el("extrato_corpo").innerHTML='<div style="margin:12px 0;padding:10px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;font-size:14px"><b>Período:</b> combustível <b>'+brlv(gC)+'</b> · pedágios '+brlv(gP)+' · total '+brlv(gT)+' · '+gN+' viagens · média/dia (combustível) <b>'+brlv(dias.length?gC/dias.length:0)+'</b></div>'+h;
+}
 function _csv(s){ s=String(s==null?"":s); return /[";\n]/.test(s) ? '"'+s.replace(/"/g,'""')+'"' : s; }
 function baixarExtratoCSV(){
   if(!_extratoRows.length){ msgTopo("Nada para exportar.", true); return; }
-  var linhas=["Motorista;CPF;Mês;Status;Viagens;KM;Valor (R$)"];
-  _extratoRows.forEach(function(r){
-    linhas.push([_csv(r.motorista), _csv(r.cpf), _csv(r.mes), _csv(r.status), r.viagens, (Number(r.km)||0).toFixed(1).replace(".",","), (Number(r.valor)||0).toFixed(2).replace(".",",")].join(";"));
-  });
+  var linhas, nome;
+  if(_extratoModo==="dia"){
+    linhas=["Dia;Viagens;KM;Combustível (R$);Pedágios (R$);Total (R$)"];
+    _extratoRows.forEach(function(r){
+      linhas.push([_csv(r.dia), r.viagens, (Number(r.km)||0).toFixed(1).replace(".",","), (Number(r.comb)||0).toFixed(2).replace(".",","), (Number(r.ped)||0).toFixed(2).replace(".",","), (Number(r.total)||0).toFixed(2).replace(".",",")].join(";"));
+    });
+    nome="combustivel_por_dia.csv";
+  } else {
+    linhas=["Motorista;CPF;Mês;Status;Viagens;KM;Valor (R$)"];
+    _extratoRows.forEach(function(r){
+      linhas.push([_csv(r.motorista), _csv(r.cpf), _csv(r.mes), _csv(r.status), r.viagens, (Number(r.km)||0).toFixed(1).replace(".",","), (Number(r.valor)||0).toFixed(2).replace(".",",")].join(";"));
+    });
+    nome="extrato_mensal_motoristas.csv";
+  }
   var blob=new Blob(["﻿"+linhas.join("\r\n")], {type:"text/csv;charset=utf-8;"});
   var url=URL.createObjectURL(blob), a=document.createElement("a");
-  a.href=url; a.download="extrato_mensal_motoristas.csv"; document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  a.href=url; a.download=nome; document.body.appendChild(a); a.click(); document.body.removeChild(a);
   setTimeout(function(){ URL.revokeObjectURL(url); }, 1500);
-  msgTopo("Extrato exportado (CSV) ✓");
+  msgTopo("Exportado (CSV) ✓");
 }
 function renderStats(){
   aplicarFiltro();
