@@ -334,6 +334,7 @@ tbody tr.sel{background:var(--primary-light)}
       <select id="extrato_grupo" onchange="renderExtrato()" style="background:var(--bg);border:1px solid var(--border);color:var(--text);padding:6px 10px;border-radius:6px;font-family:inherit;font-size:13px">
         <option value="motorista">Motorista × mês</option>
         <option value="dia">Por dia (combustível)</option>
+        <option value="motoristadia">Motorista × dia (alertas R$/km e R$/dia)</option>
       </select>
     </div>
     <div id="extrato_corpo"></div>
@@ -375,6 +376,22 @@ function show(id){["carregando","semAcesso","painel"].forEach(function(s){el(s).
 
 // ── Verificação automática de "suspeita" (mesmas regras do sistema antigo) ──
 function _hav(la1,lo1,la2,lo2){ function r(x){return x*Math.PI/180;} var R=6371,dLa=r(la2-la1),dLo=r(lo2-lo1); var a=Math.sin(dLa/2)*Math.sin(dLa/2)+Math.cos(r(la1))*Math.cos(r(la2))*Math.sin(dLo/2)*Math.sin(dLo/2); return R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a)); }
+// ── Limites de alerta pedidos pelo gestor (fáceis de ajustar aqui) ──
+var LIMITE_KM=1.00;   // R$ por km (combustível ÷ distância)
+var LIMITE_DIA=150;   // R$ de combustível por motorista, por dia
+var _gastoDiaMap={};
+function _chaveMotorista(r){ var d=String(r.cpf||"").replace(/\D/g,""); return d?("cpf:"+d):("nome:"+String(r.nome||"?").trim().toLowerCase()); }
+function construirGastoDia(){ // soma o combustível (val_real) por motorista e por dia
+  _gastoDiaMap={};
+  (DADOS||[]).forEach(function(r){
+    if(r.status==="REPROVADO") return;
+    var dia=ymd(r.checkin_em||r.criado_em); if(!dia) return;
+    var k=_chaveMotorista(r)+"|"+dia;
+    _gastoDiaMap[k]=(_gastoDiaMap[k]||0)+(Number(r.val_real)||0);
+  });
+}
+function gastoDoDia(r){ var dia=ymd(r.checkin_em||r.criado_em); if(!dia) return 0; return _gastoDiaMap[_chaveMotorista(r)+"|"+dia]||0; }
+function custoPorKm(r){ var d=Number(r.dist_total)||0; return d>0 ? (Number(r.val_real)||0)/d : 0; }
 function suspeita(r){
   // Some quando a decisão já foi tomada (PAGO/REPROVADO) e enquanto está aberta.
   if(!r || r.status==="ABERTO" || r.status==="PAGO" || r.status==="REPROVADO") return [];
@@ -384,6 +401,8 @@ function suspeita(r){
   if(r.checkin_em && r.checkout_em){ var dm=(new Date(r.checkout_em)-new Date(r.checkin_em))/60000; if(!isNaN(dm) && dm>=0 && dm<15) fl.push("Tempo < 15 min"); }
   if(Number(r.val_total)>500) fl.push("Valor > R$ 500");
   if(!r.usou_estimativa && r.preco_real!=null && r.preco_base!=null && Number(r.preco_real) > Number(r.preco_base)*1.3) fl.push("Preço/L 30%+ acima do base");
+  if(custoPorKm(r) > LIMITE_KM) fl.push("Custo > R$ "+LIMITE_KM.toFixed(2).replace(".",",")+"/km (está R$ "+custoPorKm(r).toFixed(2).replace(".",",")+"/km)");
+  if(gastoDoDia(r) > LIMITE_DIA) fl.push("Combustível do dia > R$ "+LIMITE_DIA+" (está R$ "+gastoDoDia(r).toFixed(2).replace(".",",")+")");
   return fl;
 }
 
@@ -566,6 +585,7 @@ function contarCards(){
 }
 
 function render(){
+  construirGastoDia();   // recomputa o gasto de combustível por motorista/dia (para os alertas)
   aplicarFiltro();
   contarCards();
   var rows=FILTRADOS;
@@ -648,6 +668,9 @@ function renderDetail(){
       :'<span style="background:#DCFCE7;color:#166534;font-size:10px;font-weight:700;padding:2px 7px;border-radius:4px">VALOR REAL</span> R$ '+(d.preco_real||d.preco_base||"")+'/L (cupom)');
   h+=drow("Val. Estimado",brlv(d.val_estimado));
   h+=drow("Val. Real",brlv(d.val_real));
+  var _rkm=custoPorKm(d), _gd=gastoDoDia(d);
+  h+=drow("Custo por km", (_rkm>0?('R$ '+_rkm.toFixed(2).replace(".",",")+'/km'):'—') + (_rkm>LIMITE_KM?' <span style="color:#991B1B;font-weight:700">⚠️ acima de R$ '+LIMITE_KM.toFixed(2).replace(".",",")+'</span>':''));
+  h+=drow("Combustível do motorista no dia", 'R$ '+_gd.toFixed(2).replace(".",",")+(_gd>LIMITE_DIA?' <span style="color:#991B1B;font-weight:700">⚠️ acima de R$ '+LIMITE_DIA+'</span>':''));
   h+=drow("Total a Reembolsar",'<strong style="font-size:15px">'+brlv(d.val_total)+'</strong>');
   h+=drow("Validação automática",esc(d.validacao||"—"));
   h+='</div>';
@@ -841,6 +864,7 @@ function renderExtrato(){
   });
   var modoTxt = modo==="pago" ? "somente pagas" : (modo==="apagar" ? "pagas + a pagar (aprovadas)" : "todas, exceto reprovadas");
   if(grupo==="dia"){ return renderExtratoDia(base, modoTxt); }
+  if(grupo==="motoristadia"){ return renderExtratoMotoristaDia(base, modoTxt); }
   var byDriver={};
   base.forEach(function(r){
     // agrupa por CPF (só os dígitos, para não duplicar por formatação); sem CPF, usa o nome
@@ -874,6 +898,32 @@ function renderExtrato(){
   else el("extrato_corpo").innerHTML='<div style="margin:12px 0;padding:10px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;font-size:14px"><b>Total geral:</b> '+gN+' viagens · '+km1(gK)+' km · '+brlv(gV)+'</div>'+h;
 }
 function _diaBR(y){ var p=String(y).split("-"); return p.length===3 ? (p[2]+"/"+p[1]+"/"+p[0]) : y; }
+// Extrato "Motorista × dia": um por (motorista, dia), com alerta de R$/km e R$/dia.
+function renderExtratoMotoristaDia(base, modoTxt){
+  var g={};
+  base.forEach(function(r){
+    var dia=ymd(r.checkin_em||r.criado_em); if(!dia) return;
+    var key=_chaveMotorista(r)+"|"+dia;
+    if(!g[key]) g[key]={nome:r.nome||"—", cpf:r.cpf||"", dia:dia, viagens:0, km:0, comb:0};
+    if(!g[key].cpf && r.cpf) g[key].cpf=r.cpf;
+    var x=g[key]; x.viagens++; x.km+=Number(r.dist_total)||0; x.comb+=Number(r.val_real)||0;
+  });
+  var rows=Object.keys(g).map(function(k){return g[k];}).sort(function(a,b){ return (a.nome||"").localeCompare(b.nome||"") || (a.dia<b.dia?-1:1); });
+  var nAlerta=rows.filter(function(x){ return x.comb>LIMITE_DIA || (x.km>0 && x.comb/x.km>LIMITE_KM); }).length;
+  el("extrato_lbl").textContent = "motorista × dia · "+modoTxt+" · "+rows.length+" linha(s) · "+nAlerta+" com alerta";
+  _extratoRows=[];
+  var h='<div style="margin:12px 0;padding:10px 12px;background:#FFFBEB;border:1px solid #FDE68A;border-radius:8px;font-size:12.5px;color:#92400E">🔔 Destaca em vermelho quando o combustível do dia passa de <b>R$ '+LIMITE_DIA+'</b> ou o custo passa de <b>R$ '+LIMITE_KM.toFixed(2).replace(".",",")+'/km</b>. ('+nAlerta+' de '+rows.length+' com alerta)</div>';
+  h+='<div style="overflow-x:auto"><table><thead><tr><th>Motorista</th><th>Dia</th><th class="right">Viagens</th><th class="right">KM</th><th class="right">Combustível</th><th class="right">R$/km</th><th>Alerta</th></tr></thead><tbody>';
+  rows.forEach(function(x){
+    var rkm = x.km>0 ? x.comb/x.km : 0, aDia=x.comb>LIMITE_DIA, aKm=rkm>LIMITE_KM, alert=aDia||aKm;
+    var flags=[]; if(aDia)flags.push(">R$"+LIMITE_DIA+"/dia"); if(aKm)flags.push(">R$"+LIMITE_KM.toFixed(2).replace(".",",")+"/km");
+    _extratoRows.push({motorista:x.nome, cpf:x.cpf, dia:_diaBR(x.dia), viagens:x.viagens, km:x.km, comb:x.comb, rkm:rkm, alerta:flags.join(" · ")});
+    h+='<tr'+(alert?' style="background:#FEF2F2"':'')+'><td>'+esc(x.nome)+'</td><td>'+_diaBR(x.dia)+'</td><td class="right">'+x.viagens+'</td><td class="right">'+km1(x.km)+' km</td><td class="right"'+(aDia?' style="color:#991B1B;font-weight:700"':'')+'>'+brlv(x.comb)+'</td><td class="right"'+(aKm?' style="color:#991B1B;font-weight:700"':'')+'>R$ '+rkm.toFixed(2).replace(".",",")+'</td><td>'+(alert?'<span class="st" style="background:#FEE2E2;color:#991B1B">⚠️ '+esc(flags.join(" · "))+'</span>':'')+'</td></tr>';
+  });
+  h+='</tbody></table></div>';
+  if(!rows.length) el("extrato_corpo").innerHTML='<p style="color:var(--text3);margin-top:12px">Sem dados para o filtro atual.</p>';
+  else el("extrato_corpo").innerHTML=h;
+}
 // Extrato "por dia": gasto de COMBUSTÍVEL (val_real) por dia, com pedágios e total.
 function renderExtratoDia(base, modoTxt){
   var byDia={};
@@ -908,6 +958,12 @@ function baixarExtratoCSV(){
       linhas.push([_csv(r.dia), r.viagens, (Number(r.km)||0).toFixed(1).replace(".",","), (Number(r.comb)||0).toFixed(2).replace(".",","), (Number(r.ped)||0).toFixed(2).replace(".",","), (Number(r.total)||0).toFixed(2).replace(".",",")].join(";"));
     });
     nome="combustivel_por_dia.csv";
+  } else if(_extratoModo==="motoristadia"){
+    linhas=["Motorista;CPF;Dia;Viagens;KM;Combustível (R$);R$/km;Alerta"];
+    _extratoRows.forEach(function(r){
+      linhas.push([_csv(r.motorista), _csv(r.cpf), _csv(r.dia), r.viagens, (Number(r.km)||0).toFixed(1).replace(".",","), (Number(r.comb)||0).toFixed(2).replace(".",","), (Number(r.rkm)||0).toFixed(2).replace(".",","), _csv(r.alerta)].join(";"));
+    });
+    nome="combustivel_motorista_dia.csv";
   } else {
     linhas=["Motorista;CPF;Mês;Status;Viagens;KM;Valor (R$)"];
     _extratoRows.forEach(function(r){
