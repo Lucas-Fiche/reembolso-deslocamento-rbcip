@@ -377,7 +377,7 @@ tbody tr.sel{background:var(--primary-light)}
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="config.js"></script>
 <script>
-var sb=null, DADOS=[], FILTRADOS=[], sel=null, QUEM="", DET_PARADAS=[], DET_PEDAGIOS=[];
+var sb=null, DADOS=[], FILTRADOS=[], sel=null, QUEM="", DET_PARADAS=[], DET_PEDAGIOS=[], DET_REVISOES=[];
 function el(id){return document.getElementById(id);}
 function show(id){["carregando","semAcesso","painel"].forEach(function(s){el(s).classList.add("hide");});el(id).classList.remove("hide");}
 
@@ -617,13 +617,45 @@ async function abrirDetalhe(id){
   el("actionBar").innerHTML='<div class="action-bar-label">Ações</div><div class="action-bar-empty">Carregando…</div>';
   var par = await sb.from("paradas").select("fase,ordem,origem,destino,km,horario,maps_link,lat,lng,adicionada_checkout,justificativa").eq("reembolso_id",id).order("fase").order("ordem");
   var ped = await sb.from("pedagios").select("id,fase,ordem,valor,comprovante_link,pendente").eq("reembolso_id",id).order("ordem");
-  DET_PARADAS = par.data||[]; DET_PEDAGIOS = ped.data||[];
+  var rev = await sb.from("reembolso_revisoes").select("criado_em,alteracoes").eq("reembolso_id",id).order("criado_em",{ascending:false});
+  DET_PARADAS = par.data||[]; DET_PEDAGIOS = ped.data||[]; DET_REVISOES = (rev&&rev.data)||[];
   renderDetail(); renderActions();
   setTimeout(function(){ renderMap(); if(_map)_map.invalidateSize(); }, 70);
 }
 function fecharDetalhe(){ el("detailModal").classList.remove("show"); sel=null; render(); }
 
 function drow(k,v){ return '<div class="drow"><span class="k">'+k+'</span><span class="v">'+v+'</span></div>'; }
+
+// ── Conferência da correção: rótulos e formatação de cada campo alterado ──
+var REV_META={
+  dist_total:      {lbl:"Distância total",       fmt:function(v){ return km1(v)+" km"; }},
+  consumo:         {lbl:"Consumo",               fmt:function(v){ return (v==null?"—":v+" km/L"); }},
+  usou_estimativa: {lbl:"Tipo de combustível",   fmt:function(v){ return v?"Estimativa":"Valor real (cupom)"; }},
+  preco_base:      {lbl:"Preço base",            fmt:function(v){ return (v==null?"—":"R$ "+v+"/L"); }},
+  preco_real:      {lbl:"Preço do cupom",        fmt:function(v){ return (v==null||v===""?"—":"R$ "+v+"/L"); }},
+  val_estimado:    {lbl:"Valor estimado",        fmt:brlv},
+  val_real:        {lbl:"Valor (combustível)",   fmt:brlv},
+  caronas:         {lbl:"Caronas",               fmt:function(v){ return (v==null||v===""?"—":String(v)); }}
+};
+function _revFmt(campo,v){ var m=REV_META[campo]; return m&&m.fmt ? String(m.fmt(v)) : (v==null||v===""?"—":String(v)); }
+function _revLbl(campo){ var m=REV_META[campo]; return m ? m.lbl : campo; }
+// Monta a seção "campos alterados na correção" (uma vez por rodada de revisão).
+function _revSection(){
+  if(!DET_REVISOES.length) return "";
+  var h='<div class="detail-section" style="border-color:#A5B4FC"><div class="detail-section-title" style="color:#3730A3;background:#EEF2FF">🔄 Correção do pesquisador — campos alterados (confira)</div>';
+  DET_REVISOES.forEach(function(rev,idx){
+    var alt=rev.alteracoes||[];
+    if(DET_REVISOES.length>1) h+='<div style="font-size:11px;font-weight:700;color:#4338CA;margin:'+(idx?'12':'2')+'px 0 4px">Correção '+(DET_REVISOES.length-idx)+' · '+dt(rev.criado_em)+'</div>';
+    if(!alt.length){ h+='<div class="segment" style="color:var(--text3)">Nenhum campo monitorado mudou nesta correção.</div>'; return; }
+    alt.forEach(function(c){
+      var de=esc(_revFmt(c.campo,c.de)), para=esc(_revFmt(c.campo,c.para));
+      h+=drow(_revLbl(c.campo), '<span style="color:#991B1B;text-decoration:line-through">'+de+'</span> → <b style="color:#166534">'+para+'</b>');
+    });
+  });
+  h+='<div class="segment" style="font-size:11px;color:var(--text3);border:none;padding-top:8px">Mudanças na rota/paradas aparecem como alteração da <b>Distância total</b>.</div>';
+  h+='</div>';
+  return h;
+}
 
 function renderDetail(){
   if(!sel){ el("detail").innerHTML='<div class="loading">—</div>'; return; }
@@ -638,6 +670,9 @@ function renderDetail(){
     _susp.forEach(function(f){ h+='<div class="segment" style="color:#991B1B">⚠️ '+esc(f)+'</div>'; });
     h+='</div>';
   }
+
+  // CONFERÊNCIA DA CORREÇÃO — o que o pesquisador mudou (REVISÃO → CORRIGIDO)
+  h+=_revSection();
 
   // IDENTIFICAÇÃO
   h+='<div class="detail-section"><div class="detail-section-title">Identificação</div>';
