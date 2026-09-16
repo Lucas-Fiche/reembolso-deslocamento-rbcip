@@ -19,10 +19,17 @@
   .chk:hover{background:var(--bg);border-color:#CBD5E1}
   .chk.on{border-color:var(--navy-2);background:#EFF6FF}
   .chk input{width:16px;height:16px;flex:0 0 auto;margin:0;accent-color:var(--navy-2)}
-  .chk>span{min-width:0;display:flex;flex-direction:column}
+  .chk>span{min-width:0;flex:1 1 auto;display:flex;flex-direction:column}
   .chk .nm{font-size:13.5px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .chk .em{font-size:11px;font-weight:500;color:var(--text-3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .chk.lock{cursor:default;background:#F8FAFC}
+  .chk.lock:hover{background:#F8FAFC;border-color:var(--border)}
+  .chk.lock .nm{color:var(--text-2)}
+  .tag-reg{flex:0 0 auto;font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:.03em;
+    color:#166534;background:#DCFCE7;padding:2px 7px;border-radius:999px}
   .selcount{font-size:13px;color:var(--text-2);margin-top:14px;font-weight:600}
+  .nota-sup{margin-top:10px;font-size:12.5px;color:var(--warn);background:var(--warn-bg);
+    border:1px solid #FDE68A;border-radius:9px;padding:9px 11px}
   .daygrp td{font-weight:700;font-size:11px;color:var(--text-3);text-transform:uppercase;
     letter-spacing:.04em;background:var(--bg);padding-top:12px}
 </style>
@@ -53,6 +60,7 @@
       </div>
       <div id="lista_mot" class="chklist"><p class="muted">Carregando motoristas…</p></div>
       <div class="selcount" id="selcount"></div>
+      <div id="notaSup" class="nota-sup hide">🔒 Depois de salvar, um registro só pode ser removido por um administrador. Confira antes de confirmar.</div>
       <button id="btnSalvar" onclick="salvarDia()">Salvar diárias do dia</button>
       <div id="msg" class="msg"></div>
     </div>
@@ -73,7 +81,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="config.js"></script>
 <script>
-var sb=null, SESSION=null, PAPEL="", MOTORISTAS=[], NOMES={};
+var sb=null, SESSION=null, PAPEL="", IS_ADMIN=false, MOTORISTAS=[], NOMES={}, REGISTRADOS_DIA={};
 function el(id){return document.getElementById(id);}
 function msg(tipo,texto){var m=el("msg");m.className="msg show "+tipo;m.textContent=texto;}
 function limpaMsg(){var m=el("msg");m.className="msg";m.textContent="";}
@@ -83,10 +91,16 @@ function dataBR(iso){var p=String(iso).split("-");return p.length===3?(p[2]+"/"+
 
 function renderChecklist(marcados){
   var set={}; (marcados||[]).forEach(function(id){set[id]=1;});
+  REGISTRADOS_DIA=set;
   if(!MOTORISTAS.length){ el("lista_mot").innerHTML='<p class="muted">Nenhum motorista ativo cadastrado.</p>'; atualizarContagem(); return; }
   el("lista_mot").innerHTML = MOTORISTAS.map(function(m){
-    return '<label class="chk'+(set[m.id]?" on":"")+'" data-id="'+m.id+'"><input type="checkbox" '+(set[m.id]?"checked":"")+' onchange="onToggle(this)">'
-      +'<span><span class="nm">'+esc(m.nome||"(sem nome)")+'</span><span class="em">'+esc(m.email||"")+'</span></span></label>';
+    var jaReg=!!set[m.id];
+    // Supervisor: quem já está registrado no dia fica travado (só admin remove).
+    var trava = jaReg && !IS_ADMIN;
+    return '<label class="chk'+(jaReg?" on":"")+(trava?" lock":"")+'" data-id="'+m.id+'">'
+      +'<input type="checkbox" '+(jaReg?"checked":"")+(trava?" disabled":"")+' onchange="onToggle(this)">'
+      +'<span><span class="nm">'+esc(m.nome||"(sem nome)")+'</span><span class="em">'+esc(m.email||"")+'</span></span>'
+      +(trava?'<span class="tag-reg">registrado</span>':'')+'</label>';
   }).join("");
   var ll=el("listlbl"); if(ll) ll.textContent="Motoristas · "+MOTORISTAS.length;
   atualizarContagem();
@@ -96,9 +110,10 @@ function onToggle(cb){
   atualizarContagem();
 }
 function alternarTodos(){
-  var cbs=[].slice.call(document.querySelectorAll('#lista_mot input[type=checkbox]'));
+  // opera só nos que dá para mexer (os travados de supervisor ficam de fora)
+  var cbs=[].slice.call(document.querySelectorAll('#lista_mot input[type=checkbox]:not(:disabled)'));
   if(!cbs.length) return;
-  var marcarTodos = cbs.some(function(cb){return !cb.checked;}); // se algum está vazio, marca todos; senão desmarca
+  var marcarTodos = cbs.some(function(cb){return !cb.checked;});
   cbs.forEach(function(cb){ cb.checked=marcarTodos; var lab=cb.closest(".chk"); if(lab) lab.classList.toggle("on", marcarTodos); });
   atualizarContagem();
 }
@@ -106,9 +121,11 @@ function marcadosAtuais(){
   return [].slice.call(document.querySelectorAll('#lista_mot input:checked')).map(function(cb){return cb.closest(".chk").getAttribute("data-id");});
 }
 function atualizarContagem(){
-  var n=marcadosAtuais().length, total=MOTORISTAS.length;
+  var n=marcadosAtuais().length;
   el("selcount").textContent = n ? (n+" motorista(s) marcado(s) para "+dataBR(el("data").value)) : "Nenhum motorista marcado.";
-  var sa=el("selall"); if(sa) sa.textContent = (total && n>=total) ? "Desmarcar todos" : "Marcar todos";
+  var livres=[].slice.call(document.querySelectorAll('#lista_mot input[type=checkbox]:not(:disabled)'));
+  var marc=livres.filter(function(cb){return cb.checked;}).length;
+  var sa=el("selall"); if(sa){ sa.textContent=(livres.length && marc>=livres.length)?"Desmarcar todos":"Marcar todos"; sa.classList.toggle("hide", !livres.length); }
 }
 
 async function carregarDia(){
@@ -131,7 +148,10 @@ async function salvarDia(){
 
     var inserir = marcados.filter(function(id){return !existentes[id];})
       .map(function(id){return {motorista_id:id, data:data, registrado_por:SESSION.user.id};});
-    var removerIds = Object.keys(existentes).filter(function(id){return !marcadoSet[id];}).map(function(id){return existentes[id];});
+    // Supervisor não remove nada aqui — só o admin pode desmarcar/remover.
+    var removerIds = IS_ADMIN
+      ? Object.keys(existentes).filter(function(id){return !marcadoSet[id];}).map(function(id){return existentes[id];})
+      : [];
 
     if(inserir.length){
       var ins=await sb.from("diarias").upsert(inserir,{onConflict:"motorista_id,data",ignoreDuplicates:true});
@@ -158,13 +178,17 @@ async function carregarRecentes(){
   var h="", diaAtual=null;
   rows.forEach(function(r){
     if(r.data!==diaAtual){ diaAtual=r.data; h+='<tr class="daygrp"><td colspan="3">'+dataBR(r.data)+'</td></tr>'; }
+    var acao = IS_ADMIN
+      ? '<div class="row-actions"><button class="sm danger" onclick="remover(\''+r.id+'\',\''+r.data+'\')">Remover</button></div>'
+      : '<span class="muted" title="Só um administrador pode remover">🔒</span>';
     h+='<tr><td>'+dataBR(r.data)+'</td><td>'+esc(NOMES[r.motorista_id]||"(motorista)")+'</td>'
-      +'<td><div class="row-actions"><button class="sm danger" onclick="remover(\''+r.id+'\',\''+r.data+'\')">Remover</button></div></td></tr>';
+      +'<td><div class="row-actions">'+acao+'</div></td></tr>';
   });
   el("tbl").innerHTML=h;
 }
 
 async function remover(id, data){
+  if(!IS_ADMIN){ msg("err","Só um administrador pode remover registros."); return; }
   if(!confirm("Remover esta diária?")) return;
   var { error } = await sb.from("diarias").delete().eq("id",id);
   if(error){ msg("err",error.message); return; }
@@ -186,7 +210,8 @@ async function remover(id, data){
   var { data: perfil } = await sb.from("perfis").select("papel,ativo").eq("id",session.user.id).maybeSingle();
   if(!perfil || perfil.ativo===false){ await sb.auth.signOut(); el("bloqueio").classList.remove("hide"); return; }
   if(perfil.papel!=="admin" && perfil.papel!=="supervisor"){ el("bloqueio").classList.remove("hide"); return; }
-  PAPEL=perfil.papel;
+  PAPEL=perfil.papel; IS_ADMIN=(PAPEL==="admin");
+  if(!IS_ADMIN) el("notaSup").classList.remove("hide");
   el("painel").classList.remove("hide");
   el("data").value=hojeISO();
   // motoristas: ativos vão para a lista de marcação; todos entram no mapa de nomes
