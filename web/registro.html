@@ -727,6 +727,7 @@ async function iniciarApp(){var s=await sb.auth.getSession();if(!s.data.session)
   var p=await sb.from("perfis").select("nome,papel,ativo").eq("id",SESSION.user.id).maybeSingle();PERFIL=p.data||{};
   if(!p.data || p.data.ativo===false){await sb.auth.signOut();show("secLogin");msg("msgLogin","err","Seu acesso foi removido. Fale com o administrador.");return}
   if(PERFIL.papel==="van"){location.replace("van.html");return}
+  if(PERFIL.papel==="supervisor"){location.replace("diarias.html");return}
   $("hm_nome").textContent=PERFIL.nome||SESSION.user.email;$("hm_papel").textContent=PERFIL.papel||"motorista";
   // dados da última solicitação, para pré-preencher o check-in
   try{ var ud=await sb.from("reembolsos").select("nome,cpf,rg,orgao,email,telefone,veiculo,placa").eq("motorista_id",SESSION.user.id).order("criado_em",{ascending:false}).limit(1).maybeSingle(); ULT_DADOS=(ud&&ud.data)||null; }catch(e){}
