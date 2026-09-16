@@ -6,17 +6,22 @@
 <title>RBCIP — Registrar Diárias</title>
 <link rel="stylesheet" href="estilo.css">
 <style>
-  .toolbar{display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap}
-  .toolbar .fld{flex:0 0 190px}
-  .toolbar .fld input{margin:0}
-  .chklist{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:14px}
-  @media(max-width:560px){.chklist{grid-template-columns:1fr}}
-  .chk{display:flex;align-items:center;gap:10px;padding:11px 13px;border:1.5px solid var(--border);
-    border-radius:10px;cursor:pointer;font-size:14px;font-weight:600;color:var(--text);user-select:none}
-  .chk:hover{background:var(--bg)}
+  .fld{max-width:220px}
+  .fld input{margin:0}
+  .listhead{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-top:16px}
+  .listhead .selall{font-size:12.5px;font-weight:600;color:var(--navy-2);cursor:pointer;user-select:none;
+    padding:4px 8px;border-radius:8px}
+  .listhead .selall:hover{background:var(--bg)}
+  .chklist{display:grid;grid-template-columns:repeat(auto-fill,minmax(226px,1fr));gap:6px;margin-top:8px}
+  .chk{display:flex;align-items:center;gap:9px;padding:8px 11px;border:1px solid var(--border);
+    border-radius:9px;cursor:pointer;color:var(--text);user-select:none;line-height:1.25;
+    transition:background .12s,border-color .12s}
+  .chk:hover{background:var(--bg);border-color:#CBD5E1}
   .chk.on{border-color:var(--navy-2);background:#EFF6FF}
-  .chk input{width:18px;height:18px;flex:0 0 auto;margin:0;accent-color:var(--navy-2)}
-  .chk .em{font-size:11.5px;font-weight:500;color:var(--text-3);display:block;margin-top:1px}
+  .chk input{width:16px;height:16px;flex:0 0 auto;margin:0;accent-color:var(--navy-2)}
+  .chk>span{min-width:0;display:flex;flex-direction:column}
+  .chk .nm{font-size:13.5px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .chk .em{font-size:11px;font-weight:500;color:var(--text-3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .selcount{font-size:13px;color:var(--text-2);margin-top:14px;font-weight:600}
   .daygrp td{font-weight:700;font-size:11px;color:var(--text-3);text-transform:uppercase;
     letter-spacing:.04em;background:var(--bg);padding-top:12px}
@@ -38,12 +43,13 @@
         <div><h2>Diárias do dia</h2><p class="muted">Marque os motoristas que vão atuar na data escolhida e salve.</p></div>
         <a class="link" href="login.html" style="display:inline">← voltar</a>
       </div>
-      <div class="toolbar">
-        <div class="fld">
-          <label>Data</label>
-          <input id="data" type="date" onchange="carregarDia()">
-        </div>
-        <button class="ghost sm" style="width:auto;margin:0" onclick="carregarDia()">↻ Recarregar dia</button>
+      <div class="fld">
+        <label>Data</label>
+        <input id="data" type="date" onchange="carregarDia()">
+      </div>
+      <div class="listhead">
+        <span class="muted" id="listlbl">Motoristas</span>
+        <span class="selall" id="selall" onclick="alternarTodos()">Marcar todos</span>
       </div>
       <div id="lista_mot" class="chklist"><p class="muted">Carregando motoristas…</p></div>
       <div class="selcount" id="selcount"></div>
@@ -80,20 +86,29 @@ function renderChecklist(marcados){
   if(!MOTORISTAS.length){ el("lista_mot").innerHTML='<p class="muted">Nenhum motorista ativo cadastrado.</p>'; atualizarContagem(); return; }
   el("lista_mot").innerHTML = MOTORISTAS.map(function(m){
     return '<label class="chk'+(set[m.id]?" on":"")+'" data-id="'+m.id+'"><input type="checkbox" '+(set[m.id]?"checked":"")+' onchange="onToggle(this)">'
-      +'<span>'+esc(m.nome||"(sem nome)")+'<span class="em">'+esc(m.email||"")+'</span></span></label>';
+      +'<span><span class="nm">'+esc(m.nome||"(sem nome)")+'</span><span class="em">'+esc(m.email||"")+'</span></span></label>';
   }).join("");
+  var ll=el("listlbl"); if(ll) ll.textContent="Motoristas · "+MOTORISTAS.length;
   atualizarContagem();
 }
 function onToggle(cb){
   var lab=cb.closest(".chk"); if(lab) lab.classList.toggle("on", cb.checked);
   atualizarContagem();
 }
+function alternarTodos(){
+  var cbs=[].slice.call(document.querySelectorAll('#lista_mot input[type=checkbox]'));
+  if(!cbs.length) return;
+  var marcarTodos = cbs.some(function(cb){return !cb.checked;}); // se algum está vazio, marca todos; senão desmarca
+  cbs.forEach(function(cb){ cb.checked=marcarTodos; var lab=cb.closest(".chk"); if(lab) lab.classList.toggle("on", marcarTodos); });
+  atualizarContagem();
+}
 function marcadosAtuais(){
   return [].slice.call(document.querySelectorAll('#lista_mot input:checked')).map(function(cb){return cb.closest(".chk").getAttribute("data-id");});
 }
 function atualizarContagem(){
-  var n=marcadosAtuais().length;
+  var n=marcadosAtuais().length, total=MOTORISTAS.length;
   el("selcount").textContent = n ? (n+" motorista(s) marcado(s) para "+dataBR(el("data").value)) : "Nenhum motorista marcado.";
+  var sa=el("selall"); if(sa) sa.textContent = (total && n>=total) ? "Desmarcar todos" : "Marcar todos";
 }
 
 async function carregarDia(){
