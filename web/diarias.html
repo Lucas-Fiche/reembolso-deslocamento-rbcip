@@ -12,22 +12,25 @@
   .listhead .selall{font-size:12.5px;font-weight:600;color:var(--navy-2);cursor:pointer;user-select:none;
     padding:4px 8px;border-radius:8px}
   .listhead .selall:hover{background:var(--bg)}
-  .chklist{display:grid;grid-template-columns:repeat(auto-fill,minmax(226px,1fr));gap:6px;margin-top:8px}
-  .chk{display:flex;align-items:center;gap:9px;padding:8px 11px;border:1px solid var(--border);
-    border-radius:9px;cursor:pointer;color:var(--text);user-select:none;line-height:1.25;
+  .chklist{display:grid;grid-template-columns:repeat(auto-fill,minmax(206px,1fr));gap:6px;margin-top:8px}
+  .chk{display:flex;align-items:center;gap:8px;padding:6px 10px;border:1px solid var(--border);
+    border-radius:8px;cursor:pointer;color:var(--text);user-select:none;
     transition:background .12s,border-color .12s}
   .chk:hover{background:var(--bg);border-color:#CBD5E1}
   .chk.on{border-color:var(--navy-2);background:#EFF6FF}
-  .chk input{width:16px;height:16px;flex:0 0 auto;margin:0;accent-color:var(--navy-2)}
+  .chk input{width:15px;height:15px;flex:0 0 auto;margin:0;accent-color:var(--navy-2)}
   .chk>span{min-width:0;flex:1 1 auto;display:flex;flex-direction:column}
-  .chk .nm{font-size:13.5px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-  .chk .em{font-size:11px;font-weight:500;color:var(--text-3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .chk .nm{font-size:13px;font-weight:600;line-height:1.2;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .chk .em{font-size:10.5px;font-weight:500;color:var(--text-3);line-height:1.2;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .chk.lock{cursor:default;background:#F8FAFC}
   .chk.lock:hover{background:#F8FAFC;border-color:var(--border)}
   .chk.lock .nm{color:var(--text-2)}
-  .tag-reg{flex:0 0 auto;font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:.03em;
-    color:#166534;background:#DCFCE7;padding:2px 7px;border-radius:999px}
+  .tag-reg{flex:0 0 auto;font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.03em;
+    color:#166534;background:#DCFCE7;padding:2px 6px;border-radius:999px}
   .selcount{font-size:13px;color:var(--text-2);margin-top:14px;font-weight:600}
+  #tbl td{vertical-align:middle}
+  .rc-quem{font-size:12px;color:var(--text-2)}
+  .rc-em{font-size:12px;color:var(--text-2);white-space:nowrap}
   .nota-sup{margin-top:10px;font-size:12.5px;color:var(--warn);background:var(--warn-bg);
     border:1px solid #FDE68A;border-radius:9px;padding:9px 11px}
   .daygrp td{font-weight:700;font-size:11px;color:var(--text-3);text-transform:uppercase;
@@ -69,8 +72,8 @@
       <h2>Registros recentes <span class="muted" id="contagem"></span></h2>
       <div class="tbl-wrap">
         <table>
-          <thead><tr><th>Data</th><th>Motorista</th><th></th></tr></thead>
-          <tbody id="tbl"><tr><td colspan="3" class="muted">Carregando…</td></tr></tbody>
+          <thead><tr><th>Data da atuação</th><th>Motorista</th><th>Registrado por</th><th>Registrado em</th><th></th></tr></thead>
+          <tbody id="tbl"><tr><td colspan="5" class="muted">Carregando…</td></tr></tbody>
         </table>
       </div>
     </div>
@@ -81,13 +84,14 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="config.js"></script>
 <script>
-var sb=null, SESSION=null, PAPEL="", IS_ADMIN=false, MOTORISTAS=[], NOMES={}, REGISTRADOS_DIA={};
+var sb=null, SESSION=null, PAPEL="", IS_ADMIN=false, MOTORISTAS=[], REGISTRADOS_DIA={};
 function el(id){return document.getElementById(id);}
 function msg(tipo,texto){var m=el("msg");m.className="msg show "+tipo;m.textContent=texto;}
 function limpaMsg(){var m=el("msg");m.className="msg";m.textContent="";}
 function esc(s){return String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");}
 function hojeISO(){var d=new Date();return d.getFullYear()+"-"+("0"+(d.getMonth()+1)).slice(-2)+"-"+("0"+d.getDate()).slice(-2);}
 function dataBR(iso){var p=String(iso).split("-");return p.length===3?(p[2]+"/"+p[1]+"/"+p[0]):iso;}
+function dtBR(v){ if(!v)return "—"; var d=new Date(v); if(isNaN(d))return String(v); return d.toLocaleString("pt-BR",{day:"2-digit",month:"2-digit",year:"numeric",hour:"2-digit",minute:"2-digit"}); }
 
 function renderChecklist(marcados){
   var set={}; (marcados||[]).forEach(function(id){set[id]=1;});
@@ -169,19 +173,20 @@ async function salvarDia(){
 }
 
 async function carregarRecentes(){
-  var { data:rows, error } = await sb.from("diarias")
-    .select("id,data,motorista_id,criado_em")
-    .order("data",{ascending:false}).order("criado_em",{ascending:false}).limit(400);
-  if(error){ el("tbl").innerHTML='<tr><td colspan="3" class="muted">Erro: '+esc(error.message)+'</td></tr>'; return; }
-  if(!rows || !rows.length){ el("tbl").innerHTML='<tr><td colspan="3" class="muted">Nenhuma diária registrada ainda.</td></tr>'; el("contagem").textContent=""; return; }
+  var { data:rows, error } = await sb.rpc("fn_diarias_recentes",{p_limite:600});
+  if(error){ el("tbl").innerHTML='<tr><td colspan="5" class="muted">Erro: '+esc(error.message)+'</td></tr>'; return; }
+  if(!rows || !rows.length){ el("tbl").innerHTML='<tr><td colspan="5" class="muted">Nenhuma diária registrada ainda.</td></tr>'; el("contagem").textContent=""; return; }
   el("contagem").textContent="· "+rows.length;
   var h="", diaAtual=null;
   rows.forEach(function(r){
-    if(r.data!==diaAtual){ diaAtual=r.data; h+='<tr class="daygrp"><td colspan="3">'+dataBR(r.data)+'</td></tr>'; }
+    if(r.data!==diaAtual){ diaAtual=r.data; h+='<tr class="daygrp"><td colspan="5">'+dataBR(r.data)+'</td></tr>'; }
     var acao = IS_ADMIN
       ? '<div class="row-actions"><button class="sm danger" onclick="remover(\''+r.id+'\',\''+r.data+'\')">Remover</button></div>'
       : '<span class="muted" title="Só um administrador pode remover">🔒</span>';
-    h+='<tr><td>'+dataBR(r.data)+'</td><td>'+esc(NOMES[r.motorista_id]||"(motorista)")+'</td>'
+    h+='<tr><td>'+dataBR(r.data)+'</td>'
+      +'<td>'+esc(r.motorista||"(motorista)")+'</td>'
+      +'<td class="rc-quem">'+esc(r.registrador||"—")+'</td>'
+      +'<td class="rc-em">'+dtBR(r.criado_em)+'</td>'
       +'<td><div class="row-actions">'+acao+'</div></td></tr>';
   });
   el("tbl").innerHTML=h;
@@ -214,11 +219,9 @@ async function remover(id, data){
   if(!IS_ADMIN) el("notaSup").classList.remove("hide");
   el("painel").classList.remove("hide");
   el("data").value=hojeISO();
-  // motoristas: ativos vão para a lista de marcação; todos entram no mapa de nomes
+  // motoristas ativos para a lista de marcação
   var mt = await sb.from("perfis").select("id,nome,email,ativo").eq("papel","motorista").order("nome");
-  var todos=(mt.data)||[];
-  todos.forEach(function(m){ NOMES[m.id]=m.nome||m.email||"(motorista)"; });
-  MOTORISTAS=todos.filter(function(m){return m.ativo!==false;});
+  MOTORISTAS=((mt.data)||[]).filter(function(m){return m.ativo!==false;});
   await carregarDia();
   await carregarRecentes();
 })();
