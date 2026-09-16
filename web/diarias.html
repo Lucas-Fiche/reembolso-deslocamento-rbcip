@@ -6,35 +6,83 @@
 <title>RBCIP — Registrar Diárias</title>
 <link rel="stylesheet" href="estilo.css">
 <style>
-  .fld{max-width:220px}
-  .fld input{margin:0}
-  .listhead{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-top:16px}
-  .listhead .selall{font-size:12.5px;font-weight:600;color:var(--navy-2);cursor:pointer;user-select:none;
-    padding:4px 8px;border-radius:8px}
-  .listhead .selall:hover{background:var(--bg)}
-  .chklist{display:grid;grid-template-columns:repeat(auto-fill,minmax(206px,1fr));gap:6px;margin-top:8px}
-  .chk{display:flex;align-items:center;gap:8px;padding:6px 10px;border:1px solid var(--border);
-    border-radius:8px;cursor:pointer;color:var(--text);user-select:none;
-    transition:background .12s,border-color .12s}
-  .chk:hover{background:var(--bg);border-color:#CBD5E1}
-  .chk.on{border-color:var(--navy-2);background:#EFF6FF}
-  .chk input{width:15px;height:15px;flex:0 0 auto;margin:0;accent-color:var(--navy-2)}
-  .chk>span{min-width:0;flex:1 1 auto;display:flex;flex-direction:column}
-  .chk .nm{font-size:13px;font-weight:600;line-height:1.2;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-  .chk .em{font-size:10.5px;font-weight:500;color:var(--text-3);line-height:1.2;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-  .chk.lock{cursor:default;background:#F8FAFC}
-  .chk.lock:hover{background:#F8FAFC;border-color:var(--border)}
-  .chk.lock .nm{color:var(--text-2)}
-  .tag-reg{flex:0 0 auto;font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.03em;
-    color:#166534;background:#DCFCE7;padding:2px 6px;border-radius:999px}
-  .selcount{font-size:13px;color:var(--text-2);margin-top:14px;font-weight:600}
-  #tbl td{vertical-align:middle}
-  .rc-quem{font-size:12px;color:var(--text-2)}
-  .rc-em{font-size:12px;color:var(--text-2);white-space:nowrap}
+  .wrap.wide{max-width:900px}
+  .head-top{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap}
+  .head-top h2{font-size:18px}
+  .controls{display:grid;grid-template-columns:210px 1fr;gap:14px;margin-top:8px}
+  @media(max-width:560px){.controls{grid-template-columns:1fr}}
+  .date-row{display:flex;gap:8px}
+  .date-row input{margin:0;flex:1 1 auto}
+  .chip{width:auto;margin:0;padding:0 16px;height:46px;background:var(--bg);color:var(--navy-2);
+    border:1.5px solid var(--border);font-size:13px;font-weight:700;border-radius:10px;flex:0 0 auto}
+  .chip:hover{background:#EEF4FB;border-color:var(--navy-2)}
+  .search{position:relative}
+  .search input{margin:0;padding-left:38px}
+  .search .ic{position:absolute;left:13px;top:50%;transform:translateY(-50%);color:var(--text-3);font-size:15px;pointer-events:none}
+
+  .listhead{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:2px}
+  .lh-title{font-weight:700;font-size:13px;color:var(--text-2)}
+  .lh-title b{color:var(--navy-2)}
+  .selall{font-size:12.5px;font-weight:700;color:var(--navy-2);cursor:pointer;user-select:none;
+    padding:5px 10px;border-radius:8px;border:1.5px solid transparent}
+  .selall:hover{background:var(--bg);border-color:var(--border)}
+
+  .motgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(244px,1fr));gap:8px;margin-top:12px}
+  .mot{display:flex;align-items:center;gap:11px;padding:9px 12px;border:1.5px solid var(--border);
+    border-radius:13px;background:#fff;cursor:pointer;position:relative;
+    transition:border-color .15s,box-shadow .15s,background .15s,transform .1s}
+  .mot:hover{border-color:#BBD0E8;box-shadow:0 4px 14px rgba(26,58,92,.09)}
+  .mot:active{transform:scale(.99)}
+  .mot.on{border-color:var(--navy-2);background:#F4F9FE;box-shadow:0 3px 12px rgba(46,107,173,.12)}
+  .mot input{position:absolute;opacity:0;width:0;height:0;pointer-events:none}
+  .av{width:38px;height:38px;border-radius:50%;flex:0 0 auto;display:flex;align-items:center;justify-content:center;
+    font-weight:700;font-size:13px;color:#fff;letter-spacing:.02em;box-shadow:inset 0 0 0 1px rgba(255,255,255,.15)}
+  .mot .info{min-width:0;flex:1 1 auto;display:flex;flex-direction:column}
+  .mot .nm{font-size:13.5px;font-weight:600;line-height:1.25;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .mot .em{font-size:11px;font-weight:500;color:var(--text-3);line-height:1.2;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .ck{width:23px;height:23px;border-radius:50%;border:2px solid #CBD5E1;flex:0 0 auto;
+    display:flex;align-items:center;justify-content:center;transition:background .15s,border-color .15s}
+  .ck svg{opacity:0;transition:opacity .12s}
+  .mot.on .ck{background:var(--navy-2);border-color:var(--navy-2)}
+  .mot.on .ck svg{opacity:1}
+  .mot.lock{cursor:default;background:#F8FAFC;border-style:dashed}
+  .mot.lock:hover{box-shadow:none;border-color:var(--border);transform:none}
+  .mot.lock .av{filter:grayscale(.35);opacity:.85}
+  .mot.lock .nm{color:var(--text-2)}
+  .pill-reg{flex:0 0 auto;font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:.03em;
+    color:#166534;background:#DCFCE7;border:1px solid #A7F3D0;padding:3px 8px;border-radius:999px}
+  .vazio{color:var(--text-3);font-size:13.5px;padding:22px 4px;text-align:center}
+
+  .savefoot{display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;
+    margin-top:18px;padding-top:16px;border-top:1px solid var(--border)}
+  .sc{font-size:13.5px;font-weight:600;color:var(--text-2)}
+  .sc b{color:var(--navy-2)}
+  .btn-save{width:auto;margin:0;padding:13px 26px;font-size:14.5px;border-radius:12px;
+    background:linear-gradient(135deg,var(--navy),var(--navy-2));box-shadow:0 5px 16px rgba(46,107,173,.30)}
+  .btn-save:hover{filter:brightness(1.07)}
+  .btn-save:disabled{filter:none;box-shadow:none}
   .nota-sup{margin-top:10px;font-size:12.5px;color:var(--warn);background:var(--warn-bg);
-    border:1px solid #FDE68A;border-radius:9px;padding:9px 11px}
-  .daygrp td{font-weight:700;font-size:11px;color:var(--text-3);text-transform:uppercase;
-    letter-spacing:.04em;background:var(--bg);padding-top:12px}
+    border:1px solid #FDE68A;border-radius:10px;padding:9px 12px}
+  #msg{flex:1 1 100%}
+
+  h2 .muted{font-weight:400}
+  table.rec{width:100%;border-collapse:separate;border-spacing:0;margin-top:6px}
+  table.rec th{text-align:left;padding:9px 10px;font-size:11px;text-transform:uppercase;letter-spacing:.04em;
+    color:var(--text-3);border-bottom:1.5px solid var(--border);white-space:nowrap}
+  table.rec td{padding:10px 10px;border-bottom:1px solid var(--border);font-size:13.5px;vertical-align:middle}
+  table.rec tbody tr:hover td{background:#FAFBFD}
+  .rec-mot{display:flex;align-items:center;gap:9px}
+  .rec-mot .av{width:29px;height:29px;font-size:11px}
+  .rec-mot .rn{font-weight:600;color:var(--text);white-space:nowrap}
+  .quem{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;color:var(--text-2);
+    background:var(--bg);border:1px solid var(--border);padding:3px 10px;border-radius:999px;white-space:nowrap}
+  .rc-em{font-size:12.5px;color:var(--text-3);white-space:nowrap}
+  .daygrp td{font-weight:700;font-size:11px;color:var(--navy-2);text-transform:uppercase;
+    letter-spacing:.04em;background:#F4F7FB;padding:7px 10px}
+  .btn-rm{width:auto;margin:0;padding:7px 14px;font-size:12.5px;background:#fff;color:var(--danger);
+    border:1.5px solid #FECACA;border-radius:9px;font-weight:700}
+  .btn-rm:hover{background:var(--danger);color:#fff;border-color:var(--danger)}
+  .lk{color:var(--text-3);font-size:14px}
 </style>
 </head>
 <body>
@@ -49,29 +97,47 @@
 
   <div id="painel" class="hide">
     <div class="card">
-      <div class="who">
-        <div><h2>Diárias do dia</h2><p class="muted">Marque os motoristas que vão atuar na data escolhida e salve.</p></div>
+      <div class="head-top">
+        <div><h2>Diárias do dia</h2><p class="muted">Marque quem vai atuar na data escolhida e salve.</p></div>
         <a class="link" href="login.html" style="display:inline">← voltar</a>
       </div>
-      <div class="fld">
-        <label>Data</label>
-        <input id="data" type="date" onchange="carregarDia()">
+      <div class="controls">
+        <div>
+          <label>Data</label>
+          <div class="date-row">
+            <input id="data" type="date" onchange="carregarDia()">
+            <button type="button" class="chip" onclick="irHoje()">Hoje</button>
+          </div>
+        </div>
+        <div>
+          <label>Buscar motorista</label>
+          <div class="search"><span class="ic">🔍</span><input id="busca" type="text" placeholder="Filtrar por nome ou e-mail…" oninput="filtrar()"></div>
+        </div>
       </div>
+    </div>
+
+    <div class="card">
       <div class="listhead">
-        <span class="muted" id="listlbl">Motoristas</span>
+        <span class="lh-title" id="listlbl">Motoristas</span>
         <span class="selall" id="selall" onclick="alternarTodos()">Marcar todos</span>
       </div>
-      <div id="lista_mot" class="chklist"><p class="muted">Carregando motoristas…</p></div>
-      <div class="selcount" id="selcount"></div>
-      <div id="notaSup" class="nota-sup hide">🔒 Depois de salvar, um registro só pode ser removido por um administrador. Confira antes de confirmar.</div>
-      <button id="btnSalvar" onclick="salvarDia()">Salvar diárias do dia</button>
-      <div id="msg" class="msg"></div>
+      <div id="lista_mot" class="motgrid"><p class="muted">Carregando motoristas…</p></div>
+      <div id="vazio" class="vazio hide">Nenhum motorista encontrado para essa busca.</div>
+
+      <div class="savefoot">
+        <div>
+          <div class="sc" id="selcount">Nenhum motorista selecionado.</div>
+          <div id="notaSup" class="nota-sup hide">🔒 Depois de salvar, um registro só pode ser removido por um administrador.</div>
+        </div>
+        <button id="btnSalvar" class="btn-save" onclick="salvarDia()">Salvar diárias do dia</button>
+        <div id="msg" class="msg"></div>
+      </div>
     </div>
 
     <div class="card">
       <h2>Registros recentes <span class="muted" id="contagem"></span></h2>
       <div class="tbl-wrap">
-        <table>
+        <table class="rec">
           <thead><tr><th>Data da atuação</th><th>Motorista</th><th>Registrado por</th><th>Registrado em</th><th></th></tr></thead>
           <tbody id="tbl"><tr><td colspan="5" class="muted">Carregando…</td></tr></tbody>
         </table>
@@ -85,6 +151,8 @@
 <script src="config.js"></script>
 <script>
 var sb=null, SESSION=null, PAPEL="", IS_ADMIN=false, MOTORISTAS=[], REGISTRADOS_DIA={};
+var CHECK_SVG='<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="#fff" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>';
+var AV_CORES=["#2E6BAD","#0EA5E9","#0891B2","#059669","#16A34A","#7C3AED","#4F46E5","#9333EA","#DB2777","#E11D48","#EA580C","#D97706"];
 function el(id){return document.getElementById(id);}
 function msg(tipo,texto){var m=el("msg");m.className="msg show "+tipo;m.textContent=texto;}
 function limpaMsg(){var m=el("msg");m.className="msg";m.textContent="";}
@@ -92,45 +160,61 @@ function esc(s){return String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"
 function hojeISO(){var d=new Date();return d.getFullYear()+"-"+("0"+(d.getMonth()+1)).slice(-2)+"-"+("0"+d.getDate()).slice(-2);}
 function dataBR(iso){var p=String(iso).split("-");return p.length===3?(p[2]+"/"+p[1]+"/"+p[0]):iso;}
 function dtBR(v){ if(!v)return "—"; var d=new Date(v); if(isNaN(d))return String(v); return d.toLocaleString("pt-BR",{day:"2-digit",month:"2-digit",year:"numeric",hour:"2-digit",minute:"2-digit"}); }
+function iniciais(nome){ var p=String(nome||"").trim().split(/\s+/); if(!p[0])return "?"; var a=p[0].charAt(0); var b=p.length>1?p[p.length-1].charAt(0):""; return (a+b).toUpperCase(); }
+function corAvatar(s){ var h=0,str=String(s||""); for(var i=0;i<str.length;i++){h=(h*31+str.charCodeAt(i))>>>0;} return AV_CORES[h%AV_CORES.length]; }
+function avatar(nome, cls){ return '<span class="av'+(cls?" "+cls:"")+'" style="background:'+corAvatar(nome)+'">'+esc(iniciais(nome))+'</span>'; }
 
 function renderChecklist(marcados){
   var set={}; (marcados||[]).forEach(function(id){set[id]=1;});
   REGISTRADOS_DIA=set;
   if(!MOTORISTAS.length){ el("lista_mot").innerHTML='<p class="muted">Nenhum motorista ativo cadastrado.</p>'; atualizarContagem(); return; }
   el("lista_mot").innerHTML = MOTORISTAS.map(function(m){
-    var jaReg=!!set[m.id];
-    // Supervisor: quem já está registrado no dia fica travado (só admin remove).
-    var trava = jaReg && !IS_ADMIN;
-    return '<label class="chk'+(jaReg?" on":"")+(trava?" lock":"")+'" data-id="'+m.id+'">'
+    var jaReg=!!set[m.id], trava=jaReg && !IS_ADMIN;
+    var dir = trava ? '<span class="pill-reg">registrado</span>' : '<span class="ck">'+CHECK_SVG+'</span>';
+    return '<label class="mot'+(jaReg?" on":"")+(trava?" lock":"")+'" data-id="'+m.id+'"'
+      +' data-busca="'+esc(((m.nome||"")+" "+(m.email||"")).toLowerCase())+'">'
       +'<input type="checkbox" '+(jaReg?"checked":"")+(trava?" disabled":"")+' onchange="onToggle(this)">'
-      +'<span><span class="nm">'+esc(m.nome||"(sem nome)")+'</span><span class="em">'+esc(m.email||"")+'</span></span>'
-      +(trava?'<span class="tag-reg">registrado</span>':'')+'</label>';
+      +avatar(m.nome)
+      +'<span class="info"><span class="nm">'+esc(m.nome||"(sem nome)")+'</span><span class="em">'+esc(m.email||"")+'</span></span>'
+      +dir+'</label>';
   }).join("");
-  var ll=el("listlbl"); if(ll) ll.textContent="Motoristas · "+MOTORISTAS.length;
   atualizarContagem();
+  filtrar();
 }
 function onToggle(cb){
-  var lab=cb.closest(".chk"); if(lab) lab.classList.toggle("on", cb.checked);
+  var lab=cb.closest(".mot"); if(lab) lab.classList.toggle("on", cb.checked);
+  atualizarContagem();
+}
+function filtrar(){
+  var q=(el("busca").value||"").trim().toLowerCase();
+  var cards=[].slice.call(document.querySelectorAll('#lista_mot .mot')), vis=0;
+  cards.forEach(function(c){
+    var ok = !q || (c.getAttribute("data-busca")||"").indexOf(q)>=0;
+    c.classList.toggle("hide", !ok); if(ok) vis++;
+  });
+  el("vazio").classList.toggle("hide", vis>0 || !cards.length);
+  var ll=el("listlbl"); if(ll) ll.innerHTML = q ? ("Motoristas · <b>"+vis+"</b> de "+MOTORISTAS.length) : ("Motoristas · <b>"+MOTORISTAS.length+"</b>");
   atualizarContagem();
 }
 function alternarTodos(){
-  // opera só nos que dá para mexer (os travados de supervisor ficam de fora)
-  var cbs=[].slice.call(document.querySelectorAll('#lista_mot input[type=checkbox]:not(:disabled)'));
+  var cbs=[].slice.call(document.querySelectorAll('#lista_mot .mot:not(.hide) input[type=checkbox]:not(:disabled)'));
   if(!cbs.length) return;
   var marcarTodos = cbs.some(function(cb){return !cb.checked;});
-  cbs.forEach(function(cb){ cb.checked=marcarTodos; var lab=cb.closest(".chk"); if(lab) lab.classList.toggle("on", marcarTodos); });
+  cbs.forEach(function(cb){ cb.checked=marcarTodos; var lab=cb.closest(".mot"); if(lab) lab.classList.toggle("on", marcarTodos); });
   atualizarContagem();
 }
 function marcadosAtuais(){
-  return [].slice.call(document.querySelectorAll('#lista_mot input:checked')).map(function(cb){return cb.closest(".chk").getAttribute("data-id");});
+  return [].slice.call(document.querySelectorAll('#lista_mot input:checked')).map(function(cb){return cb.closest(".mot").getAttribute("data-id");});
 }
 function atualizarContagem(){
   var n=marcadosAtuais().length;
-  el("selcount").textContent = n ? (n+" motorista(s) marcado(s) para "+dataBR(el("data").value)) : "Nenhum motorista marcado.";
-  var livres=[].slice.call(document.querySelectorAll('#lista_mot input[type=checkbox]:not(:disabled)'));
+  el("selcount").innerHTML = n ? ("<b>"+n+"</b> motorista(s) selecionado(s) para "+dataBR(el("data").value)) : "Nenhum motorista selecionado.";
+  var livres=[].slice.call(document.querySelectorAll('#lista_mot .mot:not(.hide) input[type=checkbox]:not(:disabled)'));
   var marc=livres.filter(function(cb){return cb.checked;}).length;
   var sa=el("selall"); if(sa){ sa.textContent=(livres.length && marc>=livres.length)?"Desmarcar todos":"Marcar todos"; sa.classList.toggle("hide", !livres.length); }
 }
+
+function irHoje(){ el("data").value=hojeISO(); carregarDia(); }
 
 async function carregarDia(){
   limpaMsg();
@@ -181,13 +265,13 @@ async function carregarRecentes(){
   rows.forEach(function(r){
     if(r.data!==diaAtual){ diaAtual=r.data; h+='<tr class="daygrp"><td colspan="5">'+dataBR(r.data)+'</td></tr>'; }
     var acao = IS_ADMIN
-      ? '<div class="row-actions"><button class="sm danger" onclick="remover(\''+r.id+'\',\''+r.data+'\')">Remover</button></div>'
-      : '<span class="muted" title="Só um administrador pode remover">🔒</span>';
+      ? '<button class="btn-rm" onclick="remover(\''+r.id+'\',\''+r.data+'\')">Remover</button>'
+      : '<span class="lk" title="Só um administrador pode remover">🔒</span>';
     h+='<tr><td>'+dataBR(r.data)+'</td>'
-      +'<td>'+esc(r.motorista||"(motorista)")+'</td>'
-      +'<td class="rc-quem">'+esc(r.registrador||"—")+'</td>'
+      +'<td><span class="rec-mot">'+avatar(r.motorista)+'<span class="rn">'+esc(r.motorista||"(motorista)")+'</span></span></td>'
+      +'<td><span class="quem">'+esc(r.registrador||"—")+'</span></td>'
       +'<td class="rc-em">'+dtBR(r.criado_em)+'</td>'
-      +'<td><div class="row-actions">'+acao+'</div></td></tr>';
+      +'<td style="text-align:right">'+acao+'</td></tr>';
   });
   el("tbl").innerHTML=h;
 }
@@ -219,7 +303,6 @@ async function remover(id, data){
   if(!IS_ADMIN) el("notaSup").classList.remove("hide");
   el("painel").classList.remove("hide");
   el("data").value=hojeISO();
-  // motoristas ativos para a lista de marcação
   var mt = await sb.from("perfis").select("id,nome,email,ativo").eq("papel","motorista").order("nome");
   MOTORISTAS=((mt.data)||[]).filter(function(m){return m.ativo!==false;});
   await carregarDia();
