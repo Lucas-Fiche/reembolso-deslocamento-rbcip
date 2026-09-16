@@ -28,7 +28,8 @@
     </div>
     <a id="lg_admin" class="hide" href="autorizados.html"><button class="ghost" style="margin-top:16px">Gerir e-mails autorizados →</button></a>
     <a id="lg_painel" class="hide" href="painel.html"><button class="ghost">📊 Painel</button></a>
-    <a href="registro.html"><button class="ghost">📝 Registrar deslocamento</button></a>
+    <a id="lg_diarias" class="hide" href="diarias.html"><button class="ghost">🗓️ Registrar Diárias</button></a>
+    <a id="lg_registro" class="hide" href="registro.html"><button class="ghost">📝 Registrar deslocamento</button></a>
 
     <div id="lg_senha_box" class="hide" style="margin-top:14px;border-top:1px solid #E2E8F0;padding-top:14px">
       <label>Definir / alterar senha</label>
@@ -111,12 +112,16 @@ async function refreshUI(){
 
   if(perfil && perfil.ativo === false){ await sb.auth.signOut(); mostrar("loginCodigo"); return; }
 
+  var papel = (perfil && perfil.papel) || "";
   el("lg_nome").textContent  = (perfil && perfil.nome) || session.user.email;
   el("lg_email").textContent = session.user.email;
-  el("lg_papel").textContent = (perfil && perfil.papel) || "—";
-  el("lg_admin").classList.toggle("hide", !(perfil && perfil.papel === "admin"));
-  el("lg_painel").classList.toggle("hide", !(perfil && perfil.papel === "admin"));
-  el("lg_senha_box").classList.toggle("hide", !(perfil && perfil.papel === "admin"));
+  el("lg_papel").textContent = papel || "—";
+  el("lg_admin").classList.toggle("hide", papel !== "admin");
+  el("lg_painel").classList.toggle("hide", papel !== "admin");
+  el("lg_senha_box").classList.toggle("hide", papel !== "admin");
+  // "Registrar Diárias": admin e supervisor. "Registrar deslocamento": todos menos supervisor.
+  el("lg_diarias").classList.toggle("hide", !(papel === "admin" || papel === "supervisor"));
+  el("lg_registro").classList.toggle("hide", papel === "supervisor");
   mostrar("logado");
 }
 

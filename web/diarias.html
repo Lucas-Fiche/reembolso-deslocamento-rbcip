@@ -1,0 +1,187 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>RBCIP — Registrar Diárias</title>
+<link rel="stylesheet" href="estilo.css">
+<style>
+  .toolbar{display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap}
+  .toolbar .fld{flex:0 0 190px}
+  .toolbar .fld input{margin:0}
+  .chklist{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:14px}
+  @media(max-width:560px){.chklist{grid-template-columns:1fr}}
+  .chk{display:flex;align-items:center;gap:10px;padding:11px 13px;border:1.5px solid var(--border);
+    border-radius:10px;cursor:pointer;font-size:14px;font-weight:600;color:var(--text);user-select:none}
+  .chk:hover{background:var(--bg)}
+  .chk.on{border-color:var(--navy-2);background:#EFF6FF}
+  .chk input{width:18px;height:18px;flex:0 0 auto;margin:0;accent-color:var(--navy-2)}
+  .chk .em{font-size:11.5px;font-weight:500;color:var(--text-3);display:block;margin-top:1px}
+  .selcount{font-size:13px;color:var(--text-2);margin-top:14px;font-weight:600}
+  .daygrp td{font-weight:700;font-size:11px;color:var(--text-3);text-transform:uppercase;
+    letter-spacing:.04em;background:var(--bg);padding-top:12px}
+</style>
+</head>
+<body>
+<div class="hdr"><div class="hdr-in"><img class="hdr-logo" src="assets/logo-branca.png" alt="RBCIP"><div><h1>Registrar Diárias</h1><p>Controle de quem vai atuar no dia</p></div></div></div>
+<div class="wrap wide">
+
+  <div id="bloqueio" class="card hide">
+    <h2>Acesso restrito</h2>
+    <p class="muted">Esta página é só para supervisores e administradores.
+      <a class="link" href="login.html" style="display:inline">Entrar</a>.</p>
+  </div>
+
+  <div id="painel" class="hide">
+    <div class="card">
+      <div class="who">
+        <div><h2>Diárias do dia</h2><p class="muted">Marque os motoristas que vão atuar na data escolhida e salve.</p></div>
+        <a class="link" href="login.html" style="display:inline">← voltar</a>
+      </div>
+      <div class="toolbar">
+        <div class="fld">
+          <label>Data</label>
+          <input id="data" type="date" onchange="carregarDia()">
+        </div>
+        <button class="ghost sm" style="width:auto;margin:0" onclick="carregarDia()">↻ Recarregar dia</button>
+      </div>
+      <div id="lista_mot" class="chklist"><p class="muted">Carregando motoristas…</p></div>
+      <div class="selcount" id="selcount"></div>
+      <button id="btnSalvar" onclick="salvarDia()">Salvar diárias do dia</button>
+      <div id="msg" class="msg"></div>
+    </div>
+
+    <div class="card">
+      <h2>Registros recentes <span class="muted" id="contagem"></span></h2>
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th>Data</th><th>Motorista</th><th></th></tr></thead>
+          <tbody id="tbl"><tr><td colspan="3" class="muted">Carregando…</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="config.js"></script>
+<script>
+var sb=null, SESSION=null, PAPEL="", MOTORISTAS=[], NOMES={};
+function el(id){return document.getElementById(id);}
+function msg(tipo,texto){var m=el("msg");m.className="msg show "+tipo;m.textContent=texto;}
+function limpaMsg(){var m=el("msg");m.className="msg";m.textContent="";}
+function esc(s){return String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");}
+function hojeISO(){var d=new Date();return d.getFullYear()+"-"+("0"+(d.getMonth()+1)).slice(-2)+"-"+("0"+d.getDate()).slice(-2);}
+function dataBR(iso){var p=String(iso).split("-");return p.length===3?(p[2]+"/"+p[1]+"/"+p[0]):iso;}
+
+function renderChecklist(marcados){
+  var set={}; (marcados||[]).forEach(function(id){set[id]=1;});
+  if(!MOTORISTAS.length){ el("lista_mot").innerHTML='<p class="muted">Nenhum motorista ativo cadastrado.</p>'; atualizarContagem(); return; }
+  el("lista_mot").innerHTML = MOTORISTAS.map(function(m){
+    return '<label class="chk'+(set[m.id]?" on":"")+'" data-id="'+m.id+'"><input type="checkbox" '+(set[m.id]?"checked":"")+' onchange="onToggle(this)">'
+      +'<span>'+esc(m.nome||"(sem nome)")+'<span class="em">'+esc(m.email||"")+'</span></span></label>';
+  }).join("");
+  atualizarContagem();
+}
+function onToggle(cb){
+  var lab=cb.closest(".chk"); if(lab) lab.classList.toggle("on", cb.checked);
+  atualizarContagem();
+}
+function marcadosAtuais(){
+  return [].slice.call(document.querySelectorAll('#lista_mot input:checked')).map(function(cb){return cb.closest(".chk").getAttribute("data-id");});
+}
+function atualizarContagem(){
+  var n=marcadosAtuais().length;
+  el("selcount").textContent = n ? (n+" motorista(s) marcado(s) para "+dataBR(el("data").value)) : "Nenhum motorista marcado.";
+}
+
+async function carregarDia(){
+  limpaMsg();
+  var data=el("data").value; if(!data){ msg("err","Escolha uma data."); return; }
+  var { data:rows, error } = await sb.from("diarias").select("motorista_id").eq("data",data);
+  if(error){ msg("err","Erro ao ler o dia: "+error.message); renderChecklist([]); return; }
+  renderChecklist((rows||[]).map(function(r){return r.motorista_id;}));
+}
+
+async function salvarDia(){
+  limpaMsg();
+  var data=el("data").value; if(!data){ msg("err","Escolha uma data."); return; }
+  el("btnSalvar").disabled=true;
+  try{
+    var atual = await sb.from("diarias").select("id,motorista_id").eq("data",data);
+    if(atual.error) throw new Error(atual.error.message);
+    var existentes={}; (atual.data||[]).forEach(function(r){existentes[r.motorista_id]=r.id;});
+    var marcados=marcadosAtuais(), marcadoSet={}; marcados.forEach(function(id){marcadoSet[id]=1;});
+
+    var inserir = marcados.filter(function(id){return !existentes[id];})
+      .map(function(id){return {motorista_id:id, data:data, registrado_por:SESSION.user.id};});
+    var removerIds = Object.keys(existentes).filter(function(id){return !marcadoSet[id];}).map(function(id){return existentes[id];});
+
+    if(inserir.length){
+      var ins=await sb.from("diarias").upsert(inserir,{onConflict:"motorista_id,data",ignoreDuplicates:true});
+      if(ins.error) throw new Error(ins.error.message);
+    }
+    if(removerIds.length){
+      var del=await sb.from("diarias").delete().in("id",removerIds);
+      if(del.error) throw new Error(del.error.message);
+    }
+    if(!inserir.length && !removerIds.length){ msg("info","Nada mudou para "+dataBR(data)+"."); }
+    else { msg("ok","Salvo: "+inserir.length+" incluído(s), "+removerIds.length+" removido(s) em "+dataBR(data)+"."); }
+    await carregarRecentes();
+  }catch(e){ msg("err","Erro ao salvar: "+e.message); }
+  finally{ el("btnSalvar").disabled=false; }
+}
+
+async function carregarRecentes(){
+  var { data:rows, error } = await sb.from("diarias")
+    .select("id,data,motorista_id,criado_em")
+    .order("data",{ascending:false}).order("criado_em",{ascending:false}).limit(400);
+  if(error){ el("tbl").innerHTML='<tr><td colspan="3" class="muted">Erro: '+esc(error.message)+'</td></tr>'; return; }
+  if(!rows || !rows.length){ el("tbl").innerHTML='<tr><td colspan="3" class="muted">Nenhuma diária registrada ainda.</td></tr>'; el("contagem").textContent=""; return; }
+  el("contagem").textContent="· "+rows.length;
+  var h="", diaAtual=null;
+  rows.forEach(function(r){
+    if(r.data!==diaAtual){ diaAtual=r.data; h+='<tr class="daygrp"><td colspan="3">'+dataBR(r.data)+'</td></tr>'; }
+    h+='<tr><td>'+dataBR(r.data)+'</td><td>'+esc(NOMES[r.motorista_id]||"(motorista)")+'</td>'
+      +'<td><div class="row-actions"><button class="sm danger" onclick="remover(\''+r.id+'\',\''+r.data+'\')">Remover</button></div></td></tr>';
+  });
+  el("tbl").innerHTML=h;
+}
+
+async function remover(id, data){
+  if(!confirm("Remover esta diária?")) return;
+  var { error } = await sb.from("diarias").delete().eq("id",id);
+  if(error){ msg("err",error.message); return; }
+  await carregarRecentes();
+  if(data===el("data").value) await carregarDia();
+}
+
+(async function(){
+  var c = window.RBCIP_CONFIG || {};
+  if(!c.SUPABASE_URL || String(c.SUPABASE_URL).indexOf("http")!==0 || String(c.SUPABASE_PUBLISHABLE_KEY).indexOf("COLE_")===0){
+    el("bloqueio").classList.remove("hide");
+    el("bloqueio").querySelector("p").innerHTML='Falta preencher <code>web/config.js</code> com a Project URL e a Publishable key.';
+    return;
+  }
+  sb = window.supabase.createClient(c.SUPABASE_URL, c.SUPABASE_PUBLISHABLE_KEY);
+  var { data:{ session } } = await sb.auth.getSession();
+  if(!session){ el("bloqueio").classList.remove("hide"); return; }
+  SESSION=session;
+  var { data: perfil } = await sb.from("perfis").select("papel,ativo").eq("id",session.user.id).maybeSingle();
+  if(!perfil || perfil.ativo===false){ await sb.auth.signOut(); el("bloqueio").classList.remove("hide"); return; }
+  if(perfil.papel!=="admin" && perfil.papel!=="supervisor"){ el("bloqueio").classList.remove("hide"); return; }
+  PAPEL=perfil.papel;
+  el("painel").classList.remove("hide");
+  el("data").value=hojeISO();
+  // motoristas: ativos vão para a lista de marcação; todos entram no mapa de nomes
+  var mt = await sb.from("perfis").select("id,nome,email,ativo").eq("papel","motorista").order("nome");
+  var todos=(mt.data)||[];
+  todos.forEach(function(m){ NOMES[m.id]=m.nome||m.email||"(motorista)"; });
+  MOTORISTAS=todos.filter(function(m){return m.ativo!==false;});
+  await carregarDia();
+  await carregarRecentes();
+})();
+</script>
+</body>
+</html>
