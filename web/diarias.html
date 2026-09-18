@@ -83,6 +83,33 @@
     border:1.5px solid #FECACA;border-radius:9px;font-weight:700}
   .btn-rm:hover{background:var(--danger);color:#fff;border-color:var(--danger)}
   .lk{color:var(--text-3);font-size:14px}
+
+  /* Abas */
+  .tabbar{display:flex;align-items:center;gap:4px;margin-bottom:16px;border-bottom:1px solid var(--border)}
+  .tab{width:auto;margin:0;background:none;border:none;border-bottom:2.5px solid transparent;color:var(--text-2);
+    padding:11px 15px;font-size:14px;font-weight:700;border-radius:0;cursor:pointer;margin-bottom:-1px}
+  .tab:hover{background:transparent;color:var(--navy-2)}
+  .tab.on{color:var(--navy-2);border-bottom-color:var(--navy-2)}
+  .tab-back{margin-left:auto}
+
+  /* Estatísticas */
+  .est-top{display:flex;align-items:center;gap:8px;margin-top:10px;flex-wrap:wrap}
+  .est-top input[type=month]{width:auto;margin:0;padding:10px 12px}
+  .chip.navm{padding:0 13px;height:44px;font-size:15px}
+  details.custom{margin-top:12px}
+  details.custom summary{cursor:pointer;font-size:12.5px;font-weight:700;color:var(--navy-2);
+    user-select:none;list-style:none;display:inline-flex;align-items:center;gap:6px;padding:4px 0}
+  details.custom summary::before{content:"⚙";font-size:13px}
+  details.custom[open] summary{margin-bottom:2px}
+  .est-controls{grid-template-columns:1fr 1fr;max-width:420px}
+  .stat-boxes{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-top:16px}
+  .stat-box{background:linear-gradient(135deg,#F7FAFE,#EDF3FB);border:1px solid #E1EAF5;border-radius:13px;padding:14px 16px}
+  .stat-box .l{font-size:10.5px;text-transform:uppercase;letter-spacing:.04em;color:var(--text-3);font-weight:700}
+  .stat-box .v{font-size:26px;font-weight:800;color:var(--navy);margin-top:3px;line-height:1.1}
+  .stat-box .v small{font-size:13px;font-weight:600;color:var(--text-3)}
+  .bartrack{width:100%;min-width:90px;height:9px;background:#EAF0F7;border-radius:6px;overflow:hidden}
+  .bar{height:100%;border-radius:6px;background:linear-gradient(90deg,var(--navy-2),var(--accent))}
+  .est-n{font-weight:800;color:var(--navy);font-size:15px}
 </style>
 </head>
 <body>
@@ -96,10 +123,16 @@
   </div>
 
   <div id="painel" class="hide">
+    <div class="tabbar">
+      <button class="tab on" id="tab_reg_btn" onclick="mostrarTab('reg')">📝 Registrar</button>
+      <button class="tab" id="tab_est_btn" onclick="mostrarTab('est')">📊 Estatísticas</button>
+      <a class="link tab-back" href="login.html">← voltar</a>
+    </div>
+
+    <div id="tab_reg">
     <div class="card">
       <div class="head-top">
         <div><h2>Diárias do dia</h2><p class="muted">Marque quem vai atuar na data escolhida e salve.</p></div>
-        <a class="link" href="login.html" style="display:inline">← voltar</a>
       </div>
       <div class="controls">
         <div>
@@ -143,6 +176,42 @@
         </table>
       </div>
     </div>
+    </div><!-- /tab_reg -->
+
+    <div id="tab_est" class="hide">
+      <div class="card">
+        <div class="head-top">
+          <div><h2>Resumo por período</h2><p class="muted">Quantas diárias (visitas) cada bolsista realizou no período escolhido.</p></div>
+        </div>
+        <div class="est-top">
+          <button type="button" class="chip navm" onclick="mudaMes(-1)" title="Mês anterior">◀</button>
+          <input id="est_mes" type="month" onchange="aplicarMes()">
+          <button type="button" class="chip navm" onclick="mudaMes(1)" title="Próximo mês">▶</button>
+          <button type="button" class="chip" onclick="mesRapido(0)">Este mês</button>
+        </div>
+        <details class="custom">
+          <summary>Período personalizado</summary>
+          <div class="controls est-controls">
+            <div><label>De</label><input id="est_ini" type="date" onchange="carregarStats()"></div>
+            <div><label>Até</label><input id="est_fim" type="date" onchange="carregarStats()"></div>
+          </div>
+        </details>
+        <div id="est_resumo" class="stat-boxes"></div>
+      </div>
+
+      <div class="card">
+        <div class="head-top">
+          <div><h2>Diárias por bolsista <span class="muted" id="est_lbl"></span></h2></div>
+          <button type="button" class="chip" onclick="exportarStatsCSV()">⬇ Exportar CSV</button>
+        </div>
+        <div class="tbl-wrap">
+          <table class="rec">
+            <thead><tr><th>Bolsista</th><th style="text-align:right">Diárias</th><th>Proporção</th></tr></thead>
+            <tbody id="est_tbl"><tr><td colspan="3" class="muted">Selecione um período.</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </div><!-- /tab_est -->
   </div>
 
 </div>
@@ -151,6 +220,7 @@
 <script src="config.js"></script>
 <script>
 var sb=null, SESSION=null, PAPEL="", IS_ADMIN=false, MOTORISTAS=[], REGISTRADOS_DIA={};
+var MOT_NOMES={}, STATS_ARR=[], STATS_PER={ini:"",fim:""}, STATS_LOADED=false;
 var CHECK_SVG='<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="#fff" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>';
 var AV_CORES=["#2E6BAD","#0EA5E9","#0891B2","#059669","#16A34A","#7C3AED","#4F46E5","#9333EA","#DB2777","#E11D48","#EA580C","#D97706"];
 function el(id){return document.getElementById(id);}
@@ -285,6 +355,72 @@ async function remover(id, data){
   if(data===el("data").value) await carregarDia();
 }
 
+// ── Abas ──
+function mostrarTab(t){
+  var est=(t==="est");
+  el("tab_reg").classList.toggle("hide", est);
+  el("tab_est").classList.toggle("hide", !est);
+  el("tab_reg_btn").classList.toggle("on", !est);
+  el("tab_est_btn").classList.toggle("on", est);
+  if(est && !STATS_LOADED){ STATS_LOADED=true; el("est_mes").value=ymNow(); aplicarMes(); }
+}
+
+// ── Estatísticas (resumo por período) ──
+function ymNow(){ var d=new Date(); return d.getFullYear()+"-"+("0"+(d.getMonth()+1)).slice(-2); }
+function mesBounds(ym){ var p=String(ym).split("-"), y=+p[0], m=+p[1];
+  var ini=y+"-"+("0"+m).slice(-2)+"-01", last=new Date(y,m,0).getDate();
+  return [ini, y+"-"+("0"+m).slice(-2)+"-"+("0"+last).slice(-2)]; }
+function aplicarMes(){ var ym=el("est_mes").value; if(!ym) return; var b=mesBounds(ym);
+  el("est_ini").value=b[0]; el("est_fim").value=b[1]; carregarStats(); }
+function mudaMes(delta){ var ym=el("est_mes").value||ymNow(), p=ym.split("-");
+  var d=new Date(+p[0], (+p[1]-1)+delta, 1);
+  el("est_mes").value=d.getFullYear()+"-"+("0"+(d.getMonth()+1)).slice(-2); aplicarMes(); }
+function mesRapido(off){ var d=new Date(); d=new Date(d.getFullYear(), d.getMonth()+off, 1);
+  el("est_mes").value=d.getFullYear()+"-"+("0"+(d.getMonth()+1)).slice(-2); aplicarMes(); }
+function _sbox(l,v,sub){ return '<div class="stat-box"><div class="l">'+l+'</div><div class="v">'+v+(sub?' <small>'+sub+'</small>':'')+'</div></div>'; }
+
+async function carregarStats(){
+  var ini=el("est_ini").value, fim=el("est_fim").value;
+  if(!ini || !fim){ return; }
+  if(ini>fim){ var t=ini; ini=fim; fim=t; el("est_ini").value=ini; el("est_fim").value=fim; }
+  el("est_tbl").innerHTML='<tr><td colspan="3" class="muted">Carregando…</td></tr>';
+  var { data:rows, error } = await sb.from("diarias").select("motorista_id,data").gte("data",ini).lte("data",fim);
+  if(error){ el("est_tbl").innerHTML='<tr><td colspan="3" class="muted">Erro: '+esc(error.message)+'</td></tr>'; return; }
+  rows=rows||[];
+  var porMot={}, dias={}, total=rows.length;
+  rows.forEach(function(r){ porMot[r.motorista_id]=(porMot[r.motorista_id]||0)+1; dias[r.data]=1; });
+  var arr=Object.keys(porMot).map(function(id){ return {nome:MOT_NOMES[id]||"(motorista)", n:porMot[id]}; });
+  arr.sort(function(a,b){ return b.n-a.n || a.nome.localeCompare(b.nome); });
+  STATS_ARR=arr; STATS_PER={ini:ini,fim:fim};
+  var nBols=arr.length, nDias=Object.keys(dias).length, maxN=arr.length?arr[0].n:0;
+
+  el("est_resumo").innerHTML =
+      _sbox("Total de diárias", total)
+    + _sbox("Bolsistas que atuaram", nBols)
+    + _sbox("Dias com atuação", nDias)
+    + _sbox("Média por bolsista", (nBols? (total/nBols) : 0).toFixed(1).replace(".",","), "diárias");
+  el("est_lbl").textContent = "· "+dataBR(ini)+" a "+dataBR(fim);
+
+  if(!arr.length){ el("est_tbl").innerHTML='<tr><td colspan="3" class="muted">Nenhuma diária nesse período.</td></tr>'; return; }
+  el("est_tbl").innerHTML = arr.map(function(p){
+    var pct = maxN? Math.round(p.n/maxN*100) : 0;
+    return '<tr><td><span class="rec-mot">'+avatar(p.nome)+'<span class="rn">'+esc(p.nome)+'</span></span></td>'
+      +'<td style="text-align:right"><span class="est-n">'+p.n+'</span></td>'
+      +'<td><div class="bartrack"><div class="bar" style="width:'+pct+'%"></div></div></td></tr>';
+  }).join("");
+}
+function _csv(s){ s=String(s==null?"":s); return /[";\n]/.test(s) ? '"'+s.replace(/"/g,'""')+'"' : s; }
+function exportarStatsCSV(){
+  if(!STATS_ARR.length){ alert("Nada para exportar neste período."); return; }
+  var linhas=["Bolsista;Diárias"];
+  STATS_ARR.forEach(function(p){ linhas.push(_csv(p.nome)+";"+p.n); });
+  var blob=new Blob(["﻿"+linhas.join("\r\n")], {type:"text/csv;charset=utf-8;"});
+  var url=URL.createObjectURL(blob), a=document.createElement("a");
+  a.href=url; a.download="diarias_"+STATS_PER.ini+"_a_"+STATS_PER.fim+".csv";
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  setTimeout(function(){ URL.revokeObjectURL(url); }, 1500);
+}
+
 (async function(){
   var c = window.RBCIP_CONFIG || {};
   if(!c.SUPABASE_URL || String(c.SUPABASE_URL).indexOf("http")!==0 || String(c.SUPABASE_PUBLISHABLE_KEY).indexOf("COLE_")===0){
@@ -304,7 +440,9 @@ async function remover(id, data){
   el("painel").classList.remove("hide");
   el("data").value=hojeISO();
   var mt = await sb.from("perfis").select("id,nome,email,ativo").eq("papel","motorista").order("nome");
-  MOTORISTAS=((mt.data)||[]).filter(function(m){return m.ativo!==false;});
+  var todos=(mt.data)||[];
+  todos.forEach(function(m){ MOT_NOMES[m.id]=m.nome||m.email||"(motorista)"; });
+  MOTORISTAS=todos.filter(function(m){return m.ativo!==false;});
   await carregarDia();
   await carregarRecentes();
 })();
