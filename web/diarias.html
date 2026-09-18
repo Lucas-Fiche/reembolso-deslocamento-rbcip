@@ -96,11 +96,16 @@
   .est-top{display:flex;align-items:center;gap:8px;margin-top:10px;flex-wrap:wrap}
   .est-top input[type=month]{width:auto;margin:0;padding:10px 12px}
   .chip.navm{padding:0 13px;height:44px;font-size:15px}
-  details.custom{margin-top:12px}
+  details.custom{margin-top:14px}
   details.custom summary{cursor:pointer;font-size:12.5px;font-weight:700;color:var(--navy-2);
-    user-select:none;list-style:none;display:inline-flex;align-items:center;gap:6px;padding:4px 0}
-  details.custom summary::before{content:"⚙";font-size:13px}
-  details.custom[open] summary{margin-bottom:2px}
+    user-select:none;list-style:none;display:inline-flex;align-items:center;gap:8px;
+    padding:8px 13px;border:1.5px solid var(--border);border-radius:10px;background:var(--surface);
+    transition:background .15s,border-color .15s}
+  details.custom summary::-webkit-details-marker{display:none}
+  details.custom summary:hover{background:var(--bg);border-color:#C7D3E1}
+  details.custom[open] summary{border-color:var(--navy-2);background:#F4F9FE;margin-bottom:10px}
+  details.custom summary .cae{transition:transform .18s;color:var(--navy-2);display:inline-flex}
+  details.custom[open] summary .cae{transform:rotate(180deg)}
   .est-controls{grid-template-columns:1fr 1fr;max-width:420px}
   .stat-boxes{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-top:16px}
   .stat-box{background:linear-gradient(135deg,#F7FAFE,#EDF3FB);border:1px solid #E1EAF5;border-radius:13px;padding:14px 16px}
@@ -126,7 +131,7 @@
     <div class="tabbar">
       <button class="tab on" id="tab_reg_btn" onclick="mostrarTab('reg')">📝 Registrar</button>
       <button class="tab" id="tab_est_btn" onclick="mostrarTab('est')">📊 Estatísticas</button>
-      <a class="link tab-back" href="login.html">← voltar</a>
+      <a class="btn-voltar tab-back" href="login.html"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>Voltar</a>
     </div>
 
     <div id="tab_reg">
@@ -190,7 +195,7 @@
           <button type="button" class="chip" onclick="mesRapido(0)">Este mês</button>
         </div>
         <details class="custom">
-          <summary>Período personalizado</summary>
+          <summary><span class="cae"><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></span>Período personalizado</summary>
           <div class="controls est-controls">
             <div><label>De</label><input id="est_ini" type="date" onchange="carregarStats()"></div>
             <div><label>Até</label><input id="est_fim" type="date" onchange="carregarStats()"></div>

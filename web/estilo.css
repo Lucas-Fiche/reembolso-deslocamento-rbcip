@@ -41,6 +41,15 @@ button.danger{background:var(--danger)}
   padding:6px 6px;width:auto;margin:12px 0 0;border-radius:8px;
   -webkit-tap-highlight-color:transparent;user-select:none;-webkit-user-select:none;transition:background .15s}
 .link:hover{background:var(--bg);text-decoration:underline}
+
+/* Botão "Voltar" — padrão em todo o sistema */
+.btn-voltar{display:inline-flex;align-items:center;gap:6px;width:auto;margin:0;padding:8px 14px;
+  background:var(--surface);border:1.5px solid var(--border);border-radius:10px;color:var(--text-2);
+  font-size:13px;font-weight:600;text-decoration:none;cursor:pointer;line-height:1;
+  -webkit-tap-highlight-color:transparent;user-select:none;-webkit-user-select:none;
+  transition:background .15s,border-color .15s,color .15s,box-shadow .15s}
+.btn-voltar:hover{background:var(--bg);border-color:#C7D3E1;color:var(--navy);box-shadow:0 2px 8px rgba(26,58,92,.07)}
+.btn-voltar svg{flex:0 0 auto}
 .msg{margin-top:14px;padding:11px 13px;border-radius:10px;font-size:13.5px;display:none}
 .msg.show{display:block}
 .msg.err{background:var(--danger-bg);color:#991B1B;border:1px solid #FECACA}
