@@ -249,6 +249,7 @@ tbody tr.sel{background:var(--primary-light)}
     <input type="date" id="fAte" onchange="render()" title="Data final (check-in)">
     <button class="clr" onclick="limparData()" title="Limpar datas">✕ datas</button>
     <input id="fBusca" type="text" placeholder="Buscar por nome, CPF ou protocolo…" oninput="render()">
+    <button class="btn" style="background:var(--primary);color:#fff;border-color:var(--primary)" onclick="baixarSolicitacoesCSV()" title="Baixa em planilha (CSV/Excel) as solicitações do filtro atual">⬇️ Baixar (CSV)</button>
     <div id="filtroAtivo" class="hide"></div>
   </div>
 
@@ -1007,6 +1008,40 @@ function baixarExtratoCSV(){
   a.href=url; a.download=nome; document.body.appendChild(a); a.click(); document.body.removeChild(a);
   setTimeout(function(){ URL.revokeObjectURL(url); }, 1500);
   msgTopo("Exportado (CSV) ✓");
+}
+// ── Baixar as SOLICITAÇÕES do filtro atual (CSV que abre no Excel) ──
+function baixarSolicitacoesCSV(){
+  aplicarFiltro();
+  var rows=FILTRADOS.slice().sort(function(a,b){ var da=a.checkin_em||a.criado_em||"", db=b.checkin_em||b.criado_em||""; return da<db?1:(da>db?-1:0); });
+  if(!rows.length){ msgTopo("Nada para exportar com esse filtro.", true); return; }
+  var num=function(v,d){ return (Number(v)||0).toFixed(d).replace(".",","); };
+  var dtc=function(v){ return v? dt(v) : ""; };
+  var head=["Protocolo","Status","Nome","CPF","RG","Órgão","E-mail","Telefone","Veículo","Placa",
+    "Check-in","Check-out","Distância (km)","Consumo (km/L)","Preço base (R$/L)","Preço cupom (R$/L)","Usou estimativa",
+    "Combustível estimado (R$)","Combustível real (R$)","Pedágios (R$)","Total (R$)",
+    "Qtd pedágios","Qtd paradas","Pedágios pendentes","Caronas","Recibo (link)","Observações","Criado em"];
+  var linhas=[head.map(_csv).join(";")];
+  rows.forEach(function(r){
+    linhas.push([
+      _csv(r.protocolo), _csv(statusLabel(r.status)), _csv(r.nome), _csv(r.cpf), _csv(r.rg), _csv(r.orgao),
+      _csv(r.email), _csv(r.telefone), _csv(r.veiculo), _csv(r.placa),
+      _csv(dtc(r.checkin_em)), _csv(dtc(r.checkout_em)),
+      num(r.dist_total,1), num(r.consumo,2), num(r.preco_base,3), (r.preco_real!=null&&r.preco_real!==""?num(r.preco_real,3):""),
+      (r.usou_estimativa?"Sim":"Não"),
+      num(r.val_estimado,2), num(r.val_real,2), num(r.val_pedagios,2), num(r.val_total,2),
+      (parseInt(r.qtd_pedagios)||0), (parseInt(r.qtd_paradas)||0), (parseInt(r.qtd_ped_pendentes)||0),
+      _csv(r.caronas), _csv(r.recibo_link), _csv(r.validacao), _csv(dtc(r.criado_em))
+    ].join(";"));
+  });
+  var stv=el("fStatus").value;
+  var suf = stv ? (stv.indexOf("__")===0 ? stv.replace(/_/g,"").toLowerCase() : stv.toLowerCase().replace(/[^a-z0-9]/g,"")) : "todas";
+  var stamp=new Date().toISOString().slice(0,10);
+  var nome="solicitacoes_"+suf+"_"+stamp+".csv";
+  var blob=new Blob(["﻿"+linhas.join("\r\n")], {type:"text/csv;charset=utf-8;"});
+  var url=URL.createObjectURL(blob), a=document.createElement("a");
+  a.href=url; a.download=nome; document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  setTimeout(function(){ URL.revokeObjectURL(url); }, 1500);
+  msgTopo(rows.length+" solicitação(ões) exportada(s) ✓");
 }
 // Indicador colorido (barra) com estado vs. limite.
 function _indicador(titulo, v, limite, fmt){
