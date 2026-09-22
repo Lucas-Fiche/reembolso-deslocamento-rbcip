@@ -300,6 +300,38 @@ tbody tr.sel{background:var(--primary-light)}
   </div>
 </div>
 
+<div id="modalCorrige" class="modal-bg hide" style="z-index:530">
+  <div class="modal">
+    <div style="display:flex;justify-content:space-between;align-items:center">
+      <h3>🔧 Corrigir status</h3>
+      <button class="btn" onclick="fecharCorrige()">Fechar</button>
+    </div>
+    <p id="corr_sub" style="color:var(--text3);font-size:12.5px;margin:8px 0 0"></p>
+    <div style="background:#FFFBEB;border:1px solid #FDE68A;color:#92400E;font-size:12.5px;border-radius:8px;padding:9px 11px;margin-top:12px;line-height:1.45">
+      Use para corrigir um status marcado por engano. A alteração fica <b>registrada no histórico</b> do pedido — nada é apagado. Não gera recibo automaticamente.
+    </div>
+    <label style="display:block;font-size:11px;color:var(--text2);font-weight:600;margin:14px 0 4px">Novo status</label>
+    <select id="corr_status" style="width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:8px;font-family:inherit;font-size:14px;background:var(--bg);color:var(--text)">
+      <option value="ABERTO">Aberto (em andamento)</option>
+      <option value="COMPLETO">Aguardando análise</option>
+      <option value="REVISÃO">Em revisão</option>
+      <option value="CORRIGIDO">Corrigido</option>
+      <option value="APROVADO">Aprovado</option>
+      <option value="PAGO">Pago</option>
+      <option value="REPROVADO">Reprovado</option>
+    </select>
+    <label style="display:block;font-size:11px;color:var(--text2);font-weight:600;margin:12px 0 4px">Motivo da correção (opcional — fica no histórico)</label>
+    <textarea id="corr_motivo" placeholder="Ex.: marcado como Pago por engano; o correto é Aprovado." style="width:100%;min-height:70px;padding:10px 12px;border:1px solid var(--border);border-radius:8px;font-family:inherit;font-size:14px;background:var(--bg);color:var(--text);resize:vertical"></textarea>
+    <label style="display:flex;align-items:center;gap:8px;margin-top:12px;font-size:13px;color:var(--text2);font-weight:600;cursor:pointer">
+      <input type="checkbox" id="corr_email" style="width:auto;margin:0"> Avisar o pesquisador por e-mail sobre a mudança
+    </label>
+    <div style="margin-top:16px;display:flex;gap:8px;justify-content:flex-end">
+      <button class="btn" onclick="fecharCorrige()">Cancelar</button>
+      <button class="btn" id="corr_ok" style="background:var(--primary);color:#fff;border-color:var(--primary)" onclick="confirmarCorrige()">Salvar correção</button>
+    </div>
+  </div>
+</div>
+
 <div id="modalEdit" class="modal-bg hide" style="z-index:500">
   <div class="modal wide">
     <div style="display:flex;justify-content:space-between;align-items:center">
@@ -433,6 +465,52 @@ function confirmarMotivo(){
   if(!motivo){ el("mot_texto").focus(); msgTopo("Escreva o motivo antes de confirmar.", true); return; }
   var ctx=_motCtx; _motCtx=null; fecharMotivo();
   mudarStatus(ctx.id, ctx.novo, motivo);
+}
+
+// ── Corrigir status (admin) — muda o status por engano, com registro no histórico ──
+var _corrCtx=null;
+function abrirCorrige(id){
+  var reg=DADOS.filter(function(x){return x.id===id;})[0]||{};
+  _corrCtx={id:id, atual:reg.status, protocolo:reg.protocolo};
+  el("corr_sub").textContent = "Protocolo "+(reg.protocolo||"")+" · status atual: "+statusLabel(reg.status);
+  el("corr_status").value = reg.status || "COMPLETO";
+  el("corr_motivo").value = "";
+  el("corr_email").checked = false;
+  el("modalCorrige").classList.remove("hide");
+}
+function fecharCorrige(){ el("modalCorrige").classList.add("hide"); }
+async function confirmarCorrige(){
+  if(!_corrCtx) return;
+  var ctx=_corrCtx;
+  var novo=el("corr_status").value, motivo=el("corr_motivo").value.trim(), notificar=el("corr_email").checked;
+  if(novo===ctx.atual){ msgTopo("O status escolhido é o mesmo atual.", true); return; }
+  if(!confirm("Alterar o status do "+ctx.protocolo+' de "'+statusLabel(ctx.atual)+'" para "'+statusLabel(novo)+'"?')) return;
+  _corrCtx=null; fecharCorrige();
+  bloquear("Corrigindo status…");
+  try{
+    var reg=DADOS.filter(function(x){return x.id===ctx.id;})[0]||{};
+    var cur=await sb.from("reembolsos").select("validacao").eq("id",ctx.id).maybeSingle();
+    var base=(cur && cur.data && cur.data.validacao)?cur.data.validacao+" | ":"";
+    var carimbo="CORREÇÃO ("+(QUEM||"admin")+", "+dt(new Date().toISOString())+"): status de "+statusLabel(ctx.atual)+" para "+statusLabel(novo)+(motivo?(". Motivo: "+motivo):".");
+    var { error }=await sb.from("reembolsos").update({status:novo, validacao:base+carimbo}).eq("id",ctx.id);
+    if(error){ msgTopo("Erro ao corrigir: "+error.message, true); return; }
+    if(notificar){
+      var cfg=window.RBCIP_CONFIG||{};
+      if(cfg.CARTEIRO_URL){
+        try{
+          var s1=await sb.auth.getSession();
+          await fetchTimeout(cfg.CARTEIRO_URL, { method:"POST", redirect:"follow", headers:{"Content-Type":"text/plain"},
+            body: JSON.stringify({action:"enviar_aviso_status", jwt:s1.data.session.access_token, protocolo:ctx.protocolo, novo_status:novo, observacao:(motivo||"Correção de status pela administração.")}) }, 30000);
+          msgTopo("Status corrigido e e-mail enviado ✉️");
+        }catch(e){ msgTopo("Status corrigido (não consegui confirmar o e-mail).", true); }
+      } else { msgTopo("Status corrigido ✓ (carteiro não configurado para e-mail)."); }
+    } else {
+      msgTopo("Status corrigido para "+statusLabel(novo)+" ✓");
+    }
+  } finally {
+    try{ await carregar(); await abrirDetalhe(ctx.id); }catch(e){}
+    desbloquear();
+  }
 }
 
 // ── Modo noturno (claro/escuro) ──
@@ -764,13 +842,14 @@ function renderActions(){
   var d=sel, st=d.status, id=d.id;
   var editBtn='<button class="abtn-edit" onclick="editarDados(\''+id+'\')">✏️ Editar dados / paradas</button>';
   var reciboBtn='<button class="abtn-edit" onclick="gerarRecibo(\''+id+'\')">📄 '+(d.recibo_link?"Gerar recibo novamente":"Gerar recibo")+'</button>';
+  var corrBtn='<button class="abtn-edit" onclick="abrirCorrige(\''+id+'\')">🔧 Corrigir status</button>';
   var h='<div class="action-bar-label">Ações — '+esc(d.protocolo)+'</div>';
   if(st==="PAGO"){
-    h+='<div class="approved-msg" style="background:#CCFBF1;border-color:#99F6E4;color:#0F766E">💰 Reembolso pago — processo concluído.</div>'+editBtn+reciboBtn;
+    h+='<div class="approved-msg" style="background:#CCFBF1;border-color:#99F6E4;color:#0F766E">💰 Reembolso pago — processo concluído.</div>'+editBtn+reciboBtn+corrBtn;
     bar.innerHTML=h; return;
   }
   if(st==="ABERTO"){
-    h+='<div class="action-bar-empty">Viagem em andamento — aguardando o motorista finalizar.</div>'+editBtn;
+    h+='<div class="action-bar-empty">Viagem em andamento — aguardando o motorista finalizar.</div>'+editBtn+corrBtn;
     bar.innerHTML=h; return;
   }
   if(st==="CORRIGIDO")h+='<div class="corr-note">🔄 Voltou da correção — reanalise antes de decidir.</div>';
@@ -783,7 +862,7 @@ function renderActions(){
   };
   h+='<div class="action-btns">';
   ["APROVADO","PAGO","REVISÃO","REPROVADO"].forEach(function(k){ if(k!==st)h+=btns[k]; });
-  h+='</div>'+editBtn+reciboBtn;
+  h+='</div>'+editBtn+reciboBtn+corrBtn;
   bar.innerHTML=h;
 }
 
