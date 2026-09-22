@@ -311,7 +311,7 @@ tbody tr.sel{background:var(--primary-light)}
       Use para corrigir um status marcado por engano. A alteração fica <b>registrada no histórico</b> do pedido — nada é apagado. Não gera recibo automaticamente.
     </div>
     <label style="display:block;font-size:11px;color:var(--text2);font-weight:600;margin:14px 0 4px">Novo status</label>
-    <select id="corr_status" style="width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:8px;font-family:inherit;font-size:14px;background:var(--bg);color:var(--text)">
+    <select id="corr_status" onchange="corrEmailHint()" style="width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:8px;font-family:inherit;font-size:14px;background:var(--bg);color:var(--text)">
       <option value="ABERTO">Aberto (em andamento)</option>
       <option value="COMPLETO">Aguardando análise</option>
       <option value="REVISÃO">Em revisão</option>
@@ -325,6 +325,7 @@ tbody tr.sel{background:var(--primary-light)}
     <label style="display:flex;align-items:center;gap:8px;margin-top:12px;font-size:13px;color:var(--text2);font-weight:600;cursor:pointer">
       <input type="checkbox" id="corr_email" style="width:auto;margin:0"> Avisar o pesquisador por e-mail sobre a mudança
     </label>
+    <div id="corr_hint" class="hide" style="font-size:12px;color:#92400E;margin-top:6px">⚠️ Este status não tem aviso por e-mail — o e-mail só é enviado para <b>Aprovado, Pago, Em revisão ou Reprovado</b>.</div>
     <div style="margin-top:16px;display:flex;gap:8px;justify-content:flex-end">
       <button class="btn" onclick="fecharCorrige()">Cancelar</button>
       <button class="btn" id="corr_ok" style="background:var(--primary);color:#fff;border-color:var(--primary)" onclick="confirmarCorrige()">Salvar correção</button>
@@ -476,7 +477,12 @@ function abrirCorrige(id){
   el("corr_status").value = reg.status || "COMPLETO";
   el("corr_motivo").value = "";
   el("corr_email").checked = false;
+  corrEmailHint();
   el("modalCorrige").classList.remove("hide");
+}
+function corrEmailHint(){
+  var SEM={ABERTO:1,COMPLETO:1,CORRIGIDO:1};
+  el("corr_hint").classList.toggle("hide", !SEM[el("corr_status").value]);
 }
 function fecharCorrige(){ el("modalCorrige").classList.add("hide"); }
 async function confirmarCorrige(){
@@ -496,14 +502,22 @@ async function confirmarCorrige(){
     if(error){ msgTopo("Erro ao corrigir: "+error.message, true); return; }
     if(notificar){
       var cfg=window.RBCIP_CONFIG||{};
-      if(cfg.CARTEIRO_URL){
+      var SEM_EMAIL={ABERTO:1,COMPLETO:1,CORRIGIDO:1}; // status sem modelo de e-mail no carteiro
+      if(!cfg.CARTEIRO_URL){
+        msgTopo("Status corrigido ✓ — mas o envio de e-mail não está configurado (carteiro).", true);
+      } else if(SEM_EMAIL[novo]){
+        msgTopo('Status corrigido para "'+statusLabel(novo)+'" ✓ — este status não tem aviso por e-mail; nada foi enviado.', true);
+      } else {
         try{
           var s1=await sb.auth.getSession();
-          await fetchTimeout(cfg.CARTEIRO_URL, { method:"POST", redirect:"follow", headers:{"Content-Type":"text/plain"},
+          var resp=await fetchTimeout(cfg.CARTEIRO_URL, { method:"POST", redirect:"follow", headers:{"Content-Type":"text/plain"},
             body: JSON.stringify({action:"enviar_aviso_status", jwt:s1.data.session.access_token, protocolo:ctx.protocolo, novo_status:novo, observacao:(motivo||"Correção de status pela administração.")}) }, 30000);
-          msgTopo("Status corrigido e e-mail enviado ✉️");
-        }catch(e){ msgTopo("Status corrigido (não consegui confirmar o e-mail).", true); }
-      } else { msgTopo("Status corrigido ✓ (carteiro não configurado para e-mail)."); }
+          var out={}; try{ out=JSON.parse(await resp.text()); }catch(_){}
+          if(out.enviado) msgTopo("Status corrigido e e-mail enviado ao pesquisador ✉️");
+          else if(out.success) msgTopo("Status corrigido ✓ — e-mail NÃO enviado ("+(out.motivo||"motivo não informado")+").", true);
+          else msgTopo("Status corrigido ✓, mas o e-mail falhou"+(out.error?": "+out.error:"")+".", true);
+        }catch(e){ msgTopo("Status corrigido ✓, mas não consegui confirmar o e-mail ("+(e&&e.message||"erro")+").", true); }
+      }
     } else {
       msgTopo("Status corrigido para "+statusLabel(novo)+" ✓");
     }
