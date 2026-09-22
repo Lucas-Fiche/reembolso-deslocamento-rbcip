@@ -188,6 +188,9 @@ for r in wp.iter_rows(min_row=2, values_only=True):
     ini = ini.split(" ")[0] if ini else None
     fim = fim.split(" ")[0] if fim else None
     lines.append(f"insert into precos_gasolina (inicio,fim,valor,registrado_por) select {q(ini)},{q(fim)},{q(val)},{q(reg)} where not exists (select 1 from precos_gasolina where inicio={q(ini)} and valor={q(val)});")
+# vincula os reembolsos importados a quem JÁ tem conta (casa por e-mail).
+# Quem ainda não logou é vinculado no primeiro login (trigger da migração 0016).
+lines.append("update reembolsos r set motorista_id = p.id from perfis p where r.motorista_id is null and r.email is not null and r.email = p.email;")
 # relatório: quantos reembolsos foram efetivamente adicionados nesta rodada
 lines.append("select (select count(*) from reembolsos) - (select count(*) from _existentes) as reembolsos_novos_importados, (select count(*) from reembolsos) as total_no_banco;")
 lines.append("commit;")
