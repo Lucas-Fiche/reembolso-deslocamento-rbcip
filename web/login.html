@@ -60,14 +60,14 @@
       <button class="link" onclick="voltarEmail()">← usar outro e-mail</button>
     </div>
 
-    <button class="ghost" onclick="mostrar('loginSenha')">Sou administrador (entrar com senha)</button>
+    <button class="ghost" onclick="mostrar('loginSenha')">Entrar com e-mail e senha</button>
     <div id="msgCodigo" class="msg"></div>
   </div>
 
-  <!-- LOGIN POR SENHA (admin) -->
+  <!-- LOGIN POR SENHA (admin / supervisor) -->
   <div id="loginSenha" class="card hide">
     <h2>Entrar com senha</h2>
-    <p class="muted">Acesso administrativo.</p>
+    <p class="muted">Para quem já definiu uma senha (administradores e supervisores).</p>
     <label>E-mail</label>
     <input id="sn_email" type="email" placeholder="voce@rbcip.org" autocomplete="email">
     <label>Senha</label>
@@ -118,7 +118,8 @@ async function refreshUI(){
   el("lg_papel").textContent = papel || "—";
   el("lg_admin").classList.toggle("hide", papel !== "admin");
   el("lg_painel").classList.toggle("hide", papel !== "admin");
-  el("lg_senha_box").classList.toggle("hide", papel !== "admin");
+  // Admin e supervisor podem definir senha para entrar com e-mail e senha.
+  el("lg_senha_box").classList.toggle("hide", !(papel === "admin" || papel === "supervisor"));
   // "Registrar Diárias": admin e supervisor. "Registrar deslocamento": todos menos supervisor.
   el("lg_diarias").classList.toggle("hide", !(papel === "admin" || papel === "supervisor"));
   el("lg_registro").classList.toggle("hide", papel === "supervisor");
