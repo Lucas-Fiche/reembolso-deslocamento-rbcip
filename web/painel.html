@@ -9,6 +9,8 @@
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <style>
+.ico{width:16px;height:16px;flex:0 0 auto;vertical-align:-3px;display:inline-block}
+.ico-sm{width:14px;height:14px;vertical-align:-2px}
 :root{
   --bg:#F1F5F9;--surface:#FFF;--surface2:#F8FAFC;--primary:#2563EB;--primary-light:#DBEAFE;
   --success:#16A34A;--success-light:#DCFCE7;--warning:#B45309;--warning-bg:#FEF3C7;--danger:#DC2626;--danger-light:#FEE2E2;
@@ -205,7 +207,7 @@ tbody tr.sel{background:var(--primary-light)}
 <div id="carregando" class="center"><div class="loading">Carregando…</div></div>
 
 <div id="semAcesso" class="center hide"><div class="msgbox">
-  <h2>🔒 Acesso restrito</h2>
+  <h2><svg class='ico' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><rect x='4.5' y='10.5' width='15' height='10' rx='2'/><path d='M8 10.5V7a4 4 0 0 1 8 0v3.5'/></svg> Acesso restrito</h2>
   <p id="semAcessoMsg">Esta página é só para administradores. Faça login para continuar.</p>
   <a class="cta" href="login.html">Ir para o login</a>
 </div></div>
@@ -220,12 +222,12 @@ tbody tr.sel{background:var(--primary-light)}
     <div class="hdr-right">
       <span id="quem"></span>
       <button class="btn" id="temaBtn" onclick="toggleTema()" title="Alternar modo claro/escuro" aria-label="Alternar modo claro/escuro" style="display:inline-flex;align-items:center;justify-content:center;padding:7px 10px"></button>
-      <button class="btn" onclick="location.href='login.html'">🏠 Início</button>
-      <button class="btn" onclick="location.href='painel-van.html'">🚐 Vans</button>
-      <button class="btn" onclick="abrirStats()">📊 Estatísticas</button>
-      <button class="btn" onclick="abrirExtrato()">📅 Extrato</button>
-      <button class="btn" onclick="abrirPrecos()">⛽ Gasolina</button>
-      <button class="btn" onclick="carregar(this)">↻ Atualizar</button>
+      <button class="btn" onclick="location.href='login.html'"><svg class='ico' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M3 10.5 12 3l9 7.5'/><path d='M5 9.5V21h14V9.5'/></svg> Início</button>
+      <button class="btn" onclick="location.href='painel-van.html'"><svg class='ico' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M3 16.5V6h11v10.5'/><path d='M14 9h3.5l3.5 3.5v4H18'/><path d='M3 16.5h4M11 16.5h3'/><circle cx='8.5' cy='17.5' r='1.8'/><circle cx='17' cy='17.5' r='1.8'/></svg> Vans</button>
+      <button class="btn" onclick="abrirStats()"><svg class='ico' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M4 20V11'/><path d='M10 20V5'/><path d='M16 20v-6'/><path d='M3 20h18'/></svg> Estatísticas</button>
+      <button class="btn" onclick="abrirExtrato()"><svg class='ico' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><rect x='3' y='4.5' width='18' height='16' rx='2'/><path d='M3 9h18M8 2.5v4M16 2.5v4'/></svg> Extrato</button>
+      <button class="btn" onclick="abrirPrecos()"><svg class='ico' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M5 21V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v16'/><path d='M4 21h11'/><path d='M13 9h3.5a2 2 0 0 1 2 2v5a1.6 1.6 0 0 0 3.2 0V8.5L18 5.5'/></svg> Gasolina</button>
+      <button class="btn" onclick="carregar(this)"><svg class='ico' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M3.5 8a8 8 0 0 1 13.8-2.8L21 8'/><path d='M21 4v4h-4'/><path d='M20.5 16a8 8 0 0 1-13.8 2.8L3 16'/><path d='M3 20v-4h4'/></svg> Atualizar</button>
       <button class="btn" onclick="sair()">Sair</button>
     </div>
   </div>
@@ -242,14 +244,14 @@ tbody tr.sel{background:var(--primary-light)}
       <option value="APROVADO">Aprovado</option>
       <option value="PAGO">Pago</option>
       <option value="REPROVADO">Reprovado</option>
-      <option value="__PEND">⚠️ Com pedágio pendente</option>
-      <option value="__SUSP">🔎 Suspeitas (verificação)</option>
+      <option value="__PEND">Com pedágio pendente</option>
+      <option value="__SUSP">Suspeitas (verificação)</option>
     </select>
     <input type="date" id="fDe" onchange="render()" title="Data inicial (check-in)">
     <input type="date" id="fAte" onchange="render()" title="Data final (check-in)">
     <button class="clr" onclick="limparData()" title="Limpar datas">✕ datas</button>
     <input id="fBusca" type="text" placeholder="Buscar por nome, CPF ou protocolo…" oninput="render()">
-    <button class="btn" style="background:var(--primary);color:#fff;border-color:var(--primary)" onclick="baixarSolicitacoesCSV()" title="Baixa em planilha (CSV/Excel) as solicitações do filtro atual">⬇️ Baixar (CSV)</button>
+    <button class="btn" style="background:var(--primary);color:#fff;border-color:var(--primary)" onclick="baixarSolicitacoesCSV()" title="Baixa em planilha (CSV/Excel) as solicitações do filtro atual"><svg class='ico' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M12 3v12'/><path d='M7.5 11 12 15.5 16.5 11'/><path d='M4.5 20h15'/></svg> Baixar (CSV)</button>
     <div id="filtroAtivo" class="hide"></div>
   </div>
 
@@ -303,7 +305,7 @@ tbody tr.sel{background:var(--primary-light)}
 <div id="modalCorrige" class="modal-bg hide" style="z-index:530">
   <div class="modal">
     <div style="display:flex;justify-content:space-between;align-items:center">
-      <h3>🔧 Corrigir status</h3>
+      <h3><svg class='ico' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M15.5 3.5a4.5 4.5 0 0 0 5.6 5.9L8.4 22.1a2.2 2.2 0 0 1-3.1-3.1L17.9 6.3a4.5 4.5 0 0 1-2.4-2.8z'/></svg> Corrigir status</h3>
       <button class="btn" onclick="fecharCorrige()">Fechar</button>
     </div>
     <p id="corr_sub" style="color:var(--text3);font-size:12.5px;margin:8px 0 0"></p>
@@ -325,7 +327,7 @@ tbody tr.sel{background:var(--primary-light)}
     <label style="display:flex;align-items:center;gap:8px;margin-top:12px;font-size:13px;color:var(--text2);font-weight:600;cursor:pointer">
       <input type="checkbox" id="corr_email" style="width:auto;margin:0"> Avisar o pesquisador por e-mail sobre a mudança
     </label>
-    <div id="corr_hint" class="hide" style="font-size:12px;color:#92400E;margin-top:6px">⚠️ Este status não tem aviso por e-mail — o e-mail só é enviado para <b>Aprovado, Pago, Em revisão ou Reprovado</b>.</div>
+    <div id="corr_hint" class="hide" style="font-size:12px;color:#92400E;margin-top:6px"><svg class='ico' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M12 4 2.6 20h18.8L12 4z'/><path d='M12 10v4M12 17.4v.1'/></svg> Este status não tem aviso por e-mail — o e-mail só é enviado para <b>Aprovado, Pago, Em revisão ou Reprovado</b>.</div>
     <div style="margin-top:16px;display:flex;gap:8px;justify-content:flex-end">
       <button class="btn" onclick="fecharCorrige()">Cancelar</button>
       <button class="btn" id="corr_ok" style="background:var(--primary);color:#fff;border-color:var(--primary)" onclick="confirmarCorrige()">Salvar correção</button>
@@ -336,7 +338,7 @@ tbody tr.sel{background:var(--primary-light)}
 <div id="modalEdit" class="modal-bg hide" style="z-index:500">
   <div class="modal wide">
     <div style="display:flex;justify-content:space-between;align-items:center">
-      <h3>✏️ Editar solicitação</h3>
+      <h3><svg class='ico' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M4 20h4L19 9l-4-4L4 16v4z'/><path d='M14 6l4 4'/></svg> Editar solicitação</h3>
       <button class="btn" onclick="fecharEdit()">Fechar</button>
     </div>
     <div id="edit_corpo"></div>
@@ -370,8 +372,8 @@ tbody tr.sel{background:var(--primary-light)}
 <div id="modalExtrato" class="modal-bg hide">
   <div class="modal wide">
     <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;flex-wrap:wrap">
-      <div><h3>📅 Extrato mensal por motorista</h3><div id="extrato_lbl" style="font-size:13px;color:var(--text3);margin-top:4px"></div></div>
-      <div style="display:flex;gap:8px;flex:0 0 auto"><button class="btn" style="background:var(--primary);color:#fff;border-color:var(--primary)" onclick="baixarExtratoCSV()">⬇️ Baixar CSV</button><button class="btn" onclick="fecharExtrato()">Fechar</button></div>
+      <div><h3><svg class='ico' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><rect x='3' y='4.5' width='18' height='16' rx='2'/><path d='M3 9h18M8 2.5v4M16 2.5v4'/></svg> Extrato mensal por motorista</h3><div id="extrato_lbl" style="font-size:13px;color:var(--text3);margin-top:4px"></div></div>
+      <div style="display:flex;gap:8px;flex:0 0 auto"><button class="btn" style="background:var(--primary);color:#fff;border-color:var(--primary)" onclick="baixarExtratoCSV()"><svg class='ico' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M12 3v12'/><path d='M7.5 11 12 15.5 16.5 11'/><path d='M4.5 20h15'/></svg> Baixar CSV</button><button class="btn" onclick="fecharExtrato()">Fechar</button></div>
     </div>
     <div style="margin-top:12px;display:flex;align-items:center;gap:8px;flex-wrap:wrap">
       <label style="font-size:12px;color:var(--text2);font-weight:600">Considerar:</label>
@@ -394,12 +396,12 @@ tbody tr.sel{background:var(--primary-light)}
 <div id="modalStats" class="modal-bg hide">
   <div class="modal wide">
     <div style="display:flex;justify-content:space-between;align-items:flex-start">
-      <div><h3>📊 Estatísticas</h3><div id="stats_lbl" style="font-size:13px;color:var(--text3);margin-top:4px"></div></div>
+      <div><h3><svg class='ico' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M4 20V11'/><path d='M10 20V5'/><path d='M16 20v-6'/><path d='M3 20h18'/></svg> Estatísticas</h3><div id="stats_lbl" style="font-size:13px;color:var(--text3);margin-top:4px"></div></div>
       <button class="btn" onclick="fecharStats()">Fechar</button>
     </div>
     <div style="display:flex;gap:4px;margin:12px 0 0;border-bottom:1px solid var(--border)">
       <button class="stab on" id="stab_resumo" onclick="statsTab('resumo')">Resumo</button>
-      <button class="stab" id="stab_evol" onclick="statsTab('evol')">📈 Evolução</button>
+      <button class="stab" id="stab_evol" onclick="statsTab('evol')"><svg class='ico' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M3 17l5-5 4 4 7-8'/><path d='M16 8h5v5'/></svg> Evolução</button>
     </div>
     <div id="stats_corpo"></div>
     <div id="stats_evolucao" class="hide"></div>
@@ -409,7 +411,7 @@ tbody tr.sel{background:var(--primary-light)}
 <div id="modalPrecos" class="modal-bg hide">
   <div class="modal">
     <div style="display:flex;justify-content:space-between;align-items:center">
-      <h3>⛽ Preço da gasolina</h3>
+      <h3><svg class='ico' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M5 21V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v16'/><path d='M4 21h11'/><path d='M13 9h3.5a2 2 0 0 1 2 2v5a1.6 1.6 0 0 0 3.2 0V8.5L18 5.5'/></svg> Preço da gasolina</h3>
       <button class="btn" onclick="fecharPrecos()">Fechar</button>
     </div>
     <p style="color:var(--text3);font-size:12px;margin:8px 0 0">O valor vigente é usado no cálculo das novas viagens (modo estimativa). Ao salvar um novo período, o anterior é encerrado no dia anterior.</p>
@@ -427,6 +429,29 @@ tbody tr.sel{background:var(--primary-light)}
 <script>
 var sb=null, DADOS=[], FILTRADOS=[], sel=null, QUEM="", DET_PARADAS=[], DET_PEDAGIOS=[], DET_REVISOES=[];
 function el(id){return document.getElementById(id);}
+// ── Ícones SVG (traço, herdam a cor do texto) — substituem os emojis ──
+var _IP="<svg class='ico' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'>", _IE="</svg>";
+var IC={
+  home:_IP+"<path d='M3 10.5 12 3l9 7.5'/><path d='M5 9.5V21h14V9.5'/>"+_IE,
+  van:_IP+"<path d='M3 16.5V6h11v10.5'/><path d='M14 9h3.5l3.5 3.5v4H18'/><path d='M3 16.5h4M11 16.5h3'/><circle cx='8.5' cy='17.5' r='1.8'/><circle cx='17' cy='17.5' r='1.8'/>"+_IE,
+  chart:_IP+"<path d='M4 20V11'/><path d='M10 20V5'/><path d='M16 20v-6'/><path d='M3 20h18'/>"+_IE,
+  calendar:_IP+"<rect x='3' y='4.5' width='18' height='16' rx='2'/><path d='M3 9h18M8 2.5v4M16 2.5v4'/>"+_IE,
+  fuel:_IP+"<path d='M5 21V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v16'/><path d='M4 21h11'/><path d='M13 9h3.5a2 2 0 0 1 2 2v5a1.6 1.6 0 0 0 3.2 0V8.5L18 5.5'/>"+_IE,
+  lock:_IP+"<rect x='4.5' y='10.5' width='15' height='10' rx='2'/><path d='M8 10.5V7a4 4 0 0 1 8 0v3.5'/>"+_IE,
+  wrench:_IP+"<path d='M15.5 3.5a4.5 4.5 0 0 0 5.6 5.9L8.4 22.1a2.2 2.2 0 0 1-3.1-3.1L17.9 6.3a4.5 4.5 0 0 1-2.4-2.8z'/>"+_IE,
+  pencil:_IP+"<path d='M4 20h4L19 9l-4-4L4 16v4z'/><path d='M14 6l4 4'/>"+_IE,
+  trend:_IP+"<path d='M3 17l5-5 4 4 7-8'/><path d='M16 8h5v5'/>"+_IE,
+  search:_IP+"<circle cx='11' cy='11' r='6'/><path d='M20 20l-3.6-3.6'/>"+_IE,
+  alert:_IP+"<path d='M12 4 2.6 20h18.8L12 4z'/><path d='M12 10v4M12 17.4v.1'/>"+_IE,
+  refresh:_IP+"<path d='M3.5 8a8 8 0 0 1 13.8-2.8L21 8'/><path d='M21 4v4h-4'/><path d='M20.5 16a8 8 0 0 1-13.8 2.8L3 16'/><path d='M3 20v-4h4'/>"+_IE,
+  clock:_IP+"<circle cx='12' cy='12' r='8.2'/><path d='M12 7.5V12l3 2'/>"+_IE,
+  file:_IP+"<path d='M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z'/><path d='M14 3v5h5'/>"+_IE,
+  money:_IP+"<rect x='2.5' y='6.5' width='19' height='11' rx='2'/><circle cx='12' cy='12' r='2.4'/><path d='M6 10v4M18 10v4'/>"+_IE,
+  download:_IP+"<path d='M12 3v12'/><path d='M7.5 11 12 15.5 16.5 11'/><path d='M4.5 20h15'/>"+_IE,
+  bell:_IP+"<path d='M6 9a6 6 0 0 1 12 0c0 4.5 1.8 5.8 1.8 5.8H4.2S6 13.5 6 9z'/><path d='M10.3 19a1.9 1.9 0 0 0 3.4 0'/>"+_IE,
+  check:_IP+"<path d='M5 12l4.5 4.5L19 7'/>"+_IE
+};
+function ic(n){ return IC[n]||""; }
 function show(id){["carregando","semAcesso","painel"].forEach(function(s){el(s).classList.add("hide");});el(id).classList.remove("hide");}
 
 // ── Verificação automática de "suspeita" (mesmas regras do sistema antigo) ──
@@ -527,7 +552,7 @@ async function confirmarCorrige(){
           var resp=await fetchTimeout(cfg.CARTEIRO_URL, { method:"POST", redirect:"follow", headers:{"Content-Type":"text/plain"},
             body: JSON.stringify({action:"enviar_aviso_status", jwt:s1.data.session.access_token, protocolo:ctx.protocolo, novo_status:novo, observacao:(motivo||"Correção de status pela administração.")}) }, 30000);
           var out={}; try{ out=JSON.parse(await resp.text()); }catch(_){}
-          if(out.enviado) msgTopo("Status corrigido e e-mail enviado ao pesquisador ✉️");
+          if(out.enviado) msgTopo("Status corrigido e e-mail enviado ao pesquisador");
           else if(out.success) msgTopo("Status corrigido ✓ — e-mail NÃO enviado ("+(out.motivo||"motivo não informado")+").", true);
           else msgTopo("Status corrigido ✓, mas o e-mail falhou"+(out.error?": "+out.error:"")+".", true);
         }catch(e){ msgTopo("Status corrigido ✓, mas não consegui confirmar o e-mail ("+(e&&e.message||"erro")+").", true); }
@@ -685,7 +710,7 @@ function aplicarFiltro(){
   if(de||ate){ if(de&&ate)partes.push("Período: "+fmtDataBR(de)+" a "+fmtDataBR(ate)); else if(de)partes.push("A partir de "+fmtDataBR(de)); else partes.push("Até "+fmtDataBR(ate)); }
   if(q)partes.push('Busca: "'+el("fBusca").value.trim()+'"');
   var fa=el("filtroAtivo");
-  if(partes.length){ fa.classList.remove("hide"); fa.innerHTML="🔎 Filtro ativo — "+partes.join(" · ")+" · "+FILTRADOS.length+" resultado(s)"; }
+  if(partes.length){ fa.classList.remove("hide"); fa.innerHTML=ic('search')+" Filtro ativo — "+partes.join(" · ")+" · "+FILTRADOS.length+" resultado(s)"; }
   else fa.classList.add("hide");
 }
 function limparData(){ el("fDe").value=""; el("fAte").value=""; render(); }
@@ -714,8 +739,8 @@ function contarCards(){
     {k:"KM total",v:kmTxt,sub:"Sem reprovados",acc:"#0EA5E9"},
     {k:"Valor total",v:brl(valSemRep),sub:"Sem reprovados",acc:"#16A34A"}
   ];
-  if(pendCount>0) defs.splice(1,0,{k:"⚠️ Pedágio pendente",v:pendCount,sub:"Solicitações a analisar",acc:"#D97706"});
-  if(suspCount>0) defs.splice(1,0,{k:"🔎 Suspeitas",v:suspCount,sub:"Verificação automática",acc:"var(--danger)"});
+  if(pendCount>0) defs.splice(1,0,{k:ic('alert')+" Pedágio pendente",v:pendCount,sub:"Solicitações a analisar",acc:"#D97706"});
+  if(suspCount>0) defs.splice(1,0,{k:ic('search')+" Suspeitas",v:suspCount,sub:"Verificação automática",acc:"var(--danger)"});
   el("cards").innerHTML = defs.map(function(d){
     return '<div class="card"><div class="acc" style="background:'+d.acc+'"></div><div class="label">'+d.k+'</div><div class="val">'+d.v+'</div>'+(d.sub?'<div class="sub">'+d.sub+'</div>':'')+'</div>';
   }).join("");
@@ -729,7 +754,7 @@ function render(){
   el("tbody").innerHTML = rows.map(function(r){
     return '<tr class="clk'+(sel&&sel.id===r.id?" sel":"")+'" onclick="abrirDetalhe(\''+r.id+'\')">'
       +'<td class="proto">'+esc(r.protocolo)+'</td>'
-      +'<td><span class="st st-'+esc(r.status)+'">'+esc(r.status)+'</span>'+(r.qtd_ped_pendentes>0?' <span class="st" style="background:#FEF3C7;color:#92400E">⚠️ pedágio</span>':'')+(flagsValor(r).length?' <span class="st" style="background:#FEF3C7;color:#92400E" title="'+esc(flagsValor(r).join(" · "))+'">💰 acima do esperado</span>':'')+(flagsOutros(r).length?' <span class="st" style="background:#FEE2E2;color:#991B1B" title="'+esc(flagsOutros(r).join(" · "))+'">🔎 suspeita</span>':'')+'</td>'
+      +'<td><span class="st st-'+esc(r.status)+'">'+esc(r.status)+'</span>'+(r.qtd_ped_pendentes>0?' <span class="st" style="background:#FEF3C7;color:#92400E">'+ic('alert')+' pedágio</span>':'')+(flagsValor(r).length?' <span class="st" style="background:#FEF3C7;color:#92400E" title="'+esc(flagsValor(r).join(" · "))+'">'+ic('money')+' acima do esperado</span>':'')+(flagsOutros(r).length?' <span class="st" style="background:#FEE2E2;color:#991B1B" title="'+esc(flagsOutros(r).join(" · "))+'">'+ic('search')+' suspeita</span>':'')+'</td>'
       +'<td>'+esc(r.nome||"—")+'</td>'
       +'<td>'+esc(r.veiculo||"—")+(r.placa?" · "+esc(r.placa):"")+'</td>'
       +'<td class="mono">'+dt(r.checkin_em)+'</td>'
@@ -773,7 +798,7 @@ function _revLbl(campo){ var m=REV_META[campo]; return m ? m.lbl : campo; }
 // Monta a seção "campos alterados na correção" (uma vez por rodada de revisão).
 function _revSection(){
   if(!DET_REVISOES.length) return "";
-  var h='<div class="detail-section" style="border-color:#A5B4FC"><div class="detail-section-title" style="color:#3730A3;background:#EEF2FF">🔄 Correção do pesquisador — campos alterados (confira)</div>';
+  var h='<div class="detail-section" style="border-color:#A5B4FC"><div class="detail-section-title" style="color:#3730A3;background:#EEF2FF">'+ic('refresh')+' Correção do pesquisador — campos alterados (confira)</div>';
   DET_REVISOES.forEach(function(rev,idx){
     var alt=rev.alteracoes||[];
     if(DET_REVISOES.length>1) h+='<div style="font-size:11px;font-weight:700;color:#4338CA;margin:'+(idx?'12':'2')+'px 0 4px">Correção '+(DET_REVISOES.length-idx)+' · '+dt(rev.criado_em)+'</div>';
@@ -797,8 +822,8 @@ function renderDetail(){
   // VERIFICAÇÃO AUTOMÁTICA (suspeita) — alerta no topo, como no sistema antigo
   var _susp=suspeita(d);
   if(_susp.length){
-    h+='<div class="detail-section" style="border-color:#FCA5A5"><div class="detail-section-title" style="color:#991B1B;background:#FEF2F2">🔎 Verificação automática — pontos de atenção</div>';
-    _susp.forEach(function(f){ h+='<div class="segment" style="color:#991B1B">⚠️ '+esc(f)+'</div>'; });
+    h+='<div class="detail-section" style="border-color:#FCA5A5"><div class="detail-section-title" style="color:#991B1B;background:#FEF2F2">'+ic('search')+' Verificação automática — pontos de atenção</div>';
+    _susp.forEach(function(f){ h+='<div class="segment" style="color:#991B1B">'+ic('alert')+' '+esc(f)+'</div>'; });
     h+='</div>';
   }
 
@@ -814,7 +839,7 @@ function renderDetail(){
   h+=drow("RG",esc(d.rg||"—")+(d.orgao?" "+esc(d.orgao):""));
   h+=drow("Veículo",esc(d.veiculo||"—")+(d.placa?" — "+esc(d.placa):""));
   if(d.caronas)h+=drow("Caronas",esc(d.caronas));
-  if(d.recibo_link)h+=drow("Recibo",'<a href="'+esc(d.recibo_link)+'" target="_blank" style="color:var(--primary);font-weight:600">📄 Ver recibo (PDF)</a>');
+  if(d.recibo_link)h+=drow("Recibo",'<a href="'+esc(d.recibo_link)+'" target="_blank" style="color:var(--primary);font-weight:600">'+ic('file')+' Ver recibo (PDF)</a>');
   h+='</div>';
 
   // PERÍODO
@@ -840,18 +865,18 @@ function renderDetail(){
   h+=drow("Val. Estimado",brlv(d.val_estimado));
   h+=drow("Val. Real",brlv(d.val_real));
   var _rkm=custoPorKm(d);
-  h+=drow("Custo por km", (_rkm>0?('R$ '+_rkm.toFixed(2).replace(".",",")+'/km'):'—') + (_rkm>LIMITE_KM?' <span style="color:#991B1B;font-weight:700">⚠️ acima de R$ '+LIMITE_KM.toFixed(2).replace(".",",")+'</span>':''));
-  h+=drow("Total a Reembolsar",'<strong style="font-size:15px">'+brlv(d.val_total)+'</strong>'+(Number(d.val_total)>LIMITE_VIAGEM?' <span style="color:#991B1B;font-weight:700">⚠️ acima de R$ '+LIMITE_VIAGEM+'/viagem</span>':''));
+  h+=drow("Custo por km", (_rkm>0?('R$ '+_rkm.toFixed(2).replace(".",",")+'/km'):'—') + (_rkm>LIMITE_KM?' <span style="color:#991B1B;font-weight:700">'+ic('alert')+' acima de R$ '+LIMITE_KM.toFixed(2).replace(".",",")+'</span>':''));
+  h+=drow("Total a Reembolsar",'<strong style="font-size:15px">'+brlv(d.val_total)+'</strong>'+(Number(d.val_total)>LIMITE_VIAGEM?' <span style="color:#991B1B;font-weight:700">'+ic('alert')+' acima de R$ '+LIMITE_VIAGEM+'/viagem</span>':''));
   h+=drow("Validação automática",esc(d.validacao||"—"));
   h+='</div>';
 
   // PEDÁGIOS PENDENTES (recurso novo — precisa de análise)
   var ppend=DET_PEDAGIOS.filter(function(p){return p.pendente;});
   if(ppend.length){
-    h+='<div class="detail-section"><div class="detail-section-title" style="color:#B45309;background:#FFFBEB">⚠️ Pedágios pendentes — solicitação a analisar</div>';
+    h+='<div class="detail-section"><div class="detail-section-title" style="color:#B45309;background:#FFFBEB">'+ic('alert')+' Pedágios pendentes — solicitação a analisar</div>';
     h+=ppend.map(function(p){
       return '<div class="ped-pend"><span>'+(p.fase?'['+esc(p.fase)+'] ':'')+'<b>'+brlv(p.valor)+'</b>'
-        +(p.comprovante_link?' · <a href="'+esc(driveImg(p.comprovante_link))+'" target="_blank" data-drive="'+esc(p.comprovante_link)+'" data-tit="🧾 Comprovante do pedágio" style="color:var(--primary)">comprovante</a>':' · sem comprovante')+'</span>'
+        +(p.comprovante_link?' · <a href="'+esc(driveImg(p.comprovante_link))+'" target="_blank" data-drive="'+esc(p.comprovante_link)+'" data-tit="Comprovante do pedágio" style="color:var(--primary)">comprovante</a>':' · sem comprovante')+'</span>'
         +'<span style="display:flex;gap:6px;flex:0 0 auto"><button class="pp-ok" onclick="aprovarPedagio(\''+p.id+'\',\''+d.id+'\')">Aprovar</button>'
         +'<button class="pp-no" onclick="recusarPedagio(\''+p.id+'\',\''+d.id+'\')">Recusar</button></span></div>';
     }).join("");
@@ -861,26 +886,26 @@ function renderDetail(){
   // ROTA DE IDA
   if(ida.length){
     h+='<div class="detail-section"><div class="detail-section-title">Rota de Ida ('+ida.length+' paradas)</div>';
-    ida.forEach(function(p,i){ h+='<div class="segment"><span class="seg-label">Trecho '+(i+1)+(p.adicionada_checkout?' · <span style="color:#B45309;font-weight:700">adicionada no check-out</span>':'')+'</span>'+esc(p.origem||"?")+" → "+esc(p.destino||"?")+" ("+km1(p.km||0)+" km)"+(p.adicionada_checkout&&p.justificativa?'<div style="font-size:11px;color:#92400E;margin-top:3px">📝 Justificativa: '+esc(p.justificativa)+'</div>':'')+"</div>"; });
+    ida.forEach(function(p,i){ h+='<div class="segment"><span class="seg-label">Trecho '+(i+1)+(p.adicionada_checkout?' · <span style="color:#B45309;font-weight:700">adicionada no check-out</span>':'')+'</span>'+esc(p.origem||"?")+" → "+esc(p.destino||"?")+" ("+km1(p.km||0)+" km)"+(p.adicionada_checkout&&p.justificativa?'<div style="font-size:11px;color:#92400E;margin-top:3px">'+ic('pencil')+' Justificativa: '+esc(p.justificativa)+'</div>':'')+"</div>"; });
     h+='</div>';
   }
   // ROTA DE VOLTA
   if(vol.length){
     h+='<div class="detail-section"><div class="detail-section-title">Rota de Volta ('+vol.length+' paradas)</div>';
-    vol.forEach(function(p,i){ h+='<div class="segment"><span class="seg-label">Trecho '+(i+1)+(p.adicionada_checkout?' · <span style="color:#B45309;font-weight:700">adicionada no check-out</span>':'')+'</span>'+esc(p.origem||"?")+" → "+esc(p.destino||"?")+" ("+km1(p.km||0)+" km)"+(p.adicionada_checkout&&p.justificativa?'<div style="font-size:11px;color:#92400E;margin-top:3px">📝 Justificativa: '+esc(p.justificativa)+'</div>':'')+"</div>"; });
+    vol.forEach(function(p,i){ h+='<div class="segment"><span class="seg-label">Trecho '+(i+1)+(p.adicionada_checkout?' · <span style="color:#B45309;font-weight:700">adicionada no check-out</span>':'')+'</span>'+esc(p.origem||"?")+" → "+esc(p.destino||"?")+" ("+km1(p.km||0)+" km)"+(p.adicionada_checkout&&p.justificativa?'<div style="font-size:11px;color:#92400E;margin-top:3px">'+ic('pencil')+' Justificativa: '+esc(p.justificativa)+'</div>':'')+"</div>"; });
     h+='</div>';
   }
 
   // ANEXOS
   var links=[];
-  if(d.checkin_foto)links.push(imgA(d.checkin_foto,"📷 Odômetro — saída"));
-  if(d.checkout_foto)links.push(imgA(d.checkout_foto,"📷 Odômetro — chegada"));
-  ida.forEach(function(p,i){ if(p.maps_link)links.push(imgA(p.maps_link,"🗺️ Maps ida "+(i+1))); });
-  vol.forEach(function(p,i){ if(p.maps_link)links.push(imgA(p.maps_link,"🗺️ Maps volta "+(i+1))); });
-  if(d.cupom_foto)links.push(imgA(d.cupom_foto,"⛽ Cupom fiscal — combustível"));
-  if(d.foto_consumo)links.push(imgA(d.foto_consumo,"🚗 Painel — consumo"));
-  DET_PEDAGIOS.forEach(function(p,i){ if(p.comprovante_link)links.push(imgA(p.comprovante_link,"🧾 Pedágio "+(i+1)+(p.fase?' ('+esc(p.fase)+')':'')+' — '+brlv(p.valor))); });
-  if(d.recibo_link)links.push('<a href="'+esc(d.recibo_link)+'" target="_blank">📄 Recibo (PDF)</a>');
+  if(d.checkin_foto)links.push(imgA(d.checkin_foto,"Odômetro — saída"));
+  if(d.checkout_foto)links.push(imgA(d.checkout_foto,"Odômetro — chegada"));
+  ida.forEach(function(p,i){ if(p.maps_link)links.push(imgA(p.maps_link,"Maps ida "+(i+1))); });
+  vol.forEach(function(p,i){ if(p.maps_link)links.push(imgA(p.maps_link,"Maps volta "+(i+1))); });
+  if(d.cupom_foto)links.push(imgA(d.cupom_foto,"Cupom fiscal — combustível"));
+  if(d.foto_consumo)links.push(imgA(d.foto_consumo,"Painel — consumo"));
+  DET_PEDAGIOS.forEach(function(p,i){ if(p.comprovante_link)links.push(imgA(p.comprovante_link,"Pedágio "+(i+1)+(p.fase?' ('+esc(p.fase)+')':'')+' — '+brlv(p.valor))); });
+  if(d.recibo_link)links.push('<a href="'+esc(d.recibo_link)+'" target="_blank">'+ic('file')+' Recibo (PDF)</a>');
   if(links.length){
     h+='<div class="detail-section"><div class="detail-section-title">Anexos</div><div class="detail-links">'+links.join("")+'</div></div>';
   }
@@ -892,20 +917,20 @@ function renderDetail(){
 function renderActions(){
   var bar=el("actionBar"); if(!sel){ bar.innerHTML=''; return; }
   var d=sel, st=d.status, id=d.id;
-  var editBtn='<button class="abtn-edit" onclick="editarDados(\''+id+'\')">✏️ Editar dados / paradas</button>';
-  var reciboBtn='<button class="abtn-edit" onclick="gerarRecibo(\''+id+'\')">📄 '+(d.recibo_link?"Gerar recibo novamente":"Gerar recibo")+'</button>';
-  var corrBtn='<button class="abtn-edit" onclick="abrirCorrige(\''+id+'\')">🔧 Corrigir status</button>';
+  var editBtn='<button class="abtn-edit" onclick="editarDados(\''+id+'\')">'+ic('pencil')+' Editar dados / paradas</button>';
+  var reciboBtn='<button class="abtn-edit" onclick="gerarRecibo(\''+id+'\')">'+ic('file')+' '+(d.recibo_link?"Gerar recibo novamente":"Gerar recibo")+'</button>';
+  var corrBtn='<button class="abtn-edit" onclick="abrirCorrige(\''+id+'\')">'+ic('wrench')+' Corrigir status</button>';
   var h='<div class="action-bar-label">Ações — '+esc(d.protocolo)+'</div>';
   if(st==="PAGO"){
-    h+='<div class="approved-msg" style="background:#CCFBF1;border-color:#99F6E4;color:#0F766E">💰 Reembolso pago — processo concluído.</div>'+editBtn+reciboBtn+corrBtn;
+    h+='<div class="approved-msg" style="background:#CCFBF1;border-color:#99F6E4;color:#0F766E">'+ic('money')+' Reembolso pago — processo concluído.</div>'+editBtn+reciboBtn+corrBtn;
     bar.innerHTML=h; return;
   }
   if(st==="ABERTO"){
     h+='<div class="action-bar-empty">Viagem em andamento — aguardando o motorista finalizar.</div>'+editBtn+corrBtn;
     bar.innerHTML=h; return;
   }
-  if(st==="CORRIGIDO")h+='<div class="corr-note">🔄 Voltou da correção — reanalise antes de decidir.</div>';
-  else if(st==="REVISÃO")h+='<div class="corr-note" style="color:#92400E;background:#FEF3C7;border-color:#FCD34D">⏳ Aguardando o pesquisador enviar a correção.</div>';
+  if(st==="CORRIGIDO")h+='<div class="corr-note">'+ic('refresh')+' Voltou da correção — reanalise antes de decidir.</div>';
+  else if(st==="REVISÃO")h+='<div class="corr-note" style="color:#92400E;background:#FEF3C7;border-color:#FCD34D">'+ic('clock')+' Aguardando o pesquisador enviar a correção.</div>';
   var btns={
     "PAGO":'<button class="abtn teal" onclick="mudarStatus(\''+id+'\',\'PAGO\')">Pago</button>',
     "APROVADO":'<button class="abtn green" onclick="mudarStatus(\''+id+'\',\'APROVADO\')">Aprovar</button>',
@@ -966,7 +991,7 @@ async function mudarStatus(id, novo, obsArg){
           body: JSON.stringify({action:"enviar_aviso_status", jwt: s1.data.session.access_token, protocolo: reg.protocolo, novo_status: novo, observacao: obs})
         }, 30000);
         var out={}; try{ out=JSON.parse(await resp.text()); }catch(_){}
-        if(out.enviado) msgTopo("Status salvo e e-mail enviado ao pesquisador ✉️");
+        if(out.enviado) msgTopo("Status salvo e e-mail enviado ao pesquisador");
         else if(out.success) msgTopo("Status salvo. (Sem e-mail: "+(out.motivo||"—")+")");
         else msgTopo("Status salvo, mas o e-mail pode não ter saído.", true);
       }catch(e){ msgTopo("Status salvo (não consegui confirmar o e-mail).", true); }
@@ -977,7 +1002,7 @@ async function mudarStatus(id, novo, obsArg){
     if(cfg.CARTEIRO_URL && novo==="PAGO"){
       atualizarBusy("Gerando recibo… pode levar alguns segundos. Não feche a página.");
       var res=await _gerarReciboRetry(reg.protocolo, id);
-      if(res.ok) msgTopo("Recibo Nº "+res.numero+" gerado e enviado aos e-mails internos ✅");
+      if(res.ok) msgTopo("Recibo Nº "+res.numero+" gerado e enviado aos e-mails internos ✓");
       else msgTopo("Pago salvo, mas o recibo falhou ("+res.erro+"). Você pode gerar depois em 'Gerar recibo'.", true);
     }
   } finally {
@@ -994,7 +1019,7 @@ async function gerarRecibo(id){
   bloquear("Gerando recibo… pode levar alguns segundos. Não feche a página.");
   try{
     var res=await _gerarReciboRetry(reg.protocolo, id);
-    if(res.ok) msgTopo("Recibo Nº "+res.numero+" gerado ✅");
+    if(res.ok) msgTopo("Recibo Nº "+res.numero+" gerado ✓");
     else msgTopo("Falha ao gerar recibo: "+res.erro, true);
   } finally {
     try{ await carregar(); await abrirDetalhe(id); }catch(e){}
@@ -1075,13 +1100,13 @@ function renderExtratoViagens(base, modoTxt){
   var nAlerta=rows.filter(function(r){ return Number(r.val_total)>LIMITE_VIAGEM || custoPorKm(r)>LIMITE_KM; }).length;
   el("extrato_lbl").textContent = "viagens · "+modoTxt+" · "+rows.length+" viagem(ns) · "+nAlerta+" com alerta";
   _extratoRows=[];
-  var h='<div style="margin:12px 0;padding:10px 12px;background:#FFFBEB;border:1px solid #FDE68A;border-radius:8px;font-size:12.5px;color:#92400E">🔔 Destaca em vermelho quando o <b>valor da viagem passa de R$ '+LIMITE_VIAGEM+'</b> ou o <b>custo passa de R$ '+LIMITE_KM.toFixed(2).replace(".",",")+'/km</b>. ('+nAlerta+' de '+rows.length+' com alerta)</div>';
+  var h='<div style="margin:12px 0;padding:10px 12px;background:#FFFBEB;border:1px solid #FDE68A;border-radius:8px;font-size:12.5px;color:#92400E">'+ic('bell')+' Destaca em vermelho quando o <b>valor da viagem passa de R$ '+LIMITE_VIAGEM+'</b> ou o <b>custo passa de R$ '+LIMITE_KM.toFixed(2).replace(".",",")+'/km</b>. ('+nAlerta+' de '+rows.length+' com alerta)</div>';
   h+='<div style="overflow-x:auto"><table><thead><tr><th>Data</th><th>Motorista</th><th class="right">KM</th><th class="right">Valor</th><th class="right">R$/km</th><th>Alerta</th></tr></thead><tbody>';
   rows.forEach(function(r){
     var rkm=custoPorKm(r), aVal=Number(r.val_total)>LIMITE_VIAGEM, aKm=rkm>LIMITE_KM, alert=aVal||aKm;
     var flags=[]; if(aVal)flags.push(">R$"+LIMITE_VIAGEM+"/viagem"); if(aKm)flags.push(">R$"+LIMITE_KM.toFixed(2).replace(".",",")+"/km");
     _extratoRows.push({data:dt(r.checkin_em), protocolo:r.protocolo, motorista:r.nome, cpf:r.cpf, km:r.dist_total, valor:r.val_total, rkm:rkm, alerta:flags.join(" · ")});
-    h+='<tr'+(alert?' style="background:#FEF2F2"':'')+'><td class="mono">'+dt(r.checkin_em)+'</td><td>'+esc(r.nome||"—")+'</td><td class="right mono">'+km(r.dist_total)+'</td><td class="right mono"'+(aVal?' style="color:#991B1B;font-weight:700"':'')+'>'+brl(r.val_total)+'</td><td class="right mono"'+(aKm?' style="color:#991B1B;font-weight:700"':'')+'>R$ '+rkm.toFixed(2).replace(".",",")+'</td><td>'+(alert?'<span class="st" style="background:#FEE2E2;color:#991B1B">⚠️ '+esc(flags.join(" · "))+'</span>':'')+'</td></tr>';
+    h+='<tr'+(alert?' style="background:#FEF2F2"':'')+'><td class="mono">'+dt(r.checkin_em)+'</td><td>'+esc(r.nome||"—")+'</td><td class="right mono">'+km(r.dist_total)+'</td><td class="right mono"'+(aVal?' style="color:#991B1B;font-weight:700"':'')+'>'+brl(r.val_total)+'</td><td class="right mono"'+(aKm?' style="color:#991B1B;font-weight:700"':'')+'>R$ '+rkm.toFixed(2).replace(".",",")+'</td><td>'+(alert?'<span class="st" style="background:#FEE2E2;color:#991B1B">'+ic('alert')+' '+esc(flags.join(" · "))+'</span>':'')+'</td></tr>';
   });
   h+='</tbody></table></div>';
   if(!rows.length) el("extrato_corpo").innerHTML='<p style="color:var(--text3);margin-top:12px">Sem dados para o filtro atual.</p>';
