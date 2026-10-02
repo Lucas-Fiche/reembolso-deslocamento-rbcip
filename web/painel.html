@@ -343,13 +343,27 @@ tbody tr.sel{background:var(--primary-light)}
   </div>
 </div>
 
+<style>
+.gal-nav{position:absolute;top:50%;transform:translateY(-50%);z-index:5;width:46px;height:46px;border-radius:50%;
+  border:none;background:rgba(15,23,42,.55);color:#fff;font-size:30px;line-height:1;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;transition:background .15s;padding:0 0 4px}
+.gal-nav:hover{background:rgba(15,23,42,.82)}
+.gal-prev{left:12px}.gal-next{right:12px}
+.gal-nav.hide{display:none!important}
+#img_cont{font-size:12.5px;color:var(--text3);font-weight:600}
+@media(max-width:560px){.gal-nav{width:40px;height:40px;font-size:25px}}
+</style>
 <div id="modalImg" class="img-modal hide" onclick="fecharImg()">
   <div class="img-modal-inner" onclick="event.stopPropagation()">
     <div class="img-modal-bar">
       <span id="img_titulo" style="font-weight:600"></span>
-      <span style="display:flex;gap:8px;flex:0 0 auto"><a id="img_drive" href="#" target="_blank" class="btn">Abrir no Drive ↗</a><button class="btn" onclick="fecharImg()">Fechar ✕</button></span>
+      <span style="display:flex;gap:10px;flex:0 0 auto;align-items:center"><span id="img_cont"></span><a id="img_drive" href="#" target="_blank" class="btn">Abrir no Drive ↗</a><button class="btn" onclick="fecharImg()">Fechar ✕</button></span>
     </div>
-    <div class="img-modal-body"><img id="img_el" alt="anexo"></div>
+    <div class="img-modal-body" style="position:relative">
+      <button id="gal_prev" class="gal-nav gal-prev" onclick="event.stopPropagation();galMove(-1)" title="Anterior (←)" aria-label="Imagem anterior">‹</button>
+      <img id="img_el" alt="anexo">
+      <button id="gal_next" class="gal-nav gal-next" onclick="event.stopPropagation();galMove(1)" title="Próxima (→)" aria-label="Próxima imagem">›</button>
+    </div>
   </div>
 </div>
 
@@ -550,21 +564,45 @@ function driveId(u){ var m=String(u||"").match(/(?:\/d\/|[?&]id=)([A-Za-z0-9_-]{
 function driveImg(u){ var id=driveId(u); return id?("https://lh3.googleusercontent.com/d/"+id):String(u||""); }
 // link de anexo que abre no modal (usa data-drive; o handler global intercepta)
 function imgA(url,label){ return '<a href="'+esc(driveImg(url))+'" target="_blank" data-drive="'+esc(url)+'" data-tit="'+esc(label)+'">'+esc(label)+'</a>'; }
-function abrirImg(url,titulo){
-  var id=driveId(url);
-  var img=el("img_el");
+// ── Carrossel de anexos: reúne TODAS as imagens da solicitação e navega ──
+var GAL=[], GALi=0;
+function _galList(){
+  var box=el("detailModal")||document;
+  return [].slice.call(box.querySelectorAll("a[data-drive]")).map(function(a){
+    return {url:a.getAttribute("data-drive"), tit:a.getAttribute("data-tit")};
+  });
+}
+function _galShow(){
+  var it=GAL[GALi]||{}, url=it.url, id=driveId(url), img=el("img_el");
   img.onerror=function(){ img.onerror=null; if(id) img.src="https://drive.google.com/thumbnail?id="+id+"&sz=w1600"; };
   img.src=driveImg(url);
-  el("img_titulo").textContent=titulo||"Imagem";
+  el("img_titulo").textContent=it.tit||"Imagem";
   el("img_drive").href=id?("https://drive.google.com/file/d/"+id+"/view"):url;
+  var multi=GAL.length>1;
+  el("img_cont").textContent = multi ? (GALi+1)+" / "+GAL.length : "";
+  el("gal_prev").classList.toggle("hide", !multi);
+  el("gal_next").classList.toggle("hide", !multi);
+}
+function galMove(d){ if(GAL.length<2) return; GALi=(GALi+d+GAL.length)%GAL.length; _galShow(); }
+function abrirGaleria(url){
+  GAL=_galList(); GALi=0;
+  for(var i=0;i<GAL.length;i++){ if(GAL[i].url===url){ GALi=i; break; } }
+  if(!GAL.length) GAL=[{url:url, tit:"Imagem"}];
+  _galShow();
   el("modalImg").classList.remove("hide");
 }
-function fecharImg(){ el("modalImg").classList.add("hide"); var img=el("img_el"); img.onerror=null; img.removeAttribute("src"); }
+function abrirImg(url,titulo){ abrirGaleria(url); } // compatibilidade
+function fecharImg(){ el("modalImg").classList.add("hide"); var img=el("img_el"); img.onerror=null; img.removeAttribute("src"); GAL=[]; }
 document.addEventListener("click", function(ev){
   var t=ev.target; var a=(t&&t.closest)?t.closest("a[data-drive]"):null;
-  if(a){ ev.preventDefault(); abrirImg(a.getAttribute("data-drive"), a.getAttribute("data-tit")); }
+  if(a){ ev.preventDefault(); abrirGaleria(a.getAttribute("data-drive")); }
 });
-document.addEventListener("keydown", function(ev){ if(ev.key==="Escape"){ fecharImg(); } });
+document.addEventListener("keydown", function(ev){
+  if(el("modalImg").classList.contains("hide")) return;
+  if(ev.key==="Escape") fecharImg();
+  else if(ev.key==="ArrowLeft") galMove(-1);
+  else if(ev.key==="ArrowRight") galMove(1);
+});
 
 // ── Overlay bloqueante + fetch com timeout (ações lentas: pago/recibo) ──
 function bloquear(msg){ el("busyMsg").textContent=msg||"Processando…"; el("busy").classList.add("on"); }
