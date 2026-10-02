@@ -129,8 +129,8 @@
 
   <div id="painel" class="hide">
     <div class="tabbar">
-      <button class="tab on" id="tab_reg_btn" onclick="mostrarTab('reg')">📝 Registrar</button>
-      <button class="tab" id="tab_est_btn" onclick="mostrarTab('est')">📊 Estatísticas</button>
+      <button class="tab on" id="tab_reg_btn" onclick="mostrarTab('reg')"><svg class='ico' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M4 20h4L19 9l-4-4L4 16v4z'/><path d='M14 6l4 4'/></svg> Registrar</button>
+      <button class="tab" id="tab_est_btn" onclick="mostrarTab('est')"><svg class='ico' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M4 20V11'/><path d='M10 20V5'/><path d='M16 20v-6'/><path d='M3 20h18'/></svg> Estatísticas</button>
       <a class="btn-voltar tab-back" href="login.html"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>Voltar</a>
     </div>
 
@@ -149,7 +149,7 @@
         </div>
         <div>
           <label>Buscar motorista</label>
-          <div class="search"><span class="ic">🔍</span><input id="busca" type="text" placeholder="Filtrar por nome ou e-mail…" oninput="filtrar()"></div>
+          <div class="search"><span class="ic"><svg class='ico' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><circle cx='11' cy='11' r='6'/><path d='M20 20l-3.6-3.6'/></svg></span><input id="busca" type="text" placeholder="Filtrar por nome ou e-mail…" oninput="filtrar()"></div>
         </div>
       </div>
     </div>
@@ -165,7 +165,7 @@
       <div class="savefoot">
         <div>
           <div class="sc" id="selcount">Nenhum motorista selecionado.</div>
-          <div id="notaSup" class="nota-sup hide">🔒 Depois de salvar, um registro só pode ser removido por um administrador.</div>
+          <div id="notaSup" class="nota-sup hide"><svg class='ico' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><rect x='4.5' y='10.5' width='15' height='10' rx='2'/><path d='M8 10.5V7a4 4 0 0 1 8 0v3.5'/></svg> Depois de salvar, um registro só pode ser removido por um administrador.</div>
         </div>
         <button id="btnSalvar" class="btn-save" onclick="salvarDia()">Salvar diárias do dia</button>
         <div id="msg" class="msg"></div>
@@ -214,7 +214,7 @@
               <option value="az">Nome (A–Z)</option>
               <option value="za">Nome (Z–A)</option>
             </select>
-            <button type="button" class="chip" onclick="exportarStatsCSV()">⬇ Exportar CSV</button>
+            <button type="button" class="chip" onclick="exportarStatsCSV()"><svg class='ico' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M12 3v12'/><path d='M7.5 11 12 15.5 16.5 11'/><path d='M4.5 20h15'/></svg> Exportar CSV</button>
           </div>
         </div>
         <div class="tbl-wrap">
@@ -237,6 +237,11 @@ var MOT_NOMES={}, STATS_ARR=[], STATS_PER={ini:"",fim:""}, STATS_LOADED=false, S
 var CHECK_SVG='<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="#fff" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>';
 var AV_CORES=["#2E6BAD","#0EA5E9","#0891B2","#059669","#16A34A","#7C3AED","#4F46E5","#9333EA","#DB2777","#E11D48","#EA580C","#D97706"];
 function el(id){return document.getElementById(id);}
+// Ícones SVG (traço) — substituem emojis
+var IC={
+  lock:"<svg class='ico' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><rect x='4.5' y='10.5' width='15' height='10' rx='2'/><path d='M8 10.5V7a4 4 0 0 1 8 0v3.5'/></svg>"
+};
+function ic(n){ return IC[n]||""; }
 function msg(tipo,texto){var m=el("msg");m.className="msg show "+tipo;m.textContent=texto;}
 function limpaMsg(){var m=el("msg");m.className="msg";m.textContent="";}
 function esc(s){return String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");}
@@ -349,7 +354,7 @@ async function carregarRecentes(){
     if(r.data!==diaAtual){ diaAtual=r.data; h+='<tr class="daygrp"><td colspan="5">'+dataBR(r.data)+'</td></tr>'; }
     var acao = IS_ADMIN
       ? '<button class="btn-rm" onclick="remover(\''+r.id+'\',\''+r.data+'\')">Remover</button>'
-      : '<span class="lk" title="Só um administrador pode remover">🔒</span>';
+      : '<span class="lk" title="Só um administrador pode remover">'+ic('lock')+'</span>';
     h+='<tr><td>'+dataBR(r.data)+'</td>'
       +'<td><span class="rec-mot">'+avatar(r.motorista)+'<span class="rn">'+esc(r.motorista||"(motorista)")+'</span></span></td>'
       +'<td><span class="quem">'+esc(r.registrador||"—")+'</span></td>'
