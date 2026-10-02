@@ -7,6 +7,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,400;0,500;0,600;0,700&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
 <style>
+.ico{width:16px;height:16px;flex:0 0 auto;vertical-align:-3px;display:inline-block}
+.ico-sm{width:14px;height:14px;vertical-align:-2px}
 :root{--bg:#F4F6FA;--surface:#FFF;--primary:#1A3A5C;--primary-light:#2E6BAD;--accent:#0EA5E9;--accent-glow:rgba(14,165,233,.12);--success:#10B981;--success-bg:#ECFDF5;--warning:#F59E0B;--warning-bg:#FFFBEB;--danger:#EF4444;--danger-bg:#FEF2F2;--text:#1E293B;--text-secondary:#64748B;--text-muted:#94A3B8;--border:#E2E8F0;--border-focus:#0EA5E9;--radius:14px;--radius-sm:10px;--shadow-sm:0 1px 3px rgba(0,0,0,.06);--shadow-md:0 4px 16px rgba(0,0,0,.08)}
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min-height:100dvh;-webkit-font-smoothing:antialiased}
 .hdr{background:linear-gradient(135deg,var(--primary),var(--primary-light));color:#fff;padding:16px 20px;position:sticky;top:0;z-index:100;box-shadow:0 4px 20px rgba(26,58,92,.25);display:flex;align-items:center;gap:12px}.hdr img{height:38px;width:auto;flex:0 0 auto}.hdr h1{font-size:18px;font-weight:700;margin-bottom:2px}.hdr p{font-size:13px;opacity:.75}
@@ -50,7 +52,7 @@
 <!-- LOGIN -->
 <div class="sec a" id="secLogin">
   <div class="card">
-    <div class="ct"><span class="ic" style="background:#EFF6FF;color:#2563EB">🔑</span> Entrar</div>
+    <div class="ct"><span class="ic" style="background:#EFF6FF;color:#2563EB"><svg class='ico' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><circle cx='8' cy='15' r='4'/><path d='M11 12l9-9M17 6l2 2M14 9l2 2'/></svg></span> Entrar</div>
     <p style="font-size:13px;color:var(--text-secondary);margin-bottom:8px">Use o código de 6 dígitos enviado ao seu e-mail.</p>
     <div id="passoEmail"><div class="f"><label>E-mail</label><input id="lg_email" type="email" placeholder="voce@exemplo.com" autocomplete="email"></div>
       <button class="bp b" id="btnEnviar" onclick="enviarCodigo()">Enviar código</button></div>
@@ -67,11 +69,11 @@
     <div style="min-width:0"><div style="font-weight:700;font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" id="hm_nome">—</div><span class="stp" style="background:#EFF6FF;color:#2563EB" id="hm_papel">motorista</span></div>
     <button class="bs" style="width:auto;margin:0;padding:9px 16px" onclick="sair()">Sair</button>
   </div>
-  <div class="ob" id="openBanner"><div class="bt">⚠️ Viagem em andamento</div><div class="bd" id="openDetail"></div></div>
+  <div class="ob" id="openBanner"><div class="bt"><svg class='ico' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M12 4 2.6 20h18.8L12 4z'/><path d='M12 10v4M12 17.4v.1'/></svg> Viagem em andamento</div><div class="bd" id="openDetail"></div></div>
 
   <div class="card" id="instrCard" style="border:2px solid var(--accent);padding:0;overflow:hidden">
     <div onclick="toggleInstr()" style="display:flex;align-items:center;justify-content:space-between;padding:16px 20px;cursor:pointer;background:linear-gradient(135deg,#EFF6FF,#DBEAFE)">
-      <div style="display:flex;align-items:center;gap:10px"><span style="font-size:22px">📋</span><span style="font-size:15px;font-weight:700;color:#1E40AF">Como funciona?</span></div>
+      <div style="display:flex;align-items:center;gap:10px"><span style="font-size:22px"><svg class='ico' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><rect x='5' y='4.5' width='14' height='16' rx='2'/><rect x='9' y='2.5' width='6' height='3' rx='1'/><path d='M8.5 10h7M8.5 14h7'/></svg></span><span style="font-size:15px;font-weight:700;color:#1E40AF">Como funciona?</span></div>
       <svg id="instrArrow" width="15" height="15" viewBox="0 0 24 24" fill="none" style="transition:transform .3s;flex-shrink:0"><path d="M9 6l6 6-6 6" stroke="#1E40AF" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
     </div>
     <div id="instrBody" style="max-height:0;overflow:hidden;transition:max-height .4s ease">
@@ -90,27 +92,27 @@
             <li><strong>caronas</strong>, se houver.</li>
           </ul>
           Depois é só <strong>enviar</strong> — o pedido vai para análise.</div></div>
-        <div style="background:var(--warning-bg);border:1px solid #FCD34D;border-radius:8px;padding:12px;margin-top:4px"><div style="font-size:12px;color:#92400E;line-height:1.7"><strong>⚠️ Importante:</strong><br>• Cada parada = um trecho do percurso (origem → destino + km)<br>• Durante a viagem o registro é leve, <strong>sem fotos</strong>; os prints do Maps só no check-out<br>• Se tiver cupom fiscal do combustível, tenha-o em mãos no check-out<br>• Não precisa fechar o app — se ele reiniciar, use <strong>“Retomar viagem em andamento”</strong> para continuar<br>• Sem internet? As paradas ficam salvas e são enviadas sozinhas quando a conexão voltar<br>• Usa plano de pedágio? Pode enviar sem o pedágio e lançá-lo depois em <strong>“Lançar pedágio pendente”</strong><br>• Acompanhe tudo em <strong>“Viagens Realizadas”</strong> — se o pedido cair em revisão, toque em <strong>🔄 Corrigir</strong> e reenvie</div></div>
+        <div style="background:var(--warning-bg);border:1px solid #FCD34D;border-radius:8px;padding:12px;margin-top:4px"><div style="font-size:12px;color:#92400E;line-height:1.7"><strong><svg class='ico' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M12 4 2.6 20h18.8L12 4z'/><path d='M12 10v4M12 17.4v.1'/></svg> Importante:</strong><br>• Cada parada = um trecho do percurso (origem → destino + km)<br>• Durante a viagem o registro é leve, <strong>sem fotos</strong>; os prints do Maps só no check-out<br>• Se tiver cupom fiscal do combustível, tenha-o em mãos no check-out<br>• Não precisa fechar o app — se ele reiniciar, use <strong>“Retomar viagem em andamento”</strong> para continuar<br>• Sem internet? As paradas ficam salvas e são enviadas sozinhas quando a conexão voltar<br>• Usa plano de pedágio? Pode enviar sem o pedágio e lançá-lo depois em <strong>“Lançar pedágio pendente”</strong><br>• Acompanhe tudo em <strong>“Viagens Realizadas”</strong> — se o pedido cair em revisão, toque em <strong><svg class='ico' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M3.5 8a8 8 0 0 1 13.8-2.8L21 8'/><path d='M21 4v4h-4'/><path d='M20.5 16a8 8 0 0 1-13.8 2.8L3 16'/><path d='M3 20v-4h4'/></svg> Corrigir</strong> e reenvie</div></div>
       </div>
     </div>
   </div>
 
-  <div class="mc" onclick="goCheckin()" id="cardCI"><div class="mi" style="background:#ECFDF5;color:#059669">🚀</div><div class="mn"><h3>CHECK-IN</h3><p>Registre o odômetro antes de sair.</p></div></div>
-  <div class="mc" onclick="goViagem()" id="cardV" style="display:none"><div class="mi" style="background:#EFF6FF;color:#2563EB">🗺️</div><div class="mn"><h3>Viagem em Andamento</h3><p>Registrar paradas ou finalizar.</p></div></div>
+  <div class="mc" onclick="goCheckin()" id="cardCI"><div class="mi" style="background:#ECFDF5;color:#059669"><svg class='ico' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M5 15c-1.5 1-2 4-2 4s3-.5 4-2'/><path d='M9.5 13.5l-1 1'/><path d='M14.5 4.5C17 4 20 4 20 4s0 3-.5 5.5c-.7 3.5-3.5 6-7 7l-3-3c1-3.5 3.5-6.3 7-7z'/><circle cx='15' cy='9' r='1.3'/></svg></div><div class="mn"><h3>CHECK-IN</h3><p>Registre o odômetro antes de sair.</p></div></div>
+  <div class="mc" onclick="goViagem()" id="cardV" style="display:none"><div class="mi" style="background:#EFF6FF;color:#2563EB"><svg class='ico' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M9 4 3 6v14l6-2 6 2 6-2V4l-6 2-6-2z'/><path d='M9 4v14M15 6v14'/></svg></div><div class="mn"><h3>Viagem em Andamento</h3><p>Registrar paradas ou finalizar.</p></div></div>
 
   <div class="card" id="recuperarCard" style="display:none;border:1.5px solid #93C5FD;background:#EFF6FF">
-    <div class="ct" style="color:#1E40AF"><span class="ic" style="background:#DBEAFE;color:#2563EB">🔄</span> Retomar viagem em andamento</div>
+    <div class="ct" style="color:#1E40AF"><span class="ic" style="background:#DBEAFE;color:#2563EB"><svg class='ico' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M3.5 8a8 8 0 0 1 13.8-2.8L21 8'/><path d='M21 4v4h-4'/><path d='M20.5 16a8 8 0 0 1-13.8 2.8L3 16'/><path d='M3 20v-4h4'/></svg></span> Retomar viagem em andamento</div>
     <p style="font-size:13px;color:#1E40AF;margin-bottom:10px">Iniciou uma viagem e o app voltou ao início? Ela está <strong>salva no servidor</strong> — toque para continuar de onde parou.</p>
     <div id="recuperar_lista"></div>
   </div>
 
-  <div class="card"><div class="ct"><span class="ic" style="background:#EFF6FF;color:#2563EB">📋</span> Viagens Realizadas</div>
+  <div class="card"><div class="ct"><span class="ic" style="background:#EFF6FF;color:#2563EB"><svg class='ico' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><rect x='5' y='4.5' width='14' height='16' rx='2'/><rect x='9' y='2.5' width='6' height='3' rx='1'/><path d='M8.5 10h7M8.5 14h7'/></svg></span> Viagens Realizadas</div>
     <p style="font-size:13px;color:var(--text-secondary);margin-bottom:12px">Acompanhe a situação dos seus pedidos e corrija os que estão em revisão.</p>
     <div id="meus_pedidos"></div>
   </div>
 
   <div class="card" style="border:1.5px solid #FCA5A5;background:#FEF2F2">
-    <div class="ct" style="color:#991B1B"><span class="ic" style="background:#FEE2E2;color:#DC2626">🧾</span> Pedágio Pendente</div>
+    <div class="ct" style="color:#991B1B"><span class="ic" style="background:#FEE2E2;color:#DC2626"><svg class='ico' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M6 3h12v18l-2-1.3-2 1.3-2-1.3-2 1.3-2-1.3L6 21z'/><path d='M9 8h6M9 12h6'/></svg></span> Pedágio Pendente</div>
     <p style="font-size:13px;color:#B91C1C;margin-bottom:12px">Usa plano de pedágio (Sem Parar, ConectCar…) e o comprovante chegou <strong>depois</strong> de enviar o reembolso? Adicione o pedágio à sua solicitação aqui.</p>
     <button id="ppToggleBtn" class="bp r" style="padding:14px;justify-content:space-between" onclick="togglePedagio()"><span>Lançar pedágio pendente</span><svg id="ppArrow" width="16" height="16" viewBox="0 0 24 24" fill="none" style="transition:transform .3s;flex-shrink:0"><path d="M6 9l6 6 6-6" stroke="#fff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
     <div id="pedPendenteBox"></div>
@@ -119,8 +121,8 @@
 
 <!-- CHECK-IN -->
 <div class="sec" id="secCI">
-  <div class="card"><div class="ct"><span class="ic" style="background:#EFF6FF;color:#2563EB">👤</span> Identificação</div>
-    <p id="ci_prefill_hint" style="display:none;font-size:12px;color:#065F46;background:var(--success-bg);border:1px solid #A7F3D0;border-radius:8px;padding:8px 10px;margin-bottom:12px">✅ Preenchemos seus dados da última viagem. <strong>Confira</strong> e ajuste o que mudou (ex.: placa).</p>
+  <div class="card"><div class="ct"><span class="ic" style="background:#EFF6FF;color:#2563EB"><svg class='ico' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><circle cx='12' cy='8' r='4'/><path d='M4.5 20a7.5 7.5 0 0 1 15 0'/></svg></span> Identificação</div>
+    <p id="ci_prefill_hint" style="display:none;font-size:12px;color:#065F46;background:var(--success-bg);border:1px solid #A7F3D0;border-radius:8px;padding:8px 10px;margin-bottom:12px"><svg class='ico' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M5 12l4.5 4.5L19 7'/></svg> Preenchemos seus dados da última viagem. <strong>Confira</strong> e ajuste o que mudou (ex.: placa).</p>
     <div class="f"><label>Nome completo <span class="rq">*</span></label><input type="text" id="ci_nome" autocomplete="name"></div>
     <div class="f"><label>CPF <span class="rq">*</span></label><input type="text" id="ci_cpf" inputmode="numeric" maxlength="14"></div>
     <div class="fr"><div class="f"><label>RG <span class="rq">*</span></label><input type="text" id="ci_rg" maxlength="20"></div><div class="f"><label>Órgão emissor <span class="rq">*</span></label><input type="text" id="ci_orgao" placeholder="Ex: SSP/SP" maxlength="20"></div></div>
@@ -128,56 +130,56 @@
     <div class="fr"><div class="f"><label>Veículo <span class="rq">*</span></label><select id="ci_veic"><option value="">Selecione</option><option>Carro</option><option>Moto</option></select></div><div class="f"><label>Placa <span class="rq">*</span></label><input type="text" id="ci_placa" maxlength="8" style="text-transform:uppercase"></div></div>
     <p style="font-size:11px;color:var(--text-muted);margin-top:4px">RG e órgão emissor são usados no recibo de reembolso.</p>
   </div>
-  <div class="card"><div class="ct"><span class="ic" style="background:#ECFDF5;color:#059669">📡</span> Localização</div>
+  <div class="card"><div class="ct"><span class="ic" style="background:#ECFDF5;color:#059669"><svg class='ico' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M5 13a9 9 0 0 1 14 0'/><path d='M8 16a5 5 0 0 1 8 0'/><circle cx='12' cy='19' r='1.2'/></svg></span> Localização</div>
     <div class="gs p" id="ci_gs"><div class="gd"></div><span id="ci_gt">Obtendo…</span></div><div class="lc" id="ci_ck">--:--:--</div>
   </div>
-  <div class="card"><div class="ct"><span class="ic" style="background:#EFF6FF;color:#2563EB">📸</span> Odômetro — SAÍDA</div>
-    <label class="cl" for="ci_foto"><div class="cz" id="ci_cz"><div id="ci_ph"><div class="pi">📷</div><div class="pt">Toque para fotografar</div></div><img id="ci_pv" style="display:none"></div></label>
+  <div class="card"><div class="ct"><span class="ic" style="background:#EFF6FF;color:#2563EB"><svg class='ico' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M3 8.5A1.5 1.5 0 0 1 4.5 7H7l1.5-2h7L17 7h2.5A1.5 1.5 0 0 1 21 8.5V18a1.5 1.5 0 0 1-1.5 1.5h-15A1.5 1.5 0 0 1 3 18z'/><circle cx='12' cy='13' r='3.3'/></svg></span> Odômetro — SAÍDA</div>
+    <label class="cl" for="ci_foto"><div class="cz" id="ci_cz"><div id="ci_ph"><div class="pi"><svg class='ico' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M3 8.5A1.5 1.5 0 0 1 4.5 7H7l1.5-2h7L17 7h2.5A1.5 1.5 0 0 1 21 8.5V18a1.5 1.5 0 0 1-1.5 1.5h-15A1.5 1.5 0 0 1 3 18z'/><circle cx='12' cy='13' r='3.3'/></svg></div><div class="pt">Toque para fotografar</div></div><img id="ci_pv" style="display:none"></div></label>
     <input type="file" accept="image/*" id="ci_foto" class="chi" onchange="capFoto(this,'ci')">
-    <div class="cm" id="ci_cm"><div class="mr"><span class="ml">⏱</span><span id="ci_ts">—</span></div><div class="mr"><span class="ml">📍</span><span id="ci_co">—</span></div></div>
+    <div class="cm" id="ci_cm"><div class="mr"><span class="ml"><svg class='ico' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><circle cx='12' cy='12' r='8.2'/><path d='M12 7.5V12l3 2'/></svg></span><span id="ci_ts">—</span></div><div class="mr"><span class="ml"><svg class='ico' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M12 21s7-6.2 7-11a7 7 0 0 0-14 0c0 4.8 7 11 7 11z'/><circle cx='12' cy='10' r='2.5'/></svg></span><span id="ci_co">—</span></div></div>
   </div>
-  <button class="bp g" onclick="enviarCI()">✅ Confirmar CHECK-IN</button>
+  <button class="bp g" onclick="enviarCI()"><svg class='ico' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M5 12l4.5 4.5L19 7'/></svg> Confirmar CHECK-IN</button>
   <button class="bs" onclick="goHome()">← Voltar</button>
 </div>
 
 <!-- CHECK-IN OK -->
-<div class="sec" id="secCIOk"><div class="ss"><div class="si" style="background:#ECFDF5">🚀</div><h2>Check-in Registrado!</h2><p>Ao chegar em cada destino, registre a <strong>parada</strong> correspondente.</p><div style="background:#FFFBEB;border:1px solid #FCD34D;border-radius:10px;padding:12px 14px;margin:16px auto 0;max-width:340px;text-align:left;font-size:12px;color:#92400E;line-height:1.6">📌 <strong>Já vá guardando para o check-out:</strong><br>📸 foto do odômetro na chegada · 🗺️ print do Google Maps de cada trecho · 🧾 comprovante dos pedágios (se houver).</div><div class="sid" id="ci_proto" style="margin-top:16px"></div><button class="bp" style="margin-top:24px" onclick="goViagem()">➡️ Registrar paradas</button></div></div>
+<div class="sec" id="secCIOk"><div class="ss"><div class="si" style="background:#ECFDF5"><svg class='ico' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M5 15c-1.5 1-2 4-2 4s3-.5 4-2'/><path d='M9.5 13.5l-1 1'/><path d='M14.5 4.5C17 4 20 4 20 4s0 3-.5 5.5c-.7 3.5-3.5 6-7 7l-3-3c1-3.5 3.5-6.3 7-7z'/><circle cx='15' cy='9' r='1.3'/></svg></div><h2>Check-in Registrado!</h2><p>Ao chegar em cada destino, registre a <strong>parada</strong> correspondente.</p><div style="background:#FFFBEB;border:1px solid #FCD34D;border-radius:10px;padding:12px 14px;margin:16px auto 0;max-width:340px;text-align:left;font-size:12px;color:#92400E;line-height:1.6"><svg class='ico' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M12 21s7-6.2 7-11a7 7 0 0 0-14 0c0 4.8 7 11 7 11z'/><circle cx='12' cy='10' r='2.5'/></svg> <strong>Já vá guardando para o check-out:</strong><br><svg class='ico' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M3 8.5A1.5 1.5 0 0 1 4.5 7H7l1.5-2h7L17 7h2.5A1.5 1.5 0 0 1 21 8.5V18a1.5 1.5 0 0 1-1.5 1.5h-15A1.5 1.5 0 0 1 3 18z'/><circle cx='12' cy='13' r='3.3'/></svg> foto do odômetro na chegada · <svg class='ico' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M9 4 3 6v14l6-2 6 2 6-2V4l-6 2-6-2z'/><path d='M9 4v14M15 6v14'/></svg> print do Google Maps de cada trecho · <svg class='ico' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M6 3h12v18l-2-1.3-2 1.3-2-1.3-2 1.3-2-1.3L6 21z'/><path d='M9 8h6M9 12h6'/></svg> comprovante dos pedágios (se houver).</div><div class="sid" id="ci_proto" style="margin-top:16px"></div><button class="bp" style="margin-top:24px" onclick="goViagem()"><svg class='ico' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M4 12h15'/><path d='M13 6l6 6-6 6'/></svg> Registrar paradas</button></div></div>
 
 <!-- VIAGEM EM ANDAMENTO -->
 <div class="sec" id="secViagem">
   <div class="card" style="background:var(--success-bg);border-color:var(--success)">
-    <div style="font-size:13px;font-weight:600;color:#065F46;margin-bottom:6px">📋 Viagem em andamento</div>
+    <div style="font-size:13px;font-weight:600;color:#065F46;margin-bottom:6px"><svg class='ico' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><rect x='5' y='4.5' width='14' height='16' rx='2'/><rect x='9' y='2.5' width='6' height='3' rx='1'/><path d='M8.5 10h7M8.5 14h7'/></svg> Viagem em andamento</div>
     <div id="viagem_info" style="font-size:12px;color:#047857;line-height:1.6;font-family:'JetBrains Mono',monospace"></div>
   </div>
   <div id="syncBanner" style="display:none;background:#EFF6FF;border:1px solid #BFDBFE;color:#1E40AF;border-radius:var(--radius);padding:12px 14px;margin-bottom:14px;font-size:13px;line-height:1.5"></div>
   <div class="card" style="border:2px solid #F59E0B;background:#FFFBEB;padding:16px">
-    <div style="font-size:14px;font-weight:700;color:#92400E;display:flex;align-items:center;gap:8px;margin-bottom:6px"><span style="font-size:18px">📌</span> Atenção: o que você vai precisar no CHECK-OUT</div>
+    <div style="font-size:14px;font-weight:700;color:#92400E;display:flex;align-items:center;gap:8px;margin-bottom:6px"><span style="font-size:18px"><svg class='ico' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M12 21s7-6.2 7-11a7 7 0 0 0-14 0c0 4.8 7 11 7 11z'/><circle cx='12' cy='10' r='2.5'/></svg></span> Atenção: o que você vai precisar no CHECK-OUT</div>
     <div style="font-size:12px;color:#A16207;line-height:1.5;margin-bottom:12px">Ao finalizar a viagem, será obrigatório anexar os itens abaixo. <strong>Vá guardando durante o trajeto</strong> para não perder nada:</div>
     <ul style="list-style:none;display:flex;flex-direction:column;gap:10px">
-      <li style="display:flex;gap:10px;font-size:13px;color:#78350F;line-height:1.45"><span style="font-size:18px">📸</span><div><strong>Foto do odômetro</strong> na chegada</div></li>
-      <li style="display:flex;gap:10px;font-size:13px;color:#78350F;line-height:1.45"><span style="font-size:18px">🗺️</span><div><strong>Print do Google Maps de cada trecho</strong> (ida e volta) — tire o print da rota a cada parada para não esquecer</div></li>
-      <li style="display:flex;gap:10px;font-size:13px;color:#78350F;line-height:1.45"><span style="font-size:18px">🧾</span><div><strong>Comprovante de cada pedágio</strong>, se houver</div></li>
+      <li style="display:flex;gap:10px;font-size:13px;color:#78350F;line-height:1.45"><span style="font-size:18px"><svg class='ico' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M3 8.5A1.5 1.5 0 0 1 4.5 7H7l1.5-2h7L17 7h2.5A1.5 1.5 0 0 1 21 8.5V18a1.5 1.5 0 0 1-1.5 1.5h-15A1.5 1.5 0 0 1 3 18z'/><circle cx='12' cy='13' r='3.3'/></svg></span><div><strong>Foto do odômetro</strong> na chegada</div></li>
+      <li style="display:flex;gap:10px;font-size:13px;color:#78350F;line-height:1.45"><span style="font-size:18px"><svg class='ico' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M9 4 3 6v14l6-2 6 2 6-2V4l-6 2-6-2z'/><path d='M9 4v14M15 6v14'/></svg></span><div><strong>Print do Google Maps de cada trecho</strong> (ida e volta) — tire o print da rota a cada parada para não esquecer</div></li>
+      <li style="display:flex;gap:10px;font-size:13px;color:#78350F;line-height:1.45"><span style="font-size:18px"><svg class='ico' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M6 3h12v18l-2-1.3-2 1.3-2-1.3-2 1.3-2-1.3L6 21z'/><path d='M9 8h6M9 12h6'/></svg></span><div><strong>Comprovante de cada pedágio</strong>, se houver</div></li>
     </ul>
   </div>
   <div class="card" id="ida_card">
-    <div class="ct"><span class="ic" style="background:#DBEAFE;color:#2563EB">➡️</span> <span id="ida_title">IDA</span></div>
+    <div class="ct"><span class="ic" style="background:#DBEAFE;color:#2563EB"><svg class='ico' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M4 12h15'/><path d='M13 6l6 6-6 6'/></svg></span> <span id="ida_title">IDA</span></div>
     <p style="font-size:12px;color:var(--text-muted);margin-bottom:10px">Registre uma parada para <strong>cada trecho da ida</strong>. Adicione quantas precisar.</p>
     <ul class="wl" id="ida_list"></ul>
-    <button class="bp b" onclick="goParada('ida')" id="btnIda" style="padding:12px;font-size:14px">📍 Registrar parada da IDA</button>
+    <button class="bp b" onclick="goParada('ida')" id="btnIda" style="padding:12px;font-size:14px"><svg class='ico' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M12 21s7-6.2 7-11a7 7 0 0 0-14 0c0 4.8 7 11 7 11z'/><circle cx='12' cy='10' r='2.5'/></svg> Registrar parada da IDA</button>
   </div>
   <div class="card" id="volta_card">
-    <div class="ct"><span class="ic" style="background:#FEF3C7;color:#D97706">↩️</span> <span id="volta_title">VOLTA</span></div>
+    <div class="ct"><span class="ic" style="background:#FEF3C7;color:#D97706"><svg class='ico' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M20 12H6'/><path d='M11 6 5 12l6 6'/></svg></span> <span id="volta_title">VOLTA</span></div>
     <p style="font-size:12px;color:var(--text-muted);margin-bottom:10px">Registre uma parada para <strong>cada trecho da volta</strong>. Se a viagem for só de ida, deixe vazio.</p>
     <ul class="wl" id="volta_list"></ul>
-    <button class="bp purple" onclick="goParada('volta')" id="btnVolta" style="padding:12px;font-size:14px">📍 Registrar parada da VOLTA</button>
+    <button class="bp purple" onclick="goParada('volta')" id="btnVolta" style="padding:12px;font-size:14px"><svg class='ico' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M12 21s7-6.2 7-11a7 7 0 0 0-14 0c0 4.8 7 11 7 11z'/><circle cx='12' cy='10' r='2.5'/></svg> Registrar parada da VOLTA</button>
   </div>
   <div id="finalizar_area" style="display:none">
     <div class="card" style="background:var(--success-bg);border-color:var(--success);text-align:center;padding:16px">
-      <div style="font-size:24px;margin-bottom:6px">🏁</div>
+      <div style="font-size:24px;margin-bottom:6px"><svg class='ico' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M5 21V4'/><path d='M5 4h11l-2 3 2 3H5'/></svg></div>
       <div style="font-size:14px;font-weight:700;color:#065F46">Terminou o trajeto?</div>
       <p style="font-size:13px;color:#047857;margin-top:4px">Quando tiver registrado todas as idas e voltas, finalize para calcular o reembolso.</p>
     </div>
-    <button class="bp y" onclick="goFinalizar()">🏁 CHECK-OUT — Finalizar</button>
+    <button class="bp y" onclick="goFinalizar()"><svg class='ico' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M5 21V4'/><path d='M5 4h11l-2 3 2 3H5'/></svg> CHECK-OUT — Finalizar</button>
   </div>
   <button class="bs" onclick="goHome()">← Início</button>
 </div>
@@ -188,62 +190,62 @@
     <div id="pa_badge" class="phase-badge" style="background:#DBEAFE;color:#1E40AF">IDA</div>
     <div style="font-size:15px;font-weight:700;color:#1E40AF;margin-top:8px" id="pa_titulo">Parada 1 de 1</div>
   </div>
-  <div class="card"><div class="ct"><span class="ic" style="background:#ECFDF5;color:#059669">📡</span> Localização</div>
+  <div class="card"><div class="ct"><span class="ic" style="background:#ECFDF5;color:#059669"><svg class='ico' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M5 13a9 9 0 0 1 14 0'/><path d='M8 16a5 5 0 0 1 8 0'/><circle cx='12' cy='19' r='1.2'/></svg></span> Localização</div>
     <div class="gs p" id="pa_gs"><div class="gd"></div><span id="pa_gt">Obtendo…</span></div><div class="lc" id="pa_ck">--:--:--</div>
-    <p style="font-size:12px;color:var(--text-muted);margin-top:8px;line-height:1.5">📴 <strong>Sem sinal ou sem GPS?</strong> Pode registrar assim mesmo: a <strong>origem e o destino</strong> que você digitar já registram o local, e a parada fica <strong>salva no aparelho</strong> — ela é enviada sozinha quando a internet voltar.</p>
+    <p style="font-size:12px;color:var(--text-muted);margin-top:8px;line-height:1.5"><svg class='ico' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M3 3l18 18'/><path d='M8.5 12.5a5 5 0 0 1 7 0'/><path d='M5 9a9 9 0 0 1 4-2.3M19 9a9 9 0 0 0-6-2.9'/><circle cx='12' cy='16.5' r='1.2'/></svg> <strong>Sem sinal ou sem GPS?</strong> Pode registrar assim mesmo: a <strong>origem e o destino</strong> que você digitar já registram o local, e a parada fica <strong>salva no aparelho</strong> — ela é enviada sozinha quando a internet voltar.</p>
   </div>
-  <div class="card"><div class="ct"><span class="ic" style="background:#FEF3C7;color:#D97706">🛣️</span> Trecho</div>
+  <div class="card"><div class="ct"><span class="ic" style="background:#FEF3C7;color:#D97706"><svg class='ico' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M9 4 3 6v14l6-2 6 2 6-2V4l-6 2-6-2z'/><path d='M9 4v14M15 6v14'/></svg></span> Trecho</div>
     <div class="fr"><div class="f"><label>Origem <span class="rq">*</span></label><input type="text" id="pa_orig"></div><div class="f"><label>Destino <span class="rq">*</span></label><input type="text" id="pa_dest"></div></div>
     <div class="f"><label>Distância (km) <span class="rq">*</span></label><input type="number" id="pa_km" inputmode="decimal" step="0.1"></div>
-    <p style="font-size:12px;color:#92400E;background:#FFFBEB;border:1px solid #FCD34D;border-radius:8px;padding:10px 12px;line-height:1.5">⚠️ Registro rápido, sem foto agora. <strong>Tire e guarde o print do Google Maps deste trecho</strong> — ele será obrigatório no check-out.</p>
+    <p style="font-size:12px;color:#92400E;background:#FFFBEB;border:1px solid #FCD34D;border-radius:8px;padding:10px 12px;line-height:1.5"><svg class='ico' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M12 4 2.6 20h18.8L12 4z'/><path d='M12 10v4M12 17.4v.1'/></svg> Registro rápido, sem foto agora. <strong>Tire e guarde o print do Google Maps deste trecho</strong> — ele será obrigatório no check-out.</p>
   </div>
-  <button class="bp b" onclick="enviarParada()">📍 Confirmar Parada</button>
+  <button class="bp b" onclick="enviarParada()"><svg class='ico' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M12 21s7-6.2 7-11a7 7 0 0 0-14 0c0 4.8 7 11 7 11z'/><circle cx='12' cy='10' r='2.5'/></svg> Confirmar Parada</button>
   <button class="bs" onclick="show('secViagem')">← Voltar</button>
 </div>
 
 <!-- FINALIZAR (Check-out) -->
 <div class="sec" id="secFinal">
   <div class="card" style="background:linear-gradient(135deg,#FEF3C7,#FDE68A);border:2px solid #F59E0B;text-align:center;padding:20px">
-    <div style="font-size:28px;margin-bottom:6px">🏁</div>
+    <div style="font-size:28px;margin-bottom:6px"><svg class='ico' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M5 21V4'/><path d='M5 4h11l-2 3 2 3H5'/></svg></div>
     <div style="font-size:16px;font-weight:700;color:#92400E">CHECK-OUT</div>
     <p style="font-size:13px;color:#A16207;margin-top:4px">Registre a chegada e finalize a viagem.</p>
   </div>
-  <div class="card"><div class="ct"><span class="ic" style="background:#ECFDF5;color:#059669">📡</span> Localização</div>
+  <div class="card"><div class="ct"><span class="ic" style="background:#ECFDF5;color:#059669"><svg class='ico' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M5 13a9 9 0 0 1 14 0'/><path d='M8 16a5 5 0 0 1 8 0'/><circle cx='12' cy='19' r='1.2'/></svg></span> Localização</div>
     <div class="gs p" id="co_gs"><div class="gd"></div><span id="co_gt">Obtendo…</span></div><div class="lc" id="co_ck">--:--:--</div>
   </div>
-  <div class="card" id="corrSaidaCard" style="display:none;border:1.5px solid #FCD34D;background:#FFFBEB"><div class="ct" style="color:#92400E"><span class="ic" style="background:#FEF3C7;color:#D97706">📸</span> Odômetro — SAÍDA (corrigir)</div>
+  <div class="card" id="corrSaidaCard" style="display:none;border:1.5px solid #FCD34D;background:#FFFBEB"><div class="ct" style="color:#92400E"><span class="ic" style="background:#FEF3C7;color:#D97706"><svg class='ico' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M3 8.5A1.5 1.5 0 0 1 4.5 7H7l1.5-2h7L17 7h2.5A1.5 1.5 0 0 1 21 8.5V18a1.5 1.5 0 0 1-1.5 1.5h-15A1.5 1.5 0 0 1 3 18z'/><circle cx='12' cy='13' r='3.3'/></svg></span> Odômetro — SAÍDA (corrigir)</div>
     <p style="font-size:12px;color:#A16207;margin-bottom:10px">Só na correção: se a foto do odômetro de <strong>saída</strong> estiver errada, anexe a correta aqui. Se não precisar, deixe em branco.</p>
-    <label class="cl" for="cs_foto"><div class="cz" id="cs_cz"><div id="cs_ph"><div class="pi">📷</div><div class="pt">Trocar foto do odômetro de saída</div></div><img id="cs_pv" style="display:none"></div></label>
+    <label class="cl" for="cs_foto"><div class="cz" id="cs_cz"><div id="cs_ph"><div class="pi"><svg class='ico' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M3 8.5A1.5 1.5 0 0 1 4.5 7H7l1.5-2h7L17 7h2.5A1.5 1.5 0 0 1 21 8.5V18a1.5 1.5 0 0 1-1.5 1.5h-15A1.5 1.5 0 0 1 3 18z'/><circle cx='12' cy='13' r='3.3'/></svg></div><div class="pt">Trocar foto do odômetro de saída</div></div><img id="cs_pv" style="display:none"></div></label>
     <input type="file" accept="image/*" id="cs_foto" class="chi" onchange="capFile(this,'cs_pv','cs_ph','cs_cz')">
   </div>
-  <div class="card"><div class="ct"><span class="ic" style="background:#FEF3C7;color:#D97706">📸</span> Odômetro — CHEGADA</div>
-    <label class="cl" for="co_foto"><div class="cz" id="co_cz"><div id="co_ph"><div class="pi">📷</div><div class="pt">Fotografar painel</div></div><img id="co_pv" style="display:none"></div></label>
+  <div class="card"><div class="ct"><span class="ic" style="background:#FEF3C7;color:#D97706"><svg class='ico' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M3 8.5A1.5 1.5 0 0 1 4.5 7H7l1.5-2h7L17 7h2.5A1.5 1.5 0 0 1 21 8.5V18a1.5 1.5 0 0 1-1.5 1.5h-15A1.5 1.5 0 0 1 3 18z'/><circle cx='12' cy='13' r='3.3'/></svg></span> Odômetro — CHEGADA</div>
+    <label class="cl" for="co_foto"><div class="cz" id="co_cz"><div id="co_ph"><div class="pi"><svg class='ico' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M3 8.5A1.5 1.5 0 0 1 4.5 7H7l1.5-2h7L17 7h2.5A1.5 1.5 0 0 1 21 8.5V18a1.5 1.5 0 0 1-1.5 1.5h-15A1.5 1.5 0 0 1 3 18z'/><circle cx='12' cy='13' r='3.3'/></svg></div><div class="pt">Fotografar painel</div></div><img id="co_pv" style="display:none"></div></label>
     <input type="file" accept="image/*" id="co_foto" class="chi" onchange="capFoto(this,'co')">
-    <div class="cm" id="co_cm"><div class="mr"><span class="ml">⏱</span><span id="co_ts">—</span></div><div class="mr"><span class="ml">📍</span><span id="co_co">—</span></div></div>
+    <div class="cm" id="co_cm"><div class="mr"><span class="ml"><svg class='ico' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><circle cx='12' cy='12' r='8.2'/><path d='M12 7.5V12l3 2'/></svg></span><span id="co_ts">—</span></div><div class="mr"><span class="ml"><svg class='ico' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M12 21s7-6.2 7-11a7 7 0 0 0-14 0c0 4.8 7 11 7 11z'/><circle cx='12' cy='10' r='2.5'/></svg></span><span id="co_co">—</span></div></div>
   </div>
-  <div class="card"><div class="ct"><span class="ic" style="background:#F0FDF4;color:#16A34A">🗺️</span> Prints do Maps por trecho</div>
+  <div class="card"><div class="ct"><span class="ic" style="background:#F0FDF4;color:#16A34A"><svg class='ico' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M9 4 3 6v14l6-2 6 2 6-2V4l-6 2-6-2z'/><path d='M9 4v14M15 6v14'/></svg></span> Prints do Maps por trecho</div>
     <p style="font-size:12px;color:var(--text-secondary);margin-bottom:12px">Anexe o print do Google Maps de <strong>cada parada registrada</strong> (ida e volta).</p>
     <div id="maps_list"></div>
     <div id="trecho_form"></div>
     <button class="add-btn" onclick="abrirTrechoEsquecido()" style="margin-top:10px;margin-bottom:0">+ Esqueci uma parada — adicionar trecho</button>
   </div>
-  <div class="card"><div class="ct"><span class="ic" style="background:#FEF2F2;color:#DC2626">🧾</span> Pedágios</div>
+  <div class="card"><div class="ct"><span class="ic" style="background:#FEF2F2;color:#DC2626"><svg class='ico' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M6 3h12v18l-2-1.3-2 1.3-2-1.3-2 1.3-2-1.3L6 21z'/><path d='M9 8h6M9 12h6'/></svg></span> Pedágios</div>
     <label style="display:flex;align-items:center;gap:8px;cursor:pointer;margin-bottom:12px;font-size:13px;font-weight:600;color:var(--text)"><input type="checkbox" id="co_ped_depois" onchange="togglePedDepois()" style="width:18px;height:18px;flex-shrink:0"> Vou lançar os pedágios depois (plano de pedágio)</label>
-    <div id="co_ped_depois_aviso" style="display:none;background:var(--warning-bg);border:1px solid #FCD34D;border-radius:var(--radius-sm);padding:12px;font-size:12px;color:#92400E;line-height:1.5">🧾 Os pedágios ficarão <strong>pendentes</strong>. Quando o comprovante chegar, use <strong>"Lançar pedágio pendente"</strong> na tela inicial para adicioná-los a este protocolo.</div>
+    <div id="co_ped_depois_aviso" style="display:none;background:var(--warning-bg);border:1px solid #FCD34D;border-radius:var(--radius-sm);padding:12px;font-size:12px;color:#92400E;line-height:1.5"><svg class='ico' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M6 3h12v18l-2-1.3-2 1.3-2-1.3-2 1.3-2-1.3L6 21z'/><path d='M9 8h6M9 12h6'/></svg> Os pedágios ficarão <strong>pendentes</strong>. Quando o comprovante chegar, use <strong>"Lançar pedágio pendente"</strong> na tela inicial para adicioná-los a este protocolo.</div>
     <div id="co_ped_campos">
-      <div class="ped-group-title">➡️ Pedágios da IDA</div><div id="ped_list_ida"></div><button class="add-btn" onclick="addPed('ida')">+ Adicionar Pedágio (Ida)</button>
-      <div class="ped-group-title">↩️ Pedágios da VOLTA</div><div id="ped_list_volta"></div><button class="add-btn" onclick="addPed('volta')">+ Adicionar Pedágio (Volta)</button>
+      <div class="ped-group-title"><svg class='ico' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M4 12h15'/><path d='M13 6l6 6-6 6'/></svg> Pedágios da IDA</div><div id="ped_list_ida"></div><button class="add-btn" onclick="addPed('ida')">+ Adicionar Pedágio (Ida)</button>
+      <div class="ped-group-title"><svg class='ico' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M20 12H6'/><path d='M11 6 5 12l6 6'/></svg> Pedágios da VOLTA</div><div id="ped_list_volta"></div><button class="add-btn" onclick="addPed('volta')">+ Adicionar Pedágio (Volta)</button>
       <p style="font-size:12px;color:var(--text-muted)">Adicione cada pedágio na fase correspondente. Se não houver, deixe vazio.</p>
     </div>
   </div>
-  <div class="card"><div class="ct"><span class="ic" style="background:#FEF3C7;color:#D97706">⛽</span> Valor do Combustível</div>
+  <div class="card"><div class="ct"><span class="ic" style="background:#FEF3C7;color:#D97706"><svg class='ico' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M5 21V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v16'/><path d='M4 21h11'/><path d='M13 9h3.5a2 2 0 0 1 2 2v5a1.6 1.6 0 0 0 3.2 0V8.5L18 5.5'/></svg></span> Valor do Combustível</div>
     <div class="tog-row">
       <button class="tog-btn on" id="tog_cupom" onclick="setFuelMode('cupom')">Tenho cupom fiscal</button>
       <button class="tog-btn" id="tog_estim" onclick="setFuelMode('estim')">Usar estimativa</button>
     </div>
     <div id="fuel_cupom">
       <div class="f"><label>Preço real do litro (R$) <span class="rq">*</span></label><input type="number" id="co_preco" placeholder="Ex: 7.49" inputmode="decimal" step="0.01"></div>
-      <label class="cl" for="co_cupom"><div class="cz" id="co_cupz"><div id="co_cuph"><div class="pi">🧾</div><div class="pt">Anexar cupom fiscal</div><div class="ps">Mostrando preço por litro</div></div><img id="co_cupv" style="display:none"></div></label>
+      <label class="cl" for="co_cupom"><div class="cz" id="co_cupz"><div id="co_cuph"><div class="pi"><svg class='ico' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M6 3h12v18l-2-1.3-2 1.3-2-1.3-2 1.3-2-1.3L6 21z'/><path d='M9 8h6M9 12h6'/></svg></div><div class="pt">Anexar cupom fiscal</div><div class="ps">Mostrando preço por litro</div></div><img id="co_cupv" style="display:none"></div></label>
       <input type="file" accept="image/*" id="co_cupom" class="chi" onchange="capFile(this,'co_cupv','co_cuph','co_cupz')">
     </div>
     <div id="fuel_estim" style="display:none">
@@ -254,12 +256,12 @@
       </div>
     </div>
   </div>
-  <div class="card"><div class="ct"><span class="ic" style="background:#EFF6FF;color:#2563EB">🧍</span> Caronas</div>
+  <div class="card"><div class="ct"><span class="ic" style="background:#EFF6FF;color:#2563EB"><svg class='ico' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><circle cx='9' cy='8' r='3.2'/><path d='M3.5 20a5.5 5.5 0 0 1 11 0'/><path d='M16 5.2a3.2 3.2 0 0 1 0 6M17.5 20a5.5 5.5 0 0 0-3-5'/></svg></span> Caronas</div>
     <p style="font-size:12px;color:var(--text-muted);margin-bottom:10px">Nome de quem pegou carona com você (se houver). Deixe vazio se viajou sozinho.</p>
     <div id="carona_list"></div>
     <button class="add-btn" onclick="addCarona()">+ Adicionar carona</button>
   </div>
-  <div class="card"><div class="ct"><span class="ic" style="background:#FEF3C7;color:#D97706">🚗</span> Consumo do veículo</div>
+  <div class="card"><div class="ct"><span class="ic" style="background:#FEF3C7;color:#D97706"><svg class='ico' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M4 13l2-5a2 2 0 0 1 1.9-1.4h8.2A2 2 0 0 1 18 8l2 5'/><rect x='3' y='13' width='18' height='5' rx='1.5'/><circle cx='7.5' cy='18' r='1.4'/><circle cx='16.5' cy='18' r='1.4'/></svg></span> Consumo do veículo</div>
     <div class="tog-row">
       <button class="tog-btn on" id="tog_con_pad" onclick="setConMode('padrao')">Usar padrão</button>
       <button class="tog-btn" id="tog_con_custom" onclick="setConMode('custom')">Informar meu consumo</button>
@@ -267,21 +269,21 @@
     <div id="con_padrao"><div style="padding:14px;background:var(--warning-bg);border-radius:var(--radius-sm);border:1px solid #FCD34D;text-align:center"><div style="font-size:13px;font-weight:600;color:#92400E;margin-bottom:4px">Será usado o consumo padrão</div><div id="con_padrao_val" style="font-size:18px;font-weight:700;color:#92400E">10 km/L</div></div></div>
     <div id="con_custom" style="display:none">
       <div class="f"><label>Consumo do seu carro (km/L) <span class="rq">*</span></label><input type="number" id="co_consumo" placeholder="Ex: 8.5" inputmode="decimal" step="0.1"></div>
-      <label class="cl" for="co_confoto"><div class="cz" id="co_confz"><div id="co_confh"><div class="pi">📷</div><div class="pt">Foto do painel com o consumo</div></div><img id="co_confv" style="display:none"></div></label>
+      <label class="cl" for="co_confoto"><div class="cz" id="co_confz"><div id="co_confh"><div class="pi"><svg class='ico' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M3 8.5A1.5 1.5 0 0 1 4.5 7H7l1.5-2h7L17 7h2.5A1.5 1.5 0 0 1 21 8.5V18a1.5 1.5 0 0 1-1.5 1.5h-15A1.5 1.5 0 0 1 3 18z'/><circle cx='12' cy='13' r='3.3'/></svg></div><div class="pt">Foto do painel com o consumo</div></div><img id="co_confv" style="display:none"></div></label>
       <input type="file" accept="image/*" id="co_confoto" class="chi" onchange="capFile(this,'co_confv','co_confh','co_confz')">
     </div>
   </div>
   <div class="card" id="resumoCard" style="display:none;background:var(--bg)"><div id="resumo"></div></div>
-  <button class="bp b" onclick="calcular()" id="btnCalc">🧮 Calcular Reembolso</button>
-  <button class="bp g" id="btnEnv" onclick="enviarFinal()" style="display:none;margin-top:10px">📤 Enviar Solicitação</button>
+  <button class="bp b" onclick="calcular()" id="btnCalc"><svg class='ico' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><rect x='5' y='3' width='14' height='18' rx='2'/><path d='M8 7h8'/><path d='M8 11h.1M12 11h.1M16 11h.1M8 15h.1M12 15h.1M16 15h.1M8 18h4'/></svg> Calcular Reembolso</button>
+  <button class="bp g" id="btnEnv" onclick="enviarFinal()" style="display:none;margin-top:10px"><svg class='ico' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M21 3 10 14'/><path d='M21 3l-7 18-4-8-8-4 19-6z'/></svg> Enviar Solicitação</button>
   <button class="bs" onclick="show('secViagem')">← Voltar</button>
 </div>
 
 <!-- OK -->
-<div class="sec" id="secOk"><div class="ss"><div class="si">✅</div><h2 id="ok_titulo">Solicitação Enviada!</h2><p>Reembolso registrado com check-in, paradas e check-out.</p><div class="sid" id="ok_proto"></div><div class="sid" id="ok_val" style="margin-left:8px;background:var(--success-bg);color:#065F46"></div><button class="bp" style="margin-top:24px" onclick="location.reload()">← Início</button></div></div>
+<div class="sec" id="secOk"><div class="ss"><div class="si"><svg class='ico' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M5 12l4.5 4.5L19 7'/></svg></div><h2 id="ok_titulo">Solicitação Enviada!</h2><p>Reembolso registrado com check-in, paradas e check-out.</p><div class="sid" id="ok_proto"></div><div class="sid" id="ok_val" style="margin-left:8px;background:var(--success-bg);color:#065F46"></div><button class="bp" style="margin-top:24px" onclick="location.reload()">← Início</button></div></div>
 
 </div>
-<div class="foot">📱 Qualquer problema ou dúvida, fale comigo:<br><strong>+55 11 93623-3054</strong><br><span style="font-size:10px;color:#CBD5E1">versão 11/08 · recuperação de viagem</span></div>
+<div class="foot"><svg class='ico' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M6 3h3l2 5-2.5 1.5a12 12 0 0 0 5 5L16 14l5 2v3a2 2 0 0 1-2.2 2A17 17 0 0 1 4 5.2 2 2 0 0 1 6 3z'/></svg> Qualquer problema ou dúvida, fale comigo:<br><strong>+55 11 93623-3054</strong><br><span style="font-size:10px;color:#CBD5E1">versão 11/08 · recuperação de viagem</span></div>
 <div class="lo" id="ld"><div class="sp"></div><p id="lt">Enviando…</p></div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -289,6 +291,9 @@
 <script>
 var sb=null,SESSION=null,PERFIL=null,PB=4.67,gps=null,trip=null,coCapt={ts:null,lat:null,lng:null,b64:null},clk=null,curFase="ida",fuelMode="cupom",conMode="padrao",_calc=null,_meus=[],_meusShow=5,ULT_DADOS=null;
 function $(id){return document.getElementById(id);}
+// Ícones SVG (traço) — substituem emojis
+var IC={play:"<svg class='ico' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M7 5l12 7-12 7z'/></svg>",clock:"<svg class='ico' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><circle cx='12' cy='12' r='8.2'/><path d='M12 7.5V12l3 2'/></svg>",wifioff:"<svg class='ico' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M3 3l18 18'/><path d='M8.5 12.5a5 5 0 0 1 7 0'/><path d='M5 9a9 9 0 0 1 4-2.3M19 9a9 9 0 0 0-6-2.9'/><circle cx='12' cy='16.5' r='1.2'/></svg>",receipt:"<svg class='ico' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M6 3h12v18l-2-1.3-2 1.3-2-1.3-2 1.3-2-1.3L6 21z'/><path d='M9 8h6M9 12h6'/></svg>",map:"<svg class='ico' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M9 4 3 6v14l6-2 6 2 6-2V4l-6 2-6-2z'/><path d='M9 4v14M15 6v14'/></svg>",chart:"<svg class='ico' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M4 20V11'/><path d='M10 20V5'/><path d='M16 20v-6'/><path d='M3 20h18'/></svg>",refresh:"<svg class='ico' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M3.5 8a8 8 0 0 1 13.8-2.8L21 8'/><path d='M21 4v4h-4'/><path d='M20.5 16a8 8 0 0 1-13.8 2.8L3 16'/><path d='M3 20v-4h4'/></svg>"};
+function ic(n){ return IC[n]||""; }
 function pad(n){return("0"+n).slice(-2)}function fmtD(d){return pad(d.getDate())+"/"+pad(d.getMonth()+1)+"/"+d.getFullYear()+" "+pad(d.getHours())+":"+pad(d.getMinutes())+":"+pad(d.getSeconds())}
 function show(id){var s=document.querySelectorAll(".sec");for(var i=0;i<s.length;i++)s[i].classList.remove("a");$(id).classList.add("a");window.scrollTo(0,0);if(clk){clearInterval(clk);clk=null}}
 function ld(m){$("lt").textContent=m||"Enviando…";$("ld").classList.add("s")}function hd(){$("ld").classList.remove("s")}
@@ -459,7 +464,7 @@ async function carregarAbertas(){
     if(r.error || !abertas.length){ card.style.display="none"; return; }
     card.style.display="block";
     box.innerHTML=abertas.map(function(a){
-      return '<div style="border:1px solid #BFDBFE;border-radius:10px;padding:10px 12px;margin-bottom:8px;background:#fff"><div style="font-weight:700">'+esc(a.protocolo)+'</div><div style="font-size:12px;color:var(--text-secondary);margin-top:2px">'+esc(a.veiculo||"")+(a.placa?" · "+esc(a.placa):"")+(a.checkin_em?' · iniciada '+fmtDataCurta(a.checkin_em):"")+'</div><button class="bp b" style="margin-top:8px;padding:10px;font-size:14px" onclick="continuarViagem(\''+a.id+'\')">▶️ Continuar esta viagem</button></div>';
+      return '<div style="border:1px solid #BFDBFE;border-radius:10px;padding:10px 12px;margin-bottom:8px;background:#fff"><div style="font-weight:700">'+esc(a.protocolo)+'</div><div style="font-size:12px;color:var(--text-secondary);margin-top:2px">'+esc(a.veiculo||"")+(a.placa?" · "+esc(a.placa):"")+(a.checkin_em?' · iniciada '+fmtDataCurta(a.checkin_em):"")+'</div><button class="bp b" style="margin-top:8px;padding:10px;font-size:14px" onclick="continuarViagem(\''+a.id+'\')">'+ic('play')+' Continuar esta viagem</button></div>';
     }).join("");
   }catch(e){ card.style.display="none"; }
 }
@@ -536,11 +541,11 @@ function renderViagem(){
   $("volta_title").textContent="VOLTA ("+volN+(volN===1?" parada":" paradas")+")";
   $("ida_list").innerHTML=renderParadaList(idaD,"ida");
   $("volta_list").innerHTML=renderParadaList(volD,"volta");
-  $("btnIda").textContent="📍 Registrar parada da IDA";
-  $("btnVolta").textContent="📍 Registrar parada da VOLTA";
+  $("btnIda").textContent="Registrar parada da IDA";
+  $("btnVolta").textContent="Registrar parada da VOLTA";
   $("finalizar_area").style.display=((idaN+volN)>=1)?"block":"none";
   atualizarSync();}
-function renderParadaList(arr,fase){if(!arr.length)return '<li style="color:var(--text-muted);border-left-color:var(--border)">Nenhuma parada.</li>';var h="";for(var i=0;i<arr.length;i++){var pend=arr[i].pending&&!arr[i].id;h+='<li><strong>'+esc(arr[i].orig)+' → '+esc(arr[i].dest)+'</strong> — '+esc(arr[i].km)+' km'+(pend?' <span style="background:#DBEAFE;color:#1E40AF;font-size:10px;font-weight:700;padding:1px 6px;border-radius:6px">⏳ a enviar</span>':'')+'<span class="rmp" title="Remover esta parada" onclick="removerParada(\''+fase+'\','+i+')">✕</span></li>';}return h}
+function renderParadaList(arr,fase){if(!arr.length)return '<li style="color:var(--text-muted);border-left-color:var(--border)">Nenhuma parada.</li>';var h="";for(var i=0;i<arr.length;i++){var pend=arr[i].pending&&!arr[i].id;h+='<li><strong>'+esc(arr[i].orig)+' → '+esc(arr[i].dest)+'</strong> — '+esc(arr[i].km)+' km'+(pend?' <span style="background:#DBEAFE;color:#1E40AF;font-size:10px;font-weight:700;padding:1px 6px;border-radius:6px">'+ic('clock')+' a enviar</span>':'')+'<span class="rmp" title="Remover esta parada" onclick="removerParada(\''+fase+'\','+i+')">✕</span></li>';}return h}
 async function removerParada(fase,idx){var arr=fase==="ida"?trip.ida_paradas:trip.volta_paradas;var p=arr[idx];if(!p)return;if(!confirm("Remover esta parada?"))return;if(p.id)await sb.from("paradas").delete().eq("id",p.id);arr.splice(idx,1);saveTrip(trip);renderViagem()}
 function mudarPlano(fase,delta){if(!trip)return;var reg=(fase==="ida"?(trip.ida_paradas||[]):(trip.volta_paradas||[])).length;var cur=parseInt(fase==="ida"?trip.ida_plan:trip.volta_plan,10);if(isNaN(cur))cur=(fase==="ida"?1:0);var min=(fase==="ida")?Math.max(reg,1):Math.max(reg,0);var novo=cur+delta;if(novo<min){alert("Não dá para reduzir: a "+fase+" já tem "+reg+" parada(s).");return}if(novo>12){alert("Máximo de 12 paradas.");return}if(fase==="ida")trip.ida_plan=novo;else trip.volta_plan=novo;saveTrip(trip);renderViagem()}
 
@@ -565,9 +570,9 @@ function contarPendentes(){var n=0;["ida_paradas","volta_paradas"].forEach(funct
 function atualizarSync(){var b=$("syncBanner");if(!b)return;var pend=contarPendentes(),off=(navigator.onLine===false);
   if(!pend&&!off){b.style.display="none";return;}
   b.style.display="block";
-  if(off&&pend)b.innerHTML="📴 Sem internet — <strong>"+pend+" parada(s)</strong> guardada(s) no aparelho. Serão enviadas automaticamente quando a conexão voltar.";
-  else if(off)b.innerHTML="📴 Sem internet no momento. Você pode registrar paradas normalmente — elas ficam salvas e enviam sozinhas depois.";
-  else b.innerHTML="⏳ Enviando "+pend+" parada(s) pendente(s)…";
+  if(off&&pend)b.innerHTML=ic('wifioff')+" Sem internet — <strong>"+pend+" parada(s)</strong> guardada(s) no aparelho. Serão enviadas automaticamente quando a conexão voltar.";
+  else if(off)b.innerHTML=ic('wifioff')+" Sem internet no momento. Você pode registrar paradas normalmente — elas ficam salvas e enviam sozinhas depois.";
+  else b.innerHTML=ic('clock')+" Enviando "+pend+" parada(s) pendente(s)…";
 }
 var _sincronizando=false;
 async function sincronizarParadas(){
@@ -601,7 +606,7 @@ function setConMode(m){conMode=m;$("tog_con_pad").classList.toggle("on",m==="pad
 function getConsumo(){if(conMode==="custom")return parseFloat($("co_consumo").value)||0;return(trip&&trip.veiculo==="Moto")?49:10}
 var pedN=0;
 function addPed(fase){pedN++;var wrap=$("ped_list_"+fase);var d=document.createElement("div");d.className="dyn-item";
-  d.innerHTML='<button class="rm" onclick="this.parentNode.remove()">✕</button><div class="f" style="margin:0 0 10px"><label>Valor (R$)</label><input type="number" class="ped-val" inputmode="decimal" step="0.01"></div><label class="cl" for="pedf_'+pedN+'"><div class="cz" id="pedz_'+pedN+'" style="padding:14px"><div id="pedh_'+pedN+'"><div class="pi">🧾</div><div class="pt">Comprovante <span style="color:var(--danger)">*</span></div></div><img id="pedv_'+pedN+'" style="display:none"></div></label><input type="file" accept="image/*" id="pedf_'+pedN+'" class="chi ped-foto" onchange="capFile(this,\'pedv_'+pedN+'\',\'pedh_'+pedN+'\',\'pedz_'+pedN+'\')">';wrap.appendChild(d)}
+  d.innerHTML='<button class="rm" onclick="this.parentNode.remove()">✕</button><div class="f" style="margin:0 0 10px"><label>Valor (R$)</label><input type="number" class="ped-val" inputmode="decimal" step="0.01"></div><label class="cl" for="pedf_'+pedN+'"><div class="cz" id="pedz_'+pedN+'" style="padding:14px"><div id="pedh_'+pedN+'"><div class="pi">'+ic('receipt')+'</div><div class="pt">Comprovante <span style="color:var(--danger)">*</span></div></div><img id="pedv_'+pedN+'" style="display:none"></div></label><input type="file" accept="image/*" id="pedf_'+pedN+'" class="chi ped-foto" onchange="capFile(this,\'pedv_'+pedN+'\',\'pedh_'+pedN+'\',\'pedz_'+pedN+'\')">';wrap.appendChild(d)}
 function coletarPedagios(){var out=[];["ida","volta"].forEach(function(fase){var items=$("ped_list_"+fase).querySelectorAll(".dyn-item");Array.prototype.forEach.call(items,function(it,i){var v=parseFloat(String(it.querySelector(".ped-val").value).replace(",","."))||0;if(v>0)out.push({fase:fase,ordem:i+1,valor:v,foto:it.querySelector(".ped-foto").dataset.compressed||""})})});return out}
 function addCarona(){var d=document.createElement("div");d.className="dyn-item";d.innerHTML='<button class="rm" onclick="this.parentNode.remove()">✕</button><div class="f" style="margin:0"><label>Nome</label><input type="text" class="carona-nome"></div>';$("carona_list").appendChild(d)}
 function coletarCaronas(){var out=[];Array.prototype.forEach.call($("carona_list").querySelectorAll(".carona-nome"),function(i){if(i.value.trim())out.push(i.value.trim())});return out}
@@ -617,7 +622,7 @@ function goFinalizar(){show("secFinal");reqGPS("co_gs","co_gt");clock("co_ck");c
   $("cs_pv").style.display="none";$("cs_ph").style.display="block";$("cs_cz").classList.remove("ok");$("cs_foto").dataset.compressed="";$("cs_foto").value="";
   _calc=null;renderMapsList()}
 function renderMapsList(){var pI=trip.ida_paradas||[],pV=trip.volta_paradas||[],h="";for(var i=0;i<pI.length;i++)h+=mapsItem("mida_"+i,"IDA — Parada "+(i+1),pI[i]);for(var i=0;i<pV.length;i++)h+=mapsItem("mvolta_"+i,"VOLTA — Parada "+(i+1),pV[i]);if(!pI.length&&!pV.length)h='<p style="font-size:13px;color:var(--text-muted)">Nenhuma parada registrada.</p>';$("maps_list").innerHTML=h}
-function mapsItem(id,label,p){var sub=(p?(esc(p.orig)+" → "+esc(p.dest)+" · "+esc(p.km)+" km"):"");return '<div class="maps-item"><div class="maps-head"><span class="maps-tag">'+label+'</span><span class="maps-sub">'+sub+'</span></div><label class="cl" for="'+id+'"><div class="cz" id="'+id+'_z"><div id="'+id+'_p"><div class="pi">🗺️</div><div class="pt">Anexar print do Maps</div></div><img id="'+id+'_v" style="display:none"></div></label><input type="file" accept="image/*" id="'+id+'" class="chi" onchange="capFile(this,\''+id+'_v\',\''+id+'_p\',\''+id+'_z\')"></div>'}
+function mapsItem(id,label,p){var sub=(p?(esc(p.orig)+" → "+esc(p.dest)+" · "+esc(p.km)+" km"):"");return '<div class="maps-item"><div class="maps-head"><span class="maps-tag">'+label+'</span><span class="maps-sub">'+sub+'</span></div><label class="cl" for="'+id+'"><div class="cz" id="'+id+'_z"><div id="'+id+'_p"><div class="pi">'+ic('map')+'</div><div class="pt">Anexar print do Maps</div></div><img id="'+id+'_v" style="display:none"></div></label><input type="file" accept="image/*" id="'+id+'" class="chi" onchange="capFile(this,\''+id+'_v\',\''+id+'_p\',\''+id+'_z\')"></div>'}
 // ── Parada esquecida: adicionar o trecho aqui no check-out (sem GPS do momento) ──
 var _teFase="ida";
 function cancelarTrechoEsquecido(){ $("trecho_form").innerHTML=""; }
@@ -669,7 +674,7 @@ function calcular(){if(!coCapt.b64){alert("Tire a foto do odômetro de chegada."
   var dTot=dIda+dVol,con=getConsumo(),vReal=dTot/con*precoReal,vTot=vReal+tPed,vEst=dTot/con*PB;
   _calc={dTot:dTot,con:con,usarEstim:usarEstim,precoReal:precoReal,peds:peds,vReal:vReal,vTot:vTot,pedDepois:pedDepoisOn()};
   var fuelTxt=usarEstim?'<div style="padding:10px;background:var(--warning-bg);border-radius:8px;text-align:center;margin-bottom:8px"><div style="font-size:12px;font-weight:600;color:#92400E">ESTIMATIVA (R$ '+PB.toFixed(2)+'/L)</div><div style="font-size:18px;font-weight:700;color:#92400E">'+brl(vEst)+'</div></div>':'<div style="padding:10px;background:var(--success-bg);border-radius:8px;text-align:center;margin-bottom:8px"><div style="font-size:12px;font-weight:600;color:#065F46">VALOR REAL (R$ '+precoReal.toFixed(2)+'/L)</div><div style="font-size:20px;font-weight:700;color:#065F46">'+brl(vReal)+'</div></div>';
-  $("resumo").innerHTML='<div style="font-weight:700;font-size:15px;color:var(--primary);margin-bottom:10px">📊 Resumo</div><div style="font-size:13px">Distância: <strong>'+dTot.toFixed(1)+' km</strong> ('+con+' km/L)</div><hr style="border:none;border-top:1px solid var(--border);margin:10px 0">'+fuelTxt+(tPed?'<div style="font-size:13px"><strong>Pedágios ('+peds.length+'):</strong> '+brl(tPed)+'</div>':'')+'<div style="font-size:20px;font-weight:700;color:var(--primary);margin-top:12px;padding-top:12px;border-top:2px solid var(--primary)">Total: '+brl(vTot)+'</div>';
+  $("resumo").innerHTML='<div style="font-weight:700;font-size:15px;color:var(--primary);margin-bottom:10px">'+ic('chart')+' Resumo</div><div style="font-size:13px">Distância: <strong>'+dTot.toFixed(1)+' km</strong> ('+con+' km/L)</div><hr style="border:none;border-top:1px solid var(--border);margin:10px 0">'+fuelTxt+(tPed?'<div style="font-size:13px"><strong>Pedágios ('+peds.length+'):</strong> '+brl(tPed)+'</div>':'')+'<div style="font-size:20px;font-weight:700;color:var(--primary);margin-top:12px;padding-top:12px;border-top:2px solid var(--primary)">Total: '+brl(vTot)+'</div>';
   $("resumoCard").style.display="block";$("btnCalc").style.display="none";$("btnEnv").style.display="flex";$("resumoCard").scrollIntoView({behavior:"smooth"})}
 async function enviarFinal(){if(!_calc){alert("Calcule primeiro.");return}var c=_calc,pI=trip.ida_paradas||[],pV=trip.volta_paradas||[],i;$("btnEnv").disabled=true;
   try{
@@ -707,7 +712,7 @@ async function enviarFinal(){if(!_calc){alert("Calcule primeiro.");return}var c=
 // ── Meus pedidos / Correção ──
 async function renderMeusPedidos(){var r=await sb.from("vw_reembolsos").select("id,protocolo,status,val_total,criado_em").eq("motorista_id",SESSION.user.id).order("criado_em",{ascending:false});_meus=r.data||[];_meusShow=5;desenharMeus()}
 function desenharMeus(){var box=$("meus_pedidos");if(!box)return;if(!_meus.length){box.innerHTML='<p style="font-size:13px;color:var(--text-muted)">Você ainda não tem pedidos.</p>';return}
-  var h=_meus.slice(0,_meusShow).map(function(r){var corr=r.status==="REVISÃO"?'<button class="bp b" style="padding:8px;margin-top:8px;font-size:13px" onclick="abrirCorr(\''+esc(r.protocolo)+'\')">🔄 Corrigir</button>':'';
+  var h=_meus.slice(0,_meusShow).map(function(r){var corr=r.status==="REVISÃO"?'<button class="bp b" style="padding:8px;margin-top:8px;font-size:13px" onclick="abrirCorr(\''+esc(r.protocolo)+'\')">'+ic('refresh')+' Corrigir</button>':'';
     return '<div style="border:1px solid var(--border);border-radius:10px;padding:10px 12px;margin-bottom:8px"><div style="display:flex;justify-content:space-between;align-items:center;gap:8px"><span><strong>'+esc(r.protocolo)+'</strong> <span class="stp stp-'+esc(r.status)+'">'+esc(r.status)+'</span></span><span style="font-size:13px;color:var(--text-secondary)">'+brl(r.val_total)+'</span></div>'+corr+'</div>'}).join("");
   if(_meus.length>_meusShow)h+='<button class="bs" style="margin-top:0" onclick="_meusShow+=10;desenharMeus()">Ver mais ('+(_meus.length-_meusShow)+')</button>';
   box.innerHTML=h}
