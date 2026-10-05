@@ -704,11 +704,11 @@ function aplicarFiltro(){
     if(q){ var hay=((r.protocolo||"")+" "+(r.nome||"")+" "+(r.cpf||"")).toLowerCase(); if(hay.indexOf(q)<0) return false; }
     return true;
   });
-  // Ao filtrar por Aprovado/Pago, ordena pela data em que o status foi alterado
-  // (mais recente primeiro). Sem data (registros antigos) vão para o fim.
-  var _ts=function(v){ return v ? (new Date(v).getTime()||0) : 0; };
-  if(st==="APROVADO") FILTRADOS.sort(function(a,b){ return _ts(b.aprovado_em)-_ts(a.aprovado_em); });
-  else if(st==="PAGO") FILTRADOS.sort(function(a,b){ return _ts(b.pago_em)-_ts(a.pago_em); });
+  // Ao filtrar por Aprovado/Pago, ordena pela data em que o status foi alterado:
+  // mais ANTIGOS no topo, mais novos embaixo. Sem data vai para o fim.
+  var _ts=function(v){ return v ? (new Date(v).getTime()||Infinity) : Infinity; };
+  if(st==="APROVADO") FILTRADOS.sort(function(a,b){ return _ts(a.aprovado_em)-_ts(b.aprovado_em); });
+  else if(st==="PAGO") FILTRADOS.sort(function(a,b){ return _ts(a.pago_em)-_ts(b.pago_em); });
   // texto de filtro ativo
   var partes=[];
   if(st){ var opt=document.querySelector('#fStatus option[value="'+st+'"]'); partes.push("Status: "+(opt?opt.textContent:st)); }
