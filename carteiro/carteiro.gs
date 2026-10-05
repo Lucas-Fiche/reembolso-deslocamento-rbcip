@@ -139,8 +139,7 @@ function proximoNumeroRecibo(){ var n=parseInt(_props().getProperty("RECIBO_SEQ"
 
 function gerarReciboAction(d){
   if(!d.jwt || !d.protocolo) return _jr({success:false, error:"Dados incompletos."});
-  var perfil=_sbGet("perfis?select=papel", d.jwt);
-  if(!perfil || !perfil.length || perfil[0].papel!=="admin") return _jr({success:false, error:"Não autorizado (apenas admin)."});
+  if(!_ehAdmin(d.jwt)) return _jr({success:false, error:"Não autorizado (apenas admin)."});
   var tid=_props().getProperty("RECIBO_TEMPLATE_ID"), fid=_props().getProperty("RECIBOS_FOLDER_ID");
   if(!tid || !fid) return _jr({success:false, error:"Recibo não configurado (RECIBO_TEMPLATE_ID / RECIBOS_FOLDER_ID)."});
   var arr=_sbGet("vw_reembolsos?protocolo=eq."+encodeURIComponent(d.protocolo)+"&select=nome,cpf,rg,orgao,val_total,dist_total,checkin_foto,checkout_foto,cupom_foto", d.jwt);
@@ -196,6 +195,28 @@ function _sbGet(path, jwt){
   try{ return JSON.parse(resp.getContentText()); }catch(_){ return null; }
 }
 
+// Extrai o id do usuário (claim "sub") de dentro do JWT (sem verificar assinatura —
+// a verificação real é feita pelo Supabase quando usamos o token).
+function _uidFromJwt(jwt){
+  try{
+    var parts = String(jwt||"").split(".");
+    if(parts.length < 2) return null;
+    var b64 = parts[1].replace(/-/g,"+").replace(/_/g,"/");
+    while(b64.length % 4) b64 += "=";
+    var json = Utilities.newBlob(Utilities.base64Decode(b64)).getDataAsString();
+    return JSON.parse(json).sub || null;
+  }catch(e){ return null; }
+}
+// É admin? Confere o papel DO PRÓPRIO usuário do token (filtra o perfil pelo id).
+// (Não dá para usar "perfis?select=papel" sem filtro: um admin enxerga TODOS os
+//  perfis pela RLS, e a 1ª linha devolvida não é necessariamente a dele.)
+function _ehAdmin(jwt){
+  var uid = _uidFromJwt(jwt);
+  if(!uid) return false;
+  var perfil = _sbGet("perfis?select=papel&id=eq." + encodeURIComponent(uid), jwt);
+  return !!(perfil && perfil.length && perfil[0].papel === "admin");
+}
+
 function enviarAvisoStatus(d){
   var jwt = d.jwt, protocolo = d.protocolo, novo = d.novo_status, obs = d.observacao || "";
   if(!jwt || !protocolo || !novo) return _jr({success:false, error:"Dados incompletos."});
@@ -203,9 +224,8 @@ function enviarAvisoStatus(d){
   // COMPLETO não notifica (igual ao sistema atual)
   if(novo === "COMPLETO") return _jr({success:true, enviado:false, motivo:"COMPLETO não envia e-mail"});
 
-  // 1) Confere que quem chamou é ADMIN (a RLS só devolve o próprio perfil)
-  var perfil = _sbGet("perfis?select=papel", jwt);
-  if(!perfil || !perfil.length || perfil[0].papel !== "admin")
+  // 1) Confere que quem chamou é ADMIN (pelo id do próprio token)
+  if(!_ehAdmin(jwt))
     return _jr({success:false, error:"Não autorizado (apenas admin)."});
 
   // 2) Busca o reembolso NO SUPABASE (destinatário nunca vem do navegador)
