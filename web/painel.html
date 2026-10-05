@@ -88,7 +88,7 @@ tbody tr.sel{background:var(--primary-light)}
 .msgbox p{color:var(--text2);margin-bottom:16px;font-size:14px;line-height:1.5}
 .msgbox a.cta{display:inline-block;background:var(--primary);color:#fff;text-decoration:none;padding:10px 18px;border-radius:var(--radius-sm);font-weight:600}
 .loading{color:var(--text3);text-align:center;padding:40px}
-#toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:#1E293B;color:#fff;padding:13px 20px;border-radius:10px;font-size:14px;font-weight:600;line-height:1.45;box-shadow:0 10px 30px rgba(0,0,0,.4);z-index:600;max-width:440px;width:calc(100% - 32px);text-align:center;border:1px solid rgba(255,255,255,.14)}
+#toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:#1E293B;color:#fff;padding:13px 20px;border-radius:10px;font-size:14px;font-weight:600;line-height:1.45;box-shadow:0 10px 30px rgba(0,0,0,.4);z-index:1200;max-width:440px;width:calc(100% - 32px);text-align:center;border:1px solid rgba(255,255,255,.14)}
 #toast.err{background:#DC2626;border-color:#FCA5A5;color:#fff}
 
 /* Modais genéricos (stats / gasolina) */
@@ -682,7 +682,7 @@ async function carregar(fromBtn){
   if(b){ prev=b.textContent; b.textContent="Atualizando…"; b.disabled=true; }
   try{
     var { data, error } = await sb.from("vw_reembolsos")
-      .select("id,protocolo,status,motorista_id,nome,cpf,rg,orgao,email,telefone,veiculo,placa,checkin_em,checkin_lat,checkin_lng,checkin_foto,checkout_em,checkout_lat,checkout_lng,checkout_foto,dist_total,consumo,usou_estimativa,preco_base,preco_real,cupom_foto,foto_consumo,caronas,validacao,recibo_link,val_estimado,val_real,val_pedagios,val_total,qtd_pedagios,qtd_paradas,qtd_ped_pendentes,criado_em")
+      .select("id,protocolo,status,motorista_id,nome,cpf,rg,orgao,email,telefone,veiculo,placa,checkin_em,checkin_lat,checkin_lng,checkin_foto,checkout_em,checkout_lat,checkout_lng,checkout_foto,dist_total,consumo,usou_estimativa,preco_base,preco_real,cupom_foto,foto_consumo,caronas,validacao,recibo_link,val_estimado,val_real,val_pedagios,val_total,qtd_pedagios,qtd_paradas,qtd_ped_pendentes,criado_em,aprovado_em,pago_em")
       .order("criado_em",{ascending:true});
     if(error){ msgTopo("Erro ao atualizar: "+error.message, true); return; }
     DADOS = data||[];
@@ -704,6 +704,11 @@ function aplicarFiltro(){
     if(q){ var hay=((r.protocolo||"")+" "+(r.nome||"")+" "+(r.cpf||"")).toLowerCase(); if(hay.indexOf(q)<0) return false; }
     return true;
   });
+  // Ao filtrar por Aprovado/Pago, ordena pela data em que o status foi alterado
+  // (mais recente primeiro). Sem data (registros antigos) vão para o fim.
+  var _ts=function(v){ return v ? (new Date(v).getTime()||0) : 0; };
+  if(st==="APROVADO") FILTRADOS.sort(function(a,b){ return _ts(b.aprovado_em)-_ts(a.aprovado_em); });
+  else if(st==="PAGO") FILTRADOS.sort(function(a,b){ return _ts(b.pago_em)-_ts(a.pago_em); });
   // texto de filtro ativo
   var partes=[];
   if(st){ var opt=document.querySelector('#fStatus option[value="'+st+'"]'); partes.push("Status: "+(opt?opt.textContent:st)); }
@@ -751,10 +756,13 @@ function render(){
   contarCards();
   var rows=FILTRADOS;
   el("vazio").classList.toggle("hide", rows.length>0);
+  var _fst=el("fStatus").value;
   el("tbody").innerHTML = rows.map(function(r){
+    var _sdt = (_fst==="APROVADO"&&r.aprovado_em) ? ('<div style="font-size:10.5px;color:var(--text3);margin-top:3px;font-weight:500">aprovado '+dt(r.aprovado_em)+'</div>')
+             : (_fst==="PAGO"&&r.pago_em) ? ('<div style="font-size:10.5px;color:var(--text3);margin-top:3px;font-weight:500">pago '+dt(r.pago_em)+'</div>') : '';
     return '<tr class="clk'+(sel&&sel.id===r.id?" sel":"")+'" onclick="abrirDetalhe(\''+r.id+'\')">'
       +'<td class="proto">'+esc(r.protocolo)+'</td>'
-      +'<td><span class="st st-'+esc(r.status)+'">'+esc(r.status)+'</span>'+(r.qtd_ped_pendentes>0?' <span class="st" style="background:#FEF3C7;color:#92400E">'+ic('alert')+' pedágio</span>':'')+(flagsValor(r).length?' <span class="st" style="background:#FEF3C7;color:#92400E" title="'+esc(flagsValor(r).join(" · "))+'">'+ic('money')+' acima do esperado</span>':'')+(flagsOutros(r).length?' <span class="st" style="background:#FEE2E2;color:#991B1B" title="'+esc(flagsOutros(r).join(" · "))+'">'+ic('search')+' suspeita</span>':'')+'</td>'
+      +'<td><span class="st st-'+esc(r.status)+'">'+esc(r.status)+'</span>'+(r.qtd_ped_pendentes>0?' <span class="st" style="background:#FEF3C7;color:#92400E">'+ic('alert')+' pedágio</span>':'')+(flagsValor(r).length?' <span class="st" style="background:#FEF3C7;color:#92400E" title="'+esc(flagsValor(r).join(" · "))+'">'+ic('money')+' acima do esperado</span>':'')+(flagsOutros(r).length?' <span class="st" style="background:#FEE2E2;color:#991B1B" title="'+esc(flagsOutros(r).join(" · "))+'">'+ic('search')+' suspeita</span>':'')+_sdt+'</td>'
       +'<td>'+esc(r.nome||"—")+'</td>'
       +'<td>'+esc(r.veiculo||"—")+(r.placa?" · "+esc(r.placa):"")+'</td>'
       +'<td class="mono">'+dt(r.checkin_em)+'</td>'
@@ -847,6 +855,8 @@ function renderDetail(){
   h+=drow("Check-in",dt(d.checkin_em));
   h+=drow("Check-out",dt(d.checkout_em));
   h+=drow("Duração",dur(d.checkin_em,d.checkout_em));
+  if(d.aprovado_em) h+=drow("Aprovado em",dt(d.aprovado_em));
+  if(d.pago_em) h+=drow("Pago em",dt(d.pago_em));
   h+='</div>';
 
   // VALORES
