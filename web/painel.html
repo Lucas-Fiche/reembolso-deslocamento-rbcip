@@ -449,6 +449,7 @@ var IC={
   money:_IP+"<rect x='2.5' y='6.5' width='19' height='11' rx='2'/><circle cx='12' cy='12' r='2.4'/><path d='M6 10v4M18 10v4'/>"+_IE,
   download:_IP+"<path d='M12 3v12'/><path d='M7.5 11 12 15.5 16.5 11'/><path d='M4.5 20h15'/>"+_IE,
   bell:_IP+"<path d='M6 9a6 6 0 0 1 12 0c0 4.5 1.8 5.8 1.8 5.8H4.2S6 13.5 6 9z'/><path d='M10.3 19a1.9 1.9 0 0 0 3.4 0'/>"+_IE,
+  mail:_IP+"<rect x='3' y='5' width='18' height='14' rx='2'/><path d='M3.5 6.5 12 13l8.5-6.5'/>"+_IE,
   check:_IP+"<path d='M5 12l4.5 4.5L19 7'/>"+_IE
 };
 function ic(n){ return IC[n]||""; }
@@ -758,8 +759,9 @@ function render(){
   el("vazio").classList.toggle("hide", rows.length>0);
   var _fst=el("fStatus").value;
   el("tbody").innerHTML = rows.map(function(r){
-    var _sdt = (_fst==="APROVADO"&&r.aprovado_em) ? ('<div style="font-size:10.5px;color:var(--text3);margin-top:3px;font-weight:500">aprovado '+dt(r.aprovado_em)+'</div>')
-             : (_fst==="PAGO"&&r.pago_em) ? ('<div style="font-size:10.5px;color:var(--text3);margin-top:3px;font-weight:500">pago '+dt(r.pago_em)+'</div>') : '';
+    var _sdtStyle='font-size:10.5px;color:var(--text3);margin-top:3px;font-weight:500';
+    var _sdt = (_fst==="APROVADO") ? ('<div style="'+_sdtStyle+'">aprovado '+(r.aprovado_em?dt(r.aprovado_em):'— sem data disponível')+'</div>')
+             : (_fst==="PAGO") ? ('<div style="'+_sdtStyle+'">pago '+(r.pago_em?dt(r.pago_em):'— sem data disponível')+'</div>') : '';
     return '<tr class="clk'+(sel&&sel.id===r.id?" sel":"")+'" onclick="abrirDetalhe(\''+r.id+'\')">'
       +'<td class="proto">'+esc(r.protocolo)+'</td>'
       +'<td><span class="st st-'+esc(r.status)+'">'+esc(r.status)+'</span>'+(r.qtd_ped_pendentes>0?' <span class="st" style="background:#FEF3C7;color:#92400E">'+ic('alert')+' pedágio</span>':'')+(flagsValor(r).length?' <span class="st" style="background:#FEF3C7;color:#92400E" title="'+esc(flagsValor(r).join(" · "))+'">'+ic('money')+' acima do esperado</span>':'')+(flagsOutros(r).length?' <span class="st" style="background:#FEE2E2;color:#991B1B" title="'+esc(flagsOutros(r).join(" · "))+'">'+ic('search')+' suspeita</span>':'')+_sdt+'</td>'
@@ -855,8 +857,9 @@ function renderDetail(){
   h+=drow("Check-in",dt(d.checkin_em));
   h+=drow("Check-out",dt(d.checkout_em));
   h+=drow("Duração",dur(d.checkin_em,d.checkout_em));
-  if(d.aprovado_em) h+=drow("Aprovado em",dt(d.aprovado_em));
-  if(d.pago_em) h+=drow("Pago em",dt(d.pago_em));
+  var _semData='<span style="color:var(--text3)">sem data disponível</span>';
+  if(d.status==="APROVADO"||d.status==="PAGO") h+=drow("Aprovado em", d.aprovado_em?dt(d.aprovado_em):_semData);
+  if(d.status==="PAGO") h+=drow("Pago em", d.pago_em?dt(d.pago_em):_semData);
   h+='</div>';
 
   // VALORES
@@ -930,9 +933,12 @@ function renderActions(){
   var editBtn='<button class="abtn-edit" onclick="editarDados(\''+id+'\')">'+ic('pencil')+' Editar dados / paradas</button>';
   var reciboBtn='<button class="abtn-edit" onclick="gerarRecibo(\''+id+'\')">'+ic('file')+' '+(d.recibo_link?"Gerar recibo novamente":"Gerar recibo")+'</button>';
   var corrBtn='<button class="abtn-edit" onclick="abrirCorrige(\''+id+'\')">'+ic('wrench')+' Corrigir status</button>';
+  // Só os status com modelo de e-mail (APROVADO/PAGO/REVISÃO/REPROVADO) podem reenviar.
+  var emailBtn=(["APROVADO","PAGO","REVISÃO","REPROVADO"].indexOf(st)>=0)
+    ? '<button class="abtn-edit" onclick="reenviarEmail(\''+id+'\')">'+ic('mail')+' Reenviar e-mail ao pesquisador</button>' : '';
   var h='<div class="action-bar-label">Ações — '+esc(d.protocolo)+'</div>';
   if(st==="PAGO"){
-    h+='<div class="approved-msg" style="background:#CCFBF1;border-color:#99F6E4;color:#0F766E">'+ic('money')+' Reembolso pago — processo concluído.</div>'+editBtn+reciboBtn+corrBtn;
+    h+='<div class="approved-msg" style="background:#CCFBF1;border-color:#99F6E4;color:#0F766E">'+ic('money')+' Reembolso pago — processo concluído.</div>'+editBtn+reciboBtn+corrBtn+emailBtn;
     bar.innerHTML=h; return;
   }
   if(st==="ABERTO"){
@@ -949,8 +955,26 @@ function renderActions(){
   };
   h+='<div class="action-btns">';
   ["APROVADO","PAGO","REVISÃO","REPROVADO"].forEach(function(k){ if(k!==st)h+=btns[k]; });
-  h+='</div>'+editBtn+reciboBtn+corrBtn;
+  h+='</div>'+editBtn+reciboBtn+corrBtn+emailBtn;
   bar.innerHTML=h;
+}
+// Reenvia o e-mail de status (ex.: PAGO) ao pesquisador, pelo carteiro.
+async function reenviarEmail(id){
+  var reg=DADOS.filter(function(x){return x.id===id;})[0]||{};
+  var cfg=window.RBCIP_CONFIG||{};
+  if(!cfg.CARTEIRO_URL){ msgTopo("Envio de e-mail não configurado (carteiro).", true); return; }
+  if(!confirm('Reenviar o e-mail de "'+statusLabel(reg.status)+'" ao pesquisador do '+reg.protocolo+"?")) return;
+  bloquear("Reenviando e-mail…");
+  try{
+    var s1=await sb.auth.getSession();
+    var resp=await fetchTimeout(cfg.CARTEIRO_URL, { method:"POST", redirect:"follow", headers:{"Content-Type":"text/plain"},
+      body: JSON.stringify({action:"enviar_aviso_status", jwt:s1.data.session.access_token, protocolo:reg.protocolo, novo_status:reg.status, observacao:""}) }, 30000);
+    var out={}; try{ out=JSON.parse(await resp.text()); }catch(_){}
+    if(out.enviado) msgTopo("E-mail reenviado ao pesquisador ✓");
+    else if(out.success) msgTopo("E-mail NÃO enviado ("+(out.motivo||"motivo não informado")+").", true);
+    else msgTopo("Falha ao reenviar"+(out.error?": "+out.error:"")+".", true);
+  }catch(e){ msgTopo("Não consegui reenviar o e-mail ("+(e&&e.message||"erro")+").", true); }
+  finally{ desbloquear(); }
 }
 
 var _map=null;
