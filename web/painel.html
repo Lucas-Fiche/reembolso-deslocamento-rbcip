@@ -109,6 +109,24 @@ tbody tr.sel{background:var(--primary-light)}
 .stat-box .l{font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;font-weight:600}
 .stat-box .v{font-size:17px;font-weight:700;color:var(--text);margin-top:3px}
 .grp-title{font-size:12px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;margin:18px 0 8px}
+.evc-top{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.evc-cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px;margin-top:8px}
+.evc-card{background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:12px 14px}
+.evc-card .l{font-size:10.5px;text-transform:uppercase;letter-spacing:.5px;color:var(--text3);font-weight:700}
+.evc-card .p{font-size:11.5px;color:var(--text3);margin-top:2px}
+.evc-card .v{font-size:23px;font-weight:800;color:var(--text);margin-top:6px;letter-spacing:-.3px}
+.evc-card .s{font-size:12px;color:var(--text2);margin-top:4px}
+.evc-up{color:#DC2626;font-weight:700}.evc-down{color:#16A34A;font-weight:700}.evc-eq{color:var(--text3);font-weight:700}
+.evc-box{background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:12px 16px 6px;margin-top:10px}
+.evc-tt{font-size:14px;font-weight:700;color:var(--text);margin-bottom:4px}
+.evc-leg{display:flex;flex-wrap:wrap;gap:6px 16px;font-size:12px;color:var(--text3);margin:2px 0 6px}
+.evc-leg i{display:inline-block;width:18px;height:0;border-top:3px solid;vertical-align:middle;margin-right:6px}
+.evc-scroll{overflow-x:auto}
+.evc-svg{width:100%;min-width:720px;height:auto;display:block}
+.evc-nota{font-size:11.5px;color:var(--text3);margin-top:8px;line-height:1.5}
+.evc-vazio{color:var(--text3);padding:16px}
+.evc-sel{display:inline-flex;align-items:center;gap:8px;font-size:12.5px;font-weight:600;color:var(--text2)}
+.evc-sel select{background:var(--surface);border:1px solid var(--border);color:var(--text);padding:6px 10px;border-radius:8px;font-family:inherit;font-size:13px}
 .stab{background:none;border:none;border-bottom:2px solid transparent;color:var(--text2);padding:8px 12px;font-family:inherit;font-size:13px;font-weight:600;cursor:pointer;margin-bottom:-1px}
 .stab.on{color:var(--primary);border-bottom-color:var(--primary)}
 
@@ -1244,57 +1262,166 @@ function _indicador(titulo, v, limite, fmt){
     +'<div style="height:6px;background:var(--border);border-radius:4px;margin-top:6px;overflow:hidden"><div style="height:100%;width:'+pct.toFixed(0)+'%;background:'+cor+'"></div></div>'
     +'<div style="font-size:11px;color:'+cor+';font-weight:600;margin-top:3px">'+estado+'</div></div>';
 }
-// Gráfico de linha em SVG (com linha de limite tracejada e pontos coloridos).
-function _lineChart(pts, limite, fmtY){
-  if(!pts.length) return '<div style="color:var(--text3);padding:16px">Sem dados no período.</div>';
-  var n=pts.length, W=Math.max(320, 68+n*46), H=210, pl=56, pr=16, pt=22, pb=42, iw=W-pl-pr, ih=H-pt-pb;
-  var maxV=limite*1.25; pts.forEach(function(p){ if(p.v*1.12>maxV) maxV=p.v*1.12; }); if(maxV<=0)maxV=1;
+// ── Gráficos em SVG (responsivos, com grade, eixo e cores do tema) ──
+var _chartN=0;
+function _ticks(maxV){
+  var raw=(maxV||1)/4, mag=Math.pow(10,Math.floor(Math.log(raw)/Math.LN10)), n=raw/mag;
+  var step=(n<=1?1:n<=2?2:n<=2.5?2.5:n<=5?5:10)*mag, top=Math.ceil((maxV||1)/step)*step, t=[];
+  for(var v=0; v<=top+step*1e-6; v+=step) t.push(v);
+  return {top:top||1, t:t};
+}
+function _grade(s, tk, Y, pl, W, pr, fmtAxis){
+  tk.t.forEach(function(v){ var y=Y(v).toFixed(1);
+    s.push('<line x1="'+pl+'" y1="'+y+'" x2="'+(W-pr)+'" y2="'+y+'" style="stroke:var(--border)" stroke-width="1"/>');
+    s.push('<text x="'+(pl-10)+'" y="'+(+y+4)+'" text-anchor="end" font-size="12" style="fill:var(--text3)">'+fmtAxis(v)+'</text>'); });
+}
+// Linha (média do período) + limite tracejado; pontos verde/âmbar/vermelho vs. limite.
+function _lineChart(pts, limite, fmtY, fmtAxis){
+  if(!pts.length) return '<div class="evc-vazio">Sem dados no período.</div>';
+  fmtAxis=fmtAxis||fmtY;
+  var id="lc"+(++_chartN), n=pts.length, W=1000, H=280, pl=70, pr=30, pt=28, pb=44, iw=W-pl-pr, ih=H-pt-pb;
+  var maxV=limite*1.15; pts.forEach(function(p){ if(p.v>maxV) maxV=p.v; });
+  var tk=_ticks(maxV*1.1);
   function X(i){ return pl + (n===1? iw/2 : iw*i/(n-1)); }
-  function Y(v){ return pt + ih*(1 - v/maxV); }
-  var yl=Y(limite);
-  var s='<svg viewBox="0 0 '+W+' '+H+'" width="'+W+'" height="'+H+'" font-family="Inter,sans-serif">';
-  s+='<line x1="'+pl+'" y1="'+(pt+ih)+'" x2="'+(W-pr)+'" y2="'+(pt+ih)+'" stroke="#94A3B8" stroke-width="1"/>';
-  s+='<line x1="'+pl+'" y1="'+yl.toFixed(1)+'" x2="'+(W-pr)+'" y2="'+yl.toFixed(1)+'" stroke="#DC2626" stroke-width="1.5" stroke-dasharray="6 4"/>';
-  s+='<text x="'+(W-pr)+'" y="'+(yl-4).toFixed(1)+'" text-anchor="end" font-size="10" fill="#DC2626">limite '+fmtY(limite)+'</text>';
+  function Y(v){ return pt + ih*(1 - v/tk.top); }
+  var s=['<svg class="evc-svg" viewBox="0 0 '+W+' '+H+'" role="img">',
+    '<defs><linearGradient id="'+id+'" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#2563EB" stop-opacity=".25"/><stop offset="1" stop-color="#2563EB" stop-opacity="0"/></linearGradient></defs>'];
+  _grade(s, tk, Y, pl, W, pr, fmtAxis);
   var d=""; pts.forEach(function(p,i){ d+=(i?" L":"M")+X(i).toFixed(1)+" "+Y(p.v).toFixed(1); });
-  s+='<path d="'+d+'" fill="none" stroke="#2563EB" stroke-width="2"/>';
+  if(n>1) s.push('<path d="'+d+' L'+X(n-1).toFixed(1)+' '+(pt+ih)+' L'+X(0).toFixed(1)+' '+(pt+ih)+' Z" fill="url(#'+id+')"/>');
+  var yl=Y(limite).toFixed(1);
+  s.push('<line x1="'+pl+'" y1="'+yl+'" x2="'+(W-pr)+'" y2="'+yl+'" stroke="#DC2626" stroke-width="2" stroke-dasharray="8 6"/>');
+  s.push('<path d="'+d+'" fill="none" stroke="#2563EB" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"/>');
+  var cada=Math.max(1, Math.ceil(n/12)), comValor=n<=16;
   pts.forEach(function(p,i){
-    var cor=p.v>=limite?"#DC2626":(p.v>=0.9*limite?"#D97706":"#16A34A");
-    s+='<circle cx="'+X(i).toFixed(1)+'" cy="'+Y(p.v).toFixed(1)+'" r="4" fill="'+cor+'"><title>'+esc(p.label+": "+fmtY(p.v))+'</title></circle>';
-    s+='<text x="'+X(i).toFixed(1)+'" y="'+(Y(p.v)-8).toFixed(1)+'" text-anchor="middle" font-size="9.5" font-weight="700" fill="'+cor+'">'+fmtY(p.v)+'</text>';
-    s+='<text x="'+X(i).toFixed(1)+'" y="'+(pt+ih+15)+'" text-anchor="middle" font-size="10" fill="#94A3B8">'+esc(p.label)+'</text>';
+    var cor=p.v>=limite?"#DC2626":(p.v>=0.9*limite?"#D97706":"#16A34A"), x=X(i).toFixed(1), y=Y(p.v).toFixed(1);
+    s.push('<circle cx="'+x+'" cy="'+y+'" r="'+(n>30?3.5:6)+'" fill="'+cor+'" style="stroke:var(--surface)" stroke-width="2.5"><title>'+esc((p.tip||p.label)+": "+fmtY(p.v))+'</title></circle>');
+    if(comValor || i===n-1) s.push('<text x="'+x+'" y="'+(y-13)+'" text-anchor="middle" font-size="13" font-weight="700" fill="'+cor+'" style="paint-order:stroke;stroke:var(--surface2);stroke-width:4px">'+fmtY(p.v)+'</text>');
+    if((n-1-i)%cada===0) s.push('<text x="'+x+'" y="'+(pt+ih+26)+'" text-anchor="middle" font-size="12.5" style="fill:var(--text3)">'+esc(p.label)+'</text>');
   });
-  s+='</svg>';
-  return s;
+  s.push('</svg>'); return s.join("");
+}
+// Barras (gasto por período) + linha de média; barra listrada = período em andamento.
+function _barChart(pts, media, fmtY, fmtAxis){
+  if(!pts.length) return '<div class="evc-vazio">Sem dados no período.</div>';
+  var id="bc"+(++_chartN), n=pts.length, W=1000, H=290, pl=80, pr=24, pt=30, pb=52, iw=W-pl-pr, ih=H-pt-pb;
+  var maxV=media||0; pts.forEach(function(p){ if(p.v>maxV) maxV=p.v; });
+  var tk=_ticks((maxV||1)*1.12);
+  function Y(v){ return pt + ih*(1 - v/tk.top); }
+  var slot=iw/n, bw=Math.min(58, slot*0.62);
+  var s=['<svg class="evc-svg" viewBox="0 0 '+W+' '+H+'" role="img">',
+    '<defs><linearGradient id="'+id+'" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#3B82F6"/><stop offset="1" stop-color="#1D4ED8"/></linearGradient>'
+    +'<pattern id="'+id+'p" width="8" height="8" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="8" height="8" fill="#93C5FD"/><line x1="0" y1="0" x2="0" y2="8" stroke="#3B82F6" stroke-width="3"/></pattern></defs>'];
+  _grade(s, tk, Y, pl, W, pr, fmtAxis);
+  if(media>0){ var ym=Y(media).toFixed(1); s.push('<line x1="'+pl+'" y1="'+ym+'" x2="'+(W-pr)+'" y2="'+ym+'" stroke="#D97706" stroke-width="2" stroke-dasharray="8 6"/>'); }
+  pts.forEach(function(p,i){
+    var cx=pl+slot*i+slot/2, y=Y(p.v), h=Math.max(0, pt+ih-y);
+    s.push('<rect x="'+(cx-bw/2).toFixed(1)+'" y="'+y.toFixed(1)+'" width="'+bw.toFixed(1)+'" height="'+h.toFixed(1)+'" rx="5" fill="url(#'+id+(p.parcial?'p':'')+')"><title>'+esc((p.tip||p.label)+": "+fmtY(p.v)+(p.parcial?" (parcial)":""))+'</title></rect>');
+    if(n<=16 && p.v>0) s.push('<text x="'+cx.toFixed(1)+'" y="'+(y-8).toFixed(1)+'" text-anchor="middle" font-size="12.5" font-weight="700" style="fill:var(--text);paint-order:stroke;stroke:var(--surface2);stroke-width:4px">'+fmtAxis(p.v)+'</text>');
+    s.push('<text x="'+cx.toFixed(1)+'" y="'+(pt+ih+22)+'" text-anchor="middle" font-size="12.5" style="fill:var(--text3)">'+esc(p.label)+'</text>');
+    if(p.parcial) s.push('<text x="'+cx.toFixed(1)+'" y="'+(pt+ih+39)+'" text-anchor="middle" font-size="11" style="fill:var(--text3)">parcial</text>');
+  });
+  s.push('</svg>'); return s.join("");
 }
 function statsTab(t){
   var ev=(t==="evol");
   el("stab_resumo").classList.toggle("on",!ev); el("stab_evol").classList.toggle("on",ev);
   el("stats_corpo").classList.toggle("hide",ev); el("stats_evolucao").classList.toggle("hide",!ev);
-  el("stats_lbl").textContent = ev ? "Evolução dos valores vs. limites" : el("stats_lbl").textContent;
+  el("stats_lbl").textContent = ev ? "Gasto semanal e evolução dos indicadores" : el("stats_lbl").textContent;
   if(ev) renderEvolucao();
 }
+// ── Semanas (segunda a domingo) ──
+function _ymdL(d){ var p=function(n){return("0"+n).slice(-2)}; return d.getFullYear()+"-"+p(d.getMonth()+1)+"-"+p(d.getDate()); }
+function _semIni(v){ var d=(v instanceof Date)?new Date(v.getTime()):new Date(v); if(isNaN(d)) return null; d=new Date(d.getFullYear(),d.getMonth(),d.getDate()); d.setDate(d.getDate()-((d.getDay()+6)%7)); return d; }
+function _semKey(v){ var d=_semIni(v); return d?_ymdL(d):""; }
+function _ddmm(k){ var p=String(k).split("-"); return p.length===3?(p[2]+"/"+p[1]):k; }
+function _semFim(k){ var p=String(k).split("-"), d=new Date(+p[0],+p[1]-1,+p[2]); d.setDate(d.getDate()+6); return _ymdL(d); }
+function _semLbl(k){ return _ddmm(k)+" a "+_ddmm(_semFim(k)); }
+function _brlC(v){ v=Number(v)||0; return v>=1000 ? "R$ "+(v/1000).toFixed(1).replace(".",",")+" mil" : "R$ "+Math.round(v); }
+function _varPct(a,b){ return (b>0) ? (a-b)/b*100 : null; }
+function _varHtml(a,b,txt){
+  var p=_varPct(a,b); if(p===null) return '<span class="evc-eq">sem base de comparação</span>';
+  var cls=p>2?"evc-up":(p<-2?"evc-down":"evc-eq"), seta=p>2?"▲":(p<-2?"▼":"=");
+  return '<span class="'+cls+'">'+seta+" "+Math.abs(p).toFixed(0)+'%</span> '+txt;
+}
+function _varTxt(a,b){ var p=_varPct(a,b); if(p===null) return ""; return (p>2?"+":(p<-2?"−":"±"))+Math.abs(p).toFixed(0)+"%"; }
+// Gasto de COMBUSTÍVEL (val_real, sem pedágios) agrupado por semana da viagem.
+function _semanal(base){
+  var porSem={}, vazio={comb:0,tot:0,n:0};
+  base.forEach(function(r){ var k=_semKey(r.checkin_em||r.criado_em); if(!k) return;
+    var g=porSem[k]||(porSem[k]={comb:0,tot:0,n:0}); g.comb+=Number(r.val_real)||0; g.tot+=Number(r.val_total)||0; g.n++; });
+  var hoje=new Date(), kAtual=_semKey(hoje);
+  var d=_semIni(hoje); d.setDate(d.getDate()-7); var kPass=_ymdL(d); d.setDate(d.getDate()-7); var kPP=_ymdL(d);
+  var keys=Object.keys(porSem).sort(), completas=[];
+  if(keys.length && keys[0]<=kPass){ var c=_semIni(keys[0]+"T12:00:00"); while(_ymdL(c)<=kPass){ completas.push(_ymdL(c)); c.setDate(c.getDate()+7); } }
+  var soma=function(ks){ return ks.reduce(function(a,k){ return a+(porSem[k]||vazio).comb; },0); };
+  var ult4=completas.slice(-4), ant4=completas.slice(-8,-4);
+  var serie=[], s=_semIni(hoje); s.setDate(s.getDate()-7*11);
+  for(var i=0;i<12;i++){ var k=_ymdL(s), g=porSem[k]||vazio;
+    if(!keys.length || k>=keys[0]) serie.push({label:_ddmm(k), tip:"Semana "+_semLbl(k), v:g.comb, parcial:k===kAtual});
+    s.setDate(s.getDate()+7); }
+  return { kAtual:kAtual, atual:porSem[kAtual]||vazio, kPass:kPass, pass:porSem[kPass]||vazio, pp:porSem[kPP]||vazio,
+    nSem:completas.length, media:completas.length? soma(completas)/completas.length : 0,
+    m4:ult4.length? soma(ult4)/ult4.length : 0, a4:ant4.length? soma(ant4)/ant4.length : 0, serie:serie };
+}
+var _resumoSemTxt="";
+function copiarResumoSemanal(){
+  if(!_resumoSemTxt){ msgTopo("Nada para copiar.", true); return; }
+  var ok=function(){ msgTopo("Resumo copiado — é só colar na mensagem ✓"); };
+  var fb=function(){ var ta=document.createElement("textarea"); ta.value=_resumoSemTxt; document.body.appendChild(ta); ta.select();
+    try{ document.execCommand("copy"); ok(); }catch(e){ msgTopo("Não consegui copiar automaticamente.", true); } document.body.removeChild(ta); };
+  if(navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(_resumoSemTxt).then(ok, fb); else fb();
+}
+function _evCard(l, p, v, sub){ return '<div class="evc-card"><div class="l">'+l+'</div><div class="p">'+p+'</div><div class="v">'+v+'</div><div class="s">'+sub+'</div></div>'; }
 function renderEvolucao(){
   aplicarFiltro();
-  var base=FILTRADOS.filter(function(r){ return r.status!=="REPROVADO"; });
-  var per=(el("evol_gran") && el("evol_gran").value) || "mes";
+  // Pedidos enviados (exclui reprovados e viagens ainda em andamento).
+  var base=FILTRADOS.filter(function(r){ return r.status!=="REPROVADO" && r.status!=="ABERTO"; });
+  var per=(el("evol_gran") && el("evol_gran").value) || "semana";
+  var filtro=!el("filtroAtivo").classList.contains("hide");
+  var S=_semanal(base), h="";
+
+  // 1) Gasto semanal com combustível
+  h+='<div class="evc-top"><div class="grp-title" style="margin:16px 0 4px">Gasto com combustível por semana</div>'
+    +'<button class="btn" onclick="copiarResumoSemanal()">'+ic('file')+' Copiar resumo</button></div>';
+  h+='<div class="evc-cards">'
+    +_evCard("Esta semana", _ddmm(S.kAtual)+" até hoje · parcial", brlv(S.atual.comb), S.atual.n+" pedido(s)")
+    +_evCard("Semana passada", _semLbl(S.kPass), brlv(S.pass.comb), _varHtml(S.pass.comb, S.pp.comb, "vs. semana anterior"))
+    +_evCard("Média semanal", S.nSem+" semana(s) completa(s)", brlv(S.media), "semana passada "+_varHtml(S.pass.comb, S.media, "vs. a média"))
+    +_evCard("Tendência", "média das últimas 4 semanas", brlv(S.m4), _varHtml(S.m4, S.a4, "vs. as 4 anteriores"))
+    +'</div>';
+  h+='<div class="evc-box"><div class="evc-leg"><span><i style="border-color:#2563EB;border-top-width:10px;width:12px"></i>gasto da semana</span>'
+    +'<span><i style="border-color:#D97706;border-top-style:dashed"></i>média semanal ('+brlv(S.media)+')</span><span>barra listrada = semana atual (parcial)</span></div>'
+    +'<div class="evc-scroll">'+_barChart(S.serie, S.media, brlv, _brlC)+'</div></div>';
+  h+='<div class="evc-nota">Combustível = valor de combustível reembolsado (sem pedágios), pela data da viagem. Considera os pedidos enviados, exceto reprovados'
+    +(filtro?' — <b>respeitando o filtro atual do painel</b>.':'.')+'</div>';
+  _resumoSemTxt="Gasto com reembolso de combustível (app):\n"
+    +"• Esta semana ("+_ddmm(S.kAtual)+" até hoje, parcial): "+brlv(S.atual.comb)+"\n"
+    +"• Semana passada ("+_semLbl(S.kPass)+"): "+brlv(S.pass.comb)+(_varTxt(S.pass.comb,S.pp.comb)?" ("+_varTxt(S.pass.comb,S.pp.comb)+" vs. semana anterior)":"")+"\n"
+    +"• Média semanal ("+S.nSem+" semanas): "+brlv(S.media)+"\n"
+    +"• Média das últimas 4 semanas: "+brlv(S.m4)+(_varTxt(S.m4,S.a4)?" ("+_varTxt(S.m4,S.a4)+" vs. as 4 anteriores)":"");
+
+  // 2) Indicadores vs. limites, por semana / mês / dia
   var byP={};
   base.forEach(function(r){
-    var k = per==="dia" ? ymd(r.checkin_em||r.criado_em) : _mesYM(r.checkin_em||r.criado_em); if(!k) return;
-    if(!byP[k]) byP[k]={val:0, km:0, n:0};
-    byP[k].val+=Number(r.val_total)||0; byP[k].km+=Number(r.dist_total)||0; byP[k].n++;
+    var v=r.checkin_em||r.criado_em, k = per==="dia" ? ymd(v) : (per==="mes" ? _mesYM(v) : _semKey(v)); if(!k) return;
+    var g=byP[k]||(byP[k]={val:0, km:0, n:0}); g.val+=Number(r.val_total)||0; g.km+=Number(r.dist_total)||0; g.n++;
   });
   var keys=Object.keys(byP).sort();
-  var lbl=function(k){ return per==="dia" ? _diaBR(k).slice(0,5) : _mesBR(k); };
-  var ptsKm=keys.map(function(k){ var g=byP[k]; return {label:lbl(k), v: g.km>0? g.val/g.km : 0}; });
-  var ptsV =keys.map(function(k){ var g=byP[k]; return {label:lbl(k), v: g.n>0? g.val/g.n : 0}; });
-  var h='<div style="display:flex;align-items:center;gap:8px;margin:12px 0 4px"><label style="font-size:12px;color:var(--text2);font-weight:600">Ver por:</label>'
-    +'<select id="evol_gran" onchange="renderEvolucao()" style="background:var(--bg);border:1px solid var(--border);color:var(--text);padding:6px 10px;border-radius:6px;font-family:inherit;font-size:13px"><option value="mes"'+(per==="mes"?" selected":"")+'>Mês</option><option value="dia"'+(per==="dia"?" selected":"")+'>Dia</option></select>'
-    +'<span style="font-size:11.5px;color:var(--text3)">verde = dentro · âmbar = perto do limite · vermelho = acima</span></div>';
-  h+='<div class="grp-title">Custo por km (média do período) — limite R$ '+LIMITE_KM.toFixed(2).replace(".",",")+'/km</div>';
-  h+='<div style="overflow-x:auto">'+_lineChart(ptsKm, LIMITE_KM, function(v){return "R$ "+v.toFixed(2).replace(".",",");})+'</div>';
-  h+='<div class="grp-title">Valor por viagem (média do período) — limite R$ '+LIMITE_VIAGEM+'</div>';
-  h+='<div style="overflow-x:auto">'+_lineChart(ptsV, LIMITE_VIAGEM, function(v){return "R$ "+v.toFixed(0);})+'</div>';
+  var lbl=function(k){ return per==="mes" ? _mesBR(k) : _ddmm(k); };
+  var tip=function(k){ return per==="mes" ? _mesBR(k) : (per==="dia" ? _diaBR(k) : "Semana "+_semLbl(k)); };
+  var ptsKm=keys.map(function(k){ var g=byP[k]; return {label:lbl(k), tip:tip(k), v: g.km>0? g.val/g.km : 0}; });
+  var ptsV =keys.map(function(k){ var g=byP[k]; return {label:lbl(k), tip:tip(k), v: g.n>0? g.val/g.n : 0}; });
+  var opt=function(v,t){ return '<option value="'+v+'"'+(per===v?" selected":"")+'>'+t+'</option>'; };
+  h+='<div class="evc-top" style="margin-top:22px"><div class="grp-title" style="margin:0">Indicadores vs. limites</div>'
+    +'<label class="evc-sel">Ver por <select id="evol_gran" onchange="renderEvolucao()">'+opt("semana","Semana")+opt("mes","Mês")+opt("dia","Dia")+'</select></label></div>';
+  var leg=function(lim){ return '<div class="evc-leg"><span><i style="border-color:#2563EB"></i>média do período</span><span><i style="border-color:#DC2626;border-top-style:dashed"></i>limite '+lim+'</span>'
+    +'<span><b style="color:#16A34A">●</b> dentro · <b style="color:#D97706">●</b> perto · <b style="color:#DC2626">●</b> acima</span></div>'; };
+  var limKm="R$ "+LIMITE_KM.toFixed(2).replace(".",",")+"/km";
+  h+='<div class="evc-box"><div class="evc-tt">Custo por km</div>'+leg(limKm)
+    +'<div class="evc-scroll">'+_lineChart(ptsKm, LIMITE_KM, function(v){return "R$ "+v.toFixed(2).replace(".",",");})+'</div></div>';
+  h+='<div class="evc-box"><div class="evc-tt">Valor por viagem</div>'+leg("R$ "+LIMITE_VIAGEM)
+    +'<div class="evc-scroll">'+_lineChart(ptsV, LIMITE_VIAGEM, function(v){return "R$ "+Math.round(v);})+'</div></div>';
   el("stats_evolucao").innerHTML=h;
 }
 function renderStats(){
