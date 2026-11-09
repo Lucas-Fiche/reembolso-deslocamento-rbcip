@@ -91,6 +91,7 @@ tbody tr.sel{background:var(--primary-light)}
 #toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:#1E293B;color:#fff;padding:13px 20px;border-radius:10px;font-size:14px;font-weight:600;line-height:1.45;box-shadow:0 10px 30px rgba(0,0,0,.4);z-index:1200;max-width:440px;width:calc(100% - 32px);text-align:center;border:1px solid rgba(255,255,255,.14)}
 #toast.err{background:#DC2626;border-color:#FCA5A5;color:#fff}
 #toast.ok{background:#16A34A;border-color:#86EFAC;color:#fff;box-shadow:0 10px 30px rgba(22,163,74,.45)}
+#toast.info{background:#2563EB;border-color:#93C5FD;color:#fff;box-shadow:0 10px 30px rgba(37,99,235,.45)}
 #toast .ico{width:18px;height:18px;vertical-align:-4px;stroke-width:2.6}
 #toast.in{animation:toastIn .28s cubic-bezier(.2,.9,.3,1.2)}
 @keyframes toastIn{from{opacity:0;transform:translate(-50%,14px) scale(.97)}to{opacity:1;transform:translate(-50%,0) scale(1)}}
@@ -598,7 +599,7 @@ async function confirmarCorrige(){
   var SEM_EMAIL={ABERTO:1,COMPLETO:1,CORRIGIDO:1}; // status sem modelo de e-mail no carteiro
   if(!cfg.CARTEIRO_URL) msgTopo("Status corrigido ✓ — mas o envio de e-mail não está configurado (carteiro).", true);
   else if(SEM_EMAIL[novo]) msgTopo('Status corrigido para "'+statusLabel(novo)+'" ✓ — este status não tem aviso por e-mail; nada foi enviado.', true);
-  else { msgTopo("Status corrigido ✓ — enviando e-mail em segundo plano…"); _avisoStatusBg(ctx.protocolo, novo, motivo||"Correção de status pela administração."); }
+  else { msgTopo("Status corrigido ✓ — enviando e-mail em segundo plano…", "info"); _avisoStatusBg(ctx.protocolo, novo, motivo||"Correção de status pela administração."); }
 }
 
 // ── Modo noturno (claro/escuro) ──
@@ -760,10 +761,10 @@ function dur(a,b){ if(!a||!b)return "—"; var ms=new Date(b)-new Date(a); if(is
 function statusLabel(s){ return ({ABERTO:"Aberto",COMPLETO:"Aguardando Análise",CORRIGIDO:"Corrigido",APROVADO:"Aprovado",PAGO:"Pago","REVISÃO":"Em Revisão",REPROVADO:"Reprovado"}[s])||s; }
 
 var _toastT=null;
-// tipo: true/"err" = erro (vermelho) · "ok" = sucesso (verde) · vazio = neutro
+// tipo: true/"err" = erro (vermelho) · "ok" = sucesso (verde) · "info" = em andamento (azul) · vazio = neutro
 function msgTopo(txt, tipo){
   var t=el("toast"); if(!t) return;
-  var cls = (tipo==="ok") ? "ok" : (tipo ? "err" : "");
+  var cls = (tipo==="ok"||tipo==="info") ? tipo : (tipo ? "err" : "");
   t.className=cls; t.innerHTML=(cls==="ok" ? ic('check')+" " : "")+esc(txt);
   void t.offsetWidth; t.classList.add("in"); // reinicia a animação de entrada
   if(_toastT) clearTimeout(_toastT);
@@ -1087,7 +1088,7 @@ async function reenviarEmail(id){
   var cfg=window.RBCIP_CONFIG||{};
   if(!cfg.CARTEIRO_URL){ msgTopo("Envio de e-mail não configurado (carteiro).", true); return; }
   if(!confirm('Reenviar o e-mail de "'+statusLabel(reg.status)+'" ao pesquisador do '+reg.protocolo+"?")) return;
-  msgTopo("Reenviando o e-mail do "+reg.protocolo+" em segundo plano…");
+  msgTopo("Reenviando o e-mail do "+reg.protocolo+" em segundo plano…", "info");
   _avisoStatusBg(reg.protocolo, reg.status, "");
 }
 
@@ -1138,7 +1139,7 @@ async function mudarStatus(id, novo, obsArg){
   // Status já salvo: e-mail e recibo seguem em segundo plano, sem travar a tela.
   var cfg=window.RBCIP_CONFIG||{};
   var temEmail=!!cfg.CARTEIRO_URL && novo!=="COMPLETO", temRecibo=!!cfg.CARTEIRO_URL && novo==="PAGO";
-  msgTopo("Status salvo ✓"+(temEmail||temRecibo ? " — "+(temRecibo?"e-mail e recibo":"e-mail")+" em segundo plano…" : ""));
+  msgTopo("Status salvo ✓"+(temEmail||temRecibo ? " — "+(temRecibo?"e-mail e recibo":"e-mail")+" em segundo plano…" : ""), (temEmail||temRecibo) ? "info" : "ok");
   if(temEmail) _avisoStatusBg(reg.protocolo, novo, obs);
   if(temRecibo) _reciboBg(reg.protocolo, id);
 }
@@ -1148,7 +1149,7 @@ async function gerarRecibo(id){
   var cfg=window.RBCIP_CONFIG||{};
   if(!cfg.CARTEIRO_URL){ msgTopo("Carteiro não configurado.",true); return; }
   if(!confirm("Gerar um recibo em PDF para "+reg.protocolo+"? (gera um novo número e envia ao financeiro)")) return;
-  msgTopo("Gerando o recibo do "+reg.protocolo+" em segundo plano…");
+  msgTopo("Gerando o recibo do "+reg.protocolo+" em segundo plano…", "info");
   _reciboBg(reg.protocolo, id);
 }
 
