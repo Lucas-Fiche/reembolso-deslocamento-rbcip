@@ -44,12 +44,24 @@
 <script>
 var sb=null, PERFISMAP={}, _map=null, aberto=null;
 function el(id){return document.getElementById(id);}
+// Busca TODAS as linhas paginando (a API do Supabase devolve no máximo 1000 por consulta).
+async function _buscarTodos(montar){
+  var passo=1000, de=0, tudo=[];
+  for(;;){
+    var r=await montar().range(de, de+passo-1);
+    if(r.error) return {data:null, error:r.error};
+    var lote=r.data||[]; tudo=tudo.concat(lote);
+    if(lote.length<passo) return {data:tudo, error:null};
+    de+=passo;
+  }
+}
+
 function show(id){["carregando","semAcesso","conteudo"].forEach(function(s){el(s).classList.add("hide");});el(id).classList.remove("hide");}
 function esc(s){return String(s==null?"":s).replace(/[&<>"]/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c];});}
 function dt(v){ if(!v)return "—"; var d=new Date(v); if(isNaN(d))return String(v); return d.toLocaleString("pt-BR",{day:"2-digit",month:"2-digit",year:"numeric",hour:"2-digit",minute:"2-digit"}); }
 
 async function carregar(){
-  var { data, error }=await sb.from("vw_van_viagens").select("id,motorista_id,inicio_turno,fim_turno,qtd_pontos,qtd_passageiros").order("inicio_turno",{ascending:false});
+  var { data, error }=await _buscarTodos(function(){ return sb.from("vw_van_viagens").select("id,motorista_id,inicio_turno,fim_turno,qtd_pontos,qtd_passageiros").order("inicio_turno",{ascending:false}).order("id",{ascending:true}); });
   if(error){ el("lista").innerHTML='<p class="muted">Erro: '+esc(error.message)+'</p>'; return; }
   var d=data||[];
   if(!d.length){ el("lista").innerHTML='<div class="card"><p class="muted">Nenhum turno de van registrado ainda.</p></div>'; return; }

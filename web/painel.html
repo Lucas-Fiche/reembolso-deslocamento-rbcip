@@ -447,6 +447,18 @@ tbody tr.sel{background:var(--primary-light)}
 <script>
 var sb=null, DADOS=[], FILTRADOS=[], sel=null, QUEM="", DET_PARADAS=[], DET_PEDAGIOS=[], DET_REVISOES=[];
 function el(id){return document.getElementById(id);}
+// Busca TODAS as linhas paginando (a API do Supabase devolve no máximo 1000 por consulta).
+async function _buscarTodos(montar){
+  var passo=1000, de=0, tudo=[];
+  for(;;){
+    var r=await montar().range(de, de+passo-1);
+    if(r.error) return {data:null, error:r.error};
+    var lote=r.data||[]; tudo=tudo.concat(lote);
+    if(lote.length<passo) return {data:tudo, error:null};
+    de+=passo;
+  }
+}
+
 // ── Ícones SVG (traço, herdam a cor do texto) — substituem os emojis ──
 var _IP="<svg class='ico' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'>", _IE="</svg>";
 var IC={
@@ -700,9 +712,9 @@ async function carregar(fromBtn){
   var b=(fromBtn&&fromBtn.nodeType)?fromBtn:null, prev="";
   if(b){ prev=b.textContent; b.textContent="Atualizando…"; b.disabled=true; }
   try{
-    var { data, error } = await sb.from("vw_reembolsos")
+    var { data, error } = await _buscarTodos(function(){ return sb.from("vw_reembolsos")
       .select("id,protocolo,status,motorista_id,nome,cpf,rg,orgao,email,telefone,veiculo,placa,checkin_em,checkin_lat,checkin_lng,checkin_foto,checkout_em,checkout_lat,checkout_lng,checkout_foto,dist_total,consumo,usou_estimativa,preco_base,preco_real,cupom_foto,foto_consumo,caronas,validacao,recibo_link,val_estimado,val_real,val_pedagios,val_total,qtd_pedagios,qtd_paradas,qtd_ped_pendentes,criado_em,aprovado_em,pago_em")
-      .order("criado_em",{ascending:true});
+      .order("criado_em",{ascending:true}).order("id",{ascending:true}); });
     if(error){ msgTopo("Erro ao atualizar: "+error.message, true); return; }
     DADOS = data||[];
     render();

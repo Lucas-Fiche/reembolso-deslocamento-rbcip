@@ -246,6 +246,18 @@ var MOT_NOMES={}, STATS_ARR=[], STATS_PER={ini:"",fim:""}, STATS_LOADED=false, S
 var CHECK_SVG='<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="#fff" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>';
 var AV_CORES=["#2E6BAD","#0EA5E9","#0891B2","#059669","#16A34A","#7C3AED","#4F46E5","#9333EA","#DB2777","#E11D48","#EA580C","#D97706"];
 function el(id){return document.getElementById(id);}
+// Busca TODAS as linhas paginando (a API do Supabase devolve no máximo 1000 por consulta).
+async function _buscarTodos(montar){
+  var passo=1000, de=0, tudo=[];
+  for(;;){
+    var r=await montar().range(de, de+passo-1);
+    if(r.error) return {data:null, error:r.error};
+    var lote=r.data||[]; tudo=tudo.concat(lote);
+    if(lote.length<passo) return {data:tudo, error:null};
+    de+=passo;
+  }
+}
+
 // Ícones SVG (traço) — substituem emojis
 var IC={
   lock:"<svg class='ico' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><rect x='4.5' y='10.5' width='15' height='10' rx='2'/><path d='M8 10.5V7a4 4 0 0 1 8 0v3.5'/></svg>"
@@ -411,7 +423,7 @@ async function carregarStats(){
   if(!ini || !fim){ return; }
   if(ini>fim){ var t=ini; ini=fim; fim=t; el("est_ini").value=ini; el("est_fim").value=fim; }
   el("est_tbl").innerHTML='<tr><td colspan="3" class="muted">Carregando…</td></tr>';
-  var { data:rows, error } = await sb.from("diarias").select("motorista_id,data").gte("data",ini).lte("data",fim);
+  var { data:rows, error } = await _buscarTodos(function(){ return sb.from("diarias").select("motorista_id,data").gte("data",ini).lte("data",fim).order("data",{ascending:true}).order("id",{ascending:true}); });
   if(error){ el("est_tbl").innerHTML='<tr><td colspan="3" class="muted">Erro: '+esc(error.message)+'</td></tr>'; return; }
   rows=rows||[];
   var porMot={}, porDatas={}, dias={}, total=rows.length;
