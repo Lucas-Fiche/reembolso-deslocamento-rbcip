@@ -90,6 +90,10 @@ tbody tr.sel{background:var(--primary-light)}
 .loading{color:var(--text3);text-align:center;padding:40px}
 #toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:#1E293B;color:#fff;padding:13px 20px;border-radius:10px;font-size:14px;font-weight:600;line-height:1.45;box-shadow:0 10px 30px rgba(0,0,0,.4);z-index:1200;max-width:440px;width:calc(100% - 32px);text-align:center;border:1px solid rgba(255,255,255,.14)}
 #toast.err{background:#DC2626;border-color:#FCA5A5;color:#fff}
+#toast.ok{background:#16A34A;border-color:#86EFAC;color:#fff;box-shadow:0 10px 30px rgba(22,163,74,.45)}
+#toast .ico{width:18px;height:18px;vertical-align:-4px;stroke-width:2.6}
+#toast.in{animation:toastIn .28s cubic-bezier(.2,.9,.3,1.2)}
+@keyframes toastIn{from{opacity:0;transform:translate(-50%,14px) scale(.97)}to{opacity:1;transform:translate(-50%,0) scale(1)}}
 
 /* Modais genéricos (stats / gasolina) */
 .modal-bg{position:fixed;inset:0;background:rgba(15,23,42,.5);z-index:300;display:flex;align-items:flex-start;justify-content:center;padding:40px 16px;overflow:auto}
@@ -201,9 +205,18 @@ tbody tr.sel{background:var(--primary-light)}
 /* Overlay bloqueante (trava a tela durante ações lentas: pago/recibo) */
 #busy{position:fixed;inset:0;background:rgba(15,23,42,.6);z-index:900;display:none;align-items:center;justify-content:center;flex-direction:column;gap:16px;backdrop-filter:blur(2px);-webkit-backdrop-filter:blur(2px)}
 #busy.on{display:flex}
-#bgTasks{position:fixed;left:16px;bottom:16px;z-index:1100;display:flex;align-items:center;gap:10px;background:#1E293B;color:#fff;padding:10px 14px;border-radius:10px;font-size:13px;font-weight:600;box-shadow:0 10px 30px rgba(0,0,0,.35);max-width:min(460px,calc(100% - 32px));border:1px solid rgba(255,255,255,.14)}
+#bgTasks{position:fixed;left:16px;bottom:16px;z-index:1100;display:flex;align-items:center;gap:10px;background:#1E293B;color:#fff;padding:11px 16px 13px;border-radius:12px;font-size:13.5px;font-weight:600;box-shadow:0 10px 30px rgba(0,0,0,.35);max-width:min(480px,calc(100% - 32px));border:1px solid rgba(96,165,250,.45);overflow:hidden;animation:bgIn .3s ease-out}
 #bgTasks.hide{display:none}
-#bgTasks .sp{width:16px;height:16px;border:2.5px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:busyspin .8s linear infinite;flex:0 0 auto}
+#bgTasks::after{content:"";position:absolute;left:0;bottom:0;height:3px;width:45%;background:linear-gradient(90deg,transparent,#3B82F6,#93C5FD,transparent);animation:bgBar 1.25s ease-in-out infinite}
+#bgTasks .bg-ico{display:inline-flex;color:#93C5FD;animation:bgPulo 1s ease-in-out infinite}
+#bgTasks .bg-ico .ico{width:18px;height:18px}
+#bgTasks .sp{width:15px;height:15px;border:2.5px solid rgba(255,255,255,.25);border-top-color:#93C5FD;border-radius:50%;animation:busyspin .8s linear infinite;flex:0 0 auto}
+#bgTasks .dots::after{content:"";display:inline-block;width:1.1em;text-align:left;animation:bgDots 1.2s steps(1,end) infinite}
+@keyframes bgBar{0%{transform:translateX(-110%)}100%{transform:translateX(240%)}}
+@keyframes bgPulo{0%,100%{transform:translateY(0) rotate(0)}30%{transform:translateY(-3px) rotate(-8deg)}60%{transform:translateY(0) rotate(4deg)}}
+@keyframes bgIn{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
+@keyframes bgDots{0%{content:""}25%{content:"."}50%{content:".."}75%{content:"..."}}
+@media (prefers-reduced-motion:reduce){#bgTasks,#bgTasks::after,#bgTasks .bg-ico,#bgTasks .dots::after,#toast.in{animation:none}}
 @media(max-width:700px){#bgTasks{bottom:90px}}
 #busy .sp{width:46px;height:46px;border:4px solid rgba(255,255,255,.25);border-top-color:#fff;border-radius:50%;animation:busyspin .8s linear infinite}
 #busy .msg{color:#fff;font-size:14px;font-weight:600;max-width:82vw;text-align:center;padding:0 16px;line-height:1.5}
@@ -223,7 +236,7 @@ tbody tr.sel{background:var(--primary-light)}
 <body>
 
 <div id="toast" class="hide"></div>
-<div id="bgTasks" class="hide" role="status" aria-live="polite"><div class="sp"></div><span id="bgTxt"></span></div>
+<div id="bgTasks" class="hide" role="status" aria-live="polite"><span id="bgIco" class="bg-ico"></span><span id="bgTxt"></span><div class="sp"></div></div>
 <div id="busy"><div class="sp"></div><div class="msg" id="busyMsg">Processando…</div></div>
 
 <!-- Estados de acesso -->
@@ -690,7 +703,10 @@ function _bgRender(){
   var b=el("bgTasks"); if(!b) return;
   var ks=Object.keys(_BGT);
   b.classList.toggle("hide", !ks.length);
-  el("bgTxt").textContent = ks.map(function(k){ return _BGT[k]; }).join(" · ");
+  if(!ks.length) return;
+  var soRecibo=ks.every(function(k){ return /recibo/i.test(_BGT[k]); });
+  el("bgIco").innerHTML = soRecibo ? ic('file') : ic('mail');
+  el("bgTxt").innerHTML = ks.map(function(k){ return esc(String(_BGT[k]).replace(/…$/,"")); }).join(" · ")+'<span class="dots"></span>';
 }
 function _bgIni(txt){ var k=String(++_bgSeq); _BGT[k]=txt; _bgRender(); return k; }
 function _bgFim(k){ delete _BGT[k]; _bgRender(); }
@@ -712,7 +728,7 @@ function _avisoStatusBg(protocolo, novo, obs){
       var resp=await fetchTimeout(cfg.CARTEIRO_URL, { method:"POST", redirect:"follow", headers:{"Content-Type":"text/plain"},
         body: JSON.stringify({action:"enviar_aviso_status", jwt:s1.data.session.access_token, protocolo:protocolo, novo_status:novo, observacao:obs||""}) }, 30000);
       var out={}; try{ out=JSON.parse(await resp.text()); }catch(_){}
-      if(out.enviado) msgTopo("E-mail do "+protocolo+" enviado ao pesquisador ✓");
+      if(out.enviado) msgTopo("E-mail do "+protocolo+" enviado ao pesquisador", "ok");
       else if(out.success) msgTopo("E-mail do "+protocolo+" não enviado ("+(out.motivo||"motivo não informado")+").", true);
       else msgTopo("O e-mail do "+protocolo+" falhou"+(out.error?": "+out.error:"")+". Use “Reenviar e-mail”.", true);
     }catch(e){ msgTopo("Não consegui confirmar o e-mail do "+protocolo+" ("+(e&&e.message||"erro")+"). Use “Reenviar e-mail” se preciso.", true); }
@@ -724,7 +740,7 @@ function _reciboBg(protocolo, id){
   return (async function(){
     try{
       var res=await _gerarReciboRetry(protocolo, id, k);
-      if(res.ok){ msgTopo("Recibo Nº "+res.numero+" do "+protocolo+" gerado e enviado aos e-mails internos ✓"); try{ await _atualizarPedido(id); }catch(e){} }
+      if(res.ok){ msgTopo("Recibo Nº "+res.numero+" do "+protocolo+" gerado e enviado aos e-mails internos", "ok"); try{ await _atualizarPedido(id); }catch(e){} }
       else msgTopo("O recibo do "+protocolo+" falhou ("+res.erro+"). Gere depois em “Gerar recibo”.", true);
     } finally { _bgFim(k); }
   })();
@@ -744,11 +760,14 @@ function dur(a,b){ if(!a||!b)return "—"; var ms=new Date(b)-new Date(a); if(is
 function statusLabel(s){ return ({ABERTO:"Aberto",COMPLETO:"Aguardando Análise",CORRIGIDO:"Corrigido",APROVADO:"Aprovado",PAGO:"Pago","REVISÃO":"Em Revisão",REPROVADO:"Reprovado"}[s])||s; }
 
 var _toastT=null;
-function msgTopo(txt, err){
+// tipo: true/"err" = erro (vermelho) · "ok" = sucesso (verde) · vazio = neutro
+function msgTopo(txt, tipo){
   var t=el("toast"); if(!t) return;
-  t.textContent=txt; t.className=(err?"err":""); t.classList.remove("hide");
+  var cls = (tipo==="ok") ? "ok" : (tipo ? "err" : "");
+  t.className=cls; t.innerHTML=(cls==="ok" ? ic('check')+" " : "")+esc(txt);
+  void t.offsetWidth; t.classList.add("in"); // reinicia a animação de entrada
   if(_toastT) clearTimeout(_toastT);
-  _toastT=setTimeout(function(){ t.classList.add("hide"); }, 4500);
+  _toastT=setTimeout(function(){ t.classList.add("hide"); }, cls==="ok" ? 6000 : 4500);
 }
 
 // ── Carregar dados do Supabase ──
