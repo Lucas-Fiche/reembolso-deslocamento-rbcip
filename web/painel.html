@@ -268,7 +268,7 @@ tbody tr.sel{background:var(--primary-light)}
     <input type="date" id="fDe" onchange="render()" title="Data inicial (check-in)">
     <input type="date" id="fAte" onchange="render()" title="Data final (check-in)">
     <button class="clr" onclick="limparData()" title="Limpar datas">✕ datas</button>
-    <input id="fBusca" type="text" placeholder="Buscar por nome, CPF ou protocolo…" oninput="render()">
+    <input id="fBusca" type="text" placeholder="Buscar por nome, CPF ou protocolo…" oninput="renderDepois()">
     <button class="btn" style="background:var(--primary);color:#fff;border-color:var(--primary)" onclick="baixarSolicitacoesCSV()" title="Baixa em planilha (CSV/Excel) as solicitações do filtro atual"><svg class='ico' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M12 3v12'/><path d='M7.5 11 12 15.5 16.5 11'/><path d='M4.5 20h15'/></svg> Baixar (CSV)</button>
     <div id="filtroAtivo" class="hide"></div>
   </div>
@@ -592,7 +592,7 @@ async function confirmarCorrige(){
       msgTopo("Status corrigido para "+statusLabel(novo)+" ✓");
     }
   } finally {
-    try{ await carregar(); await abrirDetalhe(ctx.id); }catch(e){}
+    try{ await recarregarUm(ctx.id); await abrirDetalhe(ctx.id); }catch(e){}
     desbloquear();
   }
 }
@@ -617,7 +617,7 @@ aplicarTema(document.documentElement.getAttribute("data-theme")==="dark"?"dark":
 
 // ── Anexos: link direto (lh3) + modal (lightbox) ──
 function driveId(u){ var m=String(u||"").match(/(?:\/d\/|[?&]id=)([A-Za-z0-9_-]{20,})/); return m?m[1]:""; }
-function driveImg(u){ var id=driveId(u); return id?("https://lh3.googleusercontent.com/d/"+id):String(u||""); }
+function driveImg(u){ var id=driveId(u); return id?("https://lh3.googleusercontent.com/d/"+id+"=w1600"):String(u||""); }
 // link de anexo que abre no modal (usa data-drive; o handler global intercepta)
 function imgA(url,label){ return '<a href="'+esc(driveImg(url))+'" target="_blank" data-drive="'+esc(url)+'" data-tit="'+esc(label)+'">'+esc(label)+'</a>'; }
 // ── Carrossel de anexos: reúne TODAS as imagens da solicitação e navega ──
@@ -638,6 +638,7 @@ function _galShow(){
   el("img_cont").textContent = multi ? (GALi+1)+" / "+GAL.length : "";
   el("gal_prev").classList.toggle("hide", !multi);
   el("gal_next").classList.toggle("hide", !multi);
+  if(multi) [GALi+1, GALi-1].forEach(function(j){ var g=GAL[(j+GAL.length)%GAL.length]; if(g&&g.url){ var im=new Image(); im.src=driveImg(g.url); } });
 }
 function galMove(d){ if(GAL.length<2) return; GALi=(GALi+d+GAL.length)%GAL.length; _galShow(); }
 function abrirGaleria(url){
@@ -708,12 +709,22 @@ function msgTopo(txt, err){
 }
 
 // ── Carregar dados do Supabase ──
+var COLS_REEMB="id,protocolo,status,motorista_id,nome,cpf,rg,orgao,email,telefone,veiculo,placa,checkin_em,checkin_lat,checkin_lng,checkin_foto,checkout_em,checkout_lat,checkout_lng,checkout_foto,dist_total,consumo,usou_estimativa,preco_base,preco_real,cupom_foto,foto_consumo,caronas,validacao,recibo_link,val_estimado,val_real,val_pedagios,val_total,qtd_pedagios,qtd_paradas,qtd_ped_pendentes,criado_em,aprovado_em,pago_em";
+// Depois de uma ação num pedido, atualiza só aquela linha (em vez de recarregar tudo).
+async function recarregarUm(id){
+  var r=await sb.from("vw_reembolsos").select(COLS_REEMB).eq("id",id).maybeSingle();
+  if(r.error || !r.data) return carregar();
+  var achou=false;
+  for(var i=0;i<DADOS.length;i++){ if(DADOS[i].id===id){ DADOS[i]=r.data; achou=true; break; } }
+  if(!achou) DADOS.push(r.data);
+  render();
+}
 async function carregar(fromBtn){
   var b=(fromBtn&&fromBtn.nodeType)?fromBtn:null, prev="";
   if(b){ prev=b.textContent; b.textContent="Atualizando…"; b.disabled=true; }
   try{
     var { data, error } = await _buscarTodos(function(){ return sb.from("vw_reembolsos")
-      .select("id,protocolo,status,motorista_id,nome,cpf,rg,orgao,email,telefone,veiculo,placa,checkin_em,checkin_lat,checkin_lng,checkin_foto,checkout_em,checkout_lat,checkout_lng,checkout_foto,dist_total,consumo,usou_estimativa,preco_base,preco_real,cupom_foto,foto_consumo,caronas,validacao,recibo_link,val_estimado,val_real,val_pedagios,val_total,qtd_pedagios,qtd_paradas,qtd_ped_pendentes,criado_em,aprovado_em,pago_em")
+      .select(COLS_REEMB)
       .order("criado_em",{ascending:true}).order("id",{ascending:true}); });
     if(error){ msgTopo("Erro ao atualizar: "+error.message, true); return; }
     DADOS = data||[];
@@ -749,6 +760,8 @@ function aplicarFiltro(){
   if(partes.length){ fa.classList.remove("hide"); fa.innerHTML=ic('search')+" Filtro ativo — "+partes.join(" · ")+" · "+FILTRADOS.length+" resultado(s)"; }
   else fa.classList.add("hide");
 }
+var _rdT=null;
+function renderDepois(){ clearTimeout(_rdT); _rdT=setTimeout(render, 220); }
 function limparData(){ el("fDe").value=""; el("fAte").value=""; render(); }
 
 function contarCards(){
@@ -792,9 +805,10 @@ function render(){
     var _sdtStyle='font-size:10.5px;color:var(--text3);margin-top:3px;font-weight:500';
     var _sdt = (_fst==="APROVADO") ? ('<div style="'+_sdtStyle+'">aprovado '+(r.aprovado_em?dt(r.aprovado_em):'— sem data disponível')+'</div>')
              : (_fst==="PAGO") ? ('<div style="'+_sdtStyle+'">pago '+(r.pago_em?dt(r.pago_em):'— sem data disponível')+'</div>') : '';
-    return '<tr class="clk'+(sel&&sel.id===r.id?" sel":"")+'" onclick="abrirDetalhe(\''+r.id+'\')">'
+    var fv=flagsValor(r), fo=flagsOutros(r);
+    return '<tr class="clk'+(sel&&sel.id===r.id?" sel":"")+'" data-id="'+r.id+'" onclick="abrirDetalhe(\''+r.id+'\')">'
       +'<td class="proto">'+esc(r.protocolo)+'</td>'
-      +'<td><span class="st st-'+esc(r.status)+'">'+esc(r.status)+'</span>'+(r.qtd_ped_pendentes>0?' <span class="st" style="background:#FEF3C7;color:#92400E">'+ic('alert')+' pedágio</span>':'')+(flagsValor(r).length?' <span class="st" style="background:#FEF3C7;color:#92400E" title="'+esc(flagsValor(r).join(" · "))+'">'+ic('money')+' acima do esperado</span>':'')+(flagsOutros(r).length?' <span class="st" style="background:#FEE2E2;color:#991B1B" title="'+esc(flagsOutros(r).join(" · "))+'">'+ic('search')+' suspeita</span>':'')+_sdt+'</td>'
+      +'<td><span class="st st-'+esc(r.status)+'">'+esc(r.status)+'</span>'+(r.qtd_ped_pendentes>0?' <span class="st" style="background:#FEF3C7;color:#92400E">'+ic('alert')+' pedágio</span>':'')+(fv.length?' <span class="st" style="background:#FEF3C7;color:#92400E" title="'+esc(fv.join(" · "))+'">'+ic('money')+' acima do esperado</span>':'')+(fo.length?' <span class="st" style="background:#FEE2E2;color:#991B1B" title="'+esc(fo.join(" · "))+'">'+ic('search')+' suspeita</span>':'')+_sdt+'</td>'
       +'<td>'+esc(r.nome||"—")+'</td>'
       +'<td>'+esc(r.veiculo||"—")+(r.placa?" · "+esc(r.placa):"")+'</td>'
       +'<td class="mono">'+dt(r.checkin_em)+'</td>'
@@ -807,18 +821,35 @@ function render(){
 async function abrirDetalhe(id){
   sel = DADOS.filter(function(x){return x.id===id;})[0]||null;
   if(!sel) return;
-  render(); // marca a linha selecionada
+  _marcarLinha(id); // marca só a linha (antes redesenhava a tabela inteira)
   el("detailModal").classList.add("show");
   el("detail").innerHTML='<div class="loading">Carregando detalhes…</div>';
   el("actionBar").innerHTML='<div class="action-bar-label">Ações</div><div class="action-bar-empty">Carregando…</div>';
-  var par = await sb.from("paradas").select("fase,ordem,origem,destino,km,horario,maps_link,lat,lng,adicionada_checkout,justificativa").eq("reembolso_id",id).order("fase").order("ordem");
-  var ped = await sb.from("pedagios").select("id,fase,ordem,valor,comprovante_link,pendente").eq("reembolso_id",id).order("ordem");
-  var rev = await sb.from("reembolso_revisoes").select("criado_em,alteracoes").eq("reembolso_id",id).order("criado_em",{ascending:false});
-  DET_PARADAS = par.data||[]; DET_PEDAGIOS = ped.data||[]; DET_REVISOES = (rev&&rev.data)||[];
+  // As 3 consultas saem ao mesmo tempo (antes eram uma depois da outra).
+  var res = await Promise.all([
+    sb.from("paradas").select("fase,ordem,origem,destino,km,horario,maps_link,lat,lng,adicionada_checkout,justificativa").eq("reembolso_id",id).order("fase").order("ordem"),
+    sb.from("pedagios").select("id,fase,ordem,valor,comprovante_link,pendente").eq("reembolso_id",id).order("ordem"),
+    sb.from("reembolso_revisoes").select("criado_em,alteracoes").eq("reembolso_id",id).order("criado_em",{ascending:false})
+  ]);
+  if(!sel || sel.id!==id) return; // abriu outro pedido enquanto carregava
+  DET_PARADAS = res[0].data||[]; DET_PEDAGIOS = res[1].data||[]; DET_REVISOES = (res[2]&&res[2].data)||[];
   renderDetail(); renderActions();
   setTimeout(function(){ renderMap(); if(_map)_map.invalidateSize(); }, 70);
+  setTimeout(_preCarregarAnexos, 400);
 }
-function fecharDetalhe(){ el("detailModal").classList.remove("show"); sel=null; render(); }
+function _marcarLinha(id){
+  var t=el("tbody"); if(!t) return;
+  [].forEach.call(t.querySelectorAll("tr.sel"), function(tr){ tr.classList.remove("sel"); });
+  if(id){ var tr=t.querySelector('tr[data-id="'+id+'"]'); if(tr) tr.classList.add("sel"); }
+}
+// Baixa as imagens do pedido em segundo plano: ao clicar, já estão prontas.
+function _preCarregarAnexos(){
+  var box=el("detailModal"); if(!box) return;
+  [].forEach.call(box.querySelectorAll("a[data-drive]"), function(a){
+    var im=new Image(); try{ im.fetchPriority="low"; }catch(e){} im.src=driveImg(a.getAttribute("data-drive"));
+  });
+}
+function fecharDetalhe(){ el("detailModal").classList.remove("show"); sel=null; _marcarLinha(null); }
 
 function drow(k,v){ return '<div class="drow"><span class="k">'+k+'</span><span class="v">'+v+'</span></div>'; }
 
@@ -1070,7 +1101,7 @@ async function mudarStatus(id, novo, obsArg){
       else msgTopo("Pago salvo, mas o recibo falhou ("+res.erro+"). Você pode gerar depois em 'Gerar recibo'.", true);
     }
   } finally {
-    try{ await carregar(); await abrirDetalhe(id); }catch(e){}
+    try{ await recarregarUm(id); await abrirDetalhe(id); }catch(e){}
     desbloquear();
   }
 }
@@ -1086,7 +1117,7 @@ async function gerarRecibo(id){
     if(res.ok) msgTopo("Recibo Nº "+res.numero+" gerado ✓");
     else msgTopo("Falha ao gerar recibo: "+res.erro, true);
   } finally {
-    try{ await carregar(); await abrirDetalhe(id); }catch(e){}
+    try{ await recarregarUm(id); await abrirDetalhe(id); }catch(e){}
     desbloquear();
   }
 }
@@ -1495,14 +1526,14 @@ async function aprovarPedagio(pedId, reembolsoId){
   var { error }=await sb.from("pedagios").update({pendente:false}).eq("id",pedId);
   if(error){ alert("Erro: "+error.message); return; }
   msgTopo("Pedágio aprovado — somado ao total ✓");
-  await carregar(); abrirDetalhe(reembolsoId);
+  await recarregarUm(reembolsoId); abrirDetalhe(reembolsoId);
 }
 async function recusarPedagio(pedId, reembolsoId){
   if(!confirm("Recusar (excluir) este pedágio pendente?")) return;
   var { error }=await sb.from("pedagios").delete().eq("id",pedId);
   if(error){ alert("Erro: "+error.message); return; }
   msgTopo("Pedágio recusado ✓");
-  await carregar(); abrirDetalhe(reembolsoId);
+  await recarregarUm(reembolsoId); abrirDetalhe(reembolsoId);
 }
 
 // ── Edição de dados pelo admin ──
@@ -1570,7 +1601,7 @@ async function salvarEdicao(id){
   for(var m=0;m<_editParadas.length;m++){ var op=_editParadas[m]; if(op.id && !mantidos[op.id]){ await sb.from("paradas").delete().eq("id",op.id); } }
   msgTopo("Dados atualizados ✓");
   fecharEdit();
-  await carregar(); abrirDetalhe(id);
+  await recarregarUm(id); abrirDetalhe(id);
 }
 async function carregarPrecos(){
   var { data, error }=await sb.from("precos_gasolina").select("inicio,fim,valor,registrado_por").order("inicio",{ascending:false});
