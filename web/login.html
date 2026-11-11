@@ -5,6 +5,53 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>RBCIP — Entrar</title>
 <link rel="stylesheet" href="estilo.css">
+<style>
+  #logado.home{padding:0;overflow:hidden}
+  .perfil{display:flex;align-items:center;gap:14px;padding:22px 22px 20px;background:linear-gradient(135deg,#F4F8FD 0%,#E7F0FB 100%);border-bottom:1px solid var(--border)}
+  .avatar{width:54px;height:54px;border-radius:50%;flex:0 0 auto;display:flex;align-items:center;justify-content:center;
+    background:linear-gradient(135deg,var(--navy),var(--navy-2));color:#fff;font-weight:700;font-size:19px;letter-spacing:.02em;
+    box-shadow:0 6px 16px rgba(26,58,92,.28),inset 0 0 0 2px rgba(255,255,255,.18)}
+  .perfil-txt{flex:1;min-width:0}
+  .perfil-txt .ola{display:block;font-size:12px;color:var(--text-2);font-weight:500}
+  .perfil-txt h2{font-size:17px;margin:1px 0 2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .perfil-txt .email{font-size:12.5px;color:var(--text-2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .papel{display:inline-block;margin-top:7px;font-size:11px;font-weight:700;padding:4px 10px;border-radius:999px;background:#fff;color:var(--navy-2);border:1px solid #CFE0F3}
+  .home-corpo{padding:18px 22px 22px}
+  .sec-tit{font-size:11px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--text-3);margin:0 0 10px}
+  .tiles{display:flex;flex-direction:column;gap:9px}
+  .tile{display:flex;align-items:center;gap:13px;padding:12px 14px;border:1.5px solid var(--border);border-radius:13px;background:#fff;
+    color:var(--text);text-decoration:none;transition:border-color .15s,box-shadow .15s,transform .15s}
+  .tile:hover{border-color:#BFD3EA;box-shadow:0 8px 20px rgba(26,58,92,.10);transform:translateY(-1px)}
+  .tile:focus-visible{outline:3px solid rgba(14,165,233,.35);outline-offset:2px}
+  .tile.hide{display:none}
+  .t-ico{width:42px;height:42px;border-radius:11px;flex:0 0 auto;display:flex;align-items:center;justify-content:center}
+  .t-ico.azul{background:#E8F1FD;color:#2563EB}.t-ico.verde{background:#E6F6EE;color:#059669}
+  .t-ico.ambar{background:#FDF2E2;color:#D97706}.t-ico.roxo{background:#EFEAFD;color:#7C3AED}.t-ico.cinza{background:#EEF2F6;color:#475569}
+  .t-txt{flex:1;min-width:0;display:flex;flex-direction:column}
+  .t-txt b{font-size:14.5px;font-weight:700;color:var(--text)}
+  .t-txt small{font-size:12.5px;color:var(--text-2);margin-top:1px;line-height:1.35}
+  .t-chev{display:flex;color:var(--text-3);transition:transform .2s,color .15s}
+  .tile:hover .t-chev{transform:translateX(3px);color:var(--navy-2)}
+  .conta{margin-top:16px;border:1.5px solid var(--border);border-radius:13px;background:#fff;overflow:hidden}
+  .conta.hide{display:none}
+  .conta summary{list-style:none;display:flex;align-items:center;gap:13px;padding:12px 14px;cursor:pointer;user-select:none}
+  .conta summary::-webkit-details-marker{display:none}
+  .conta summary:hover .t-chev{color:var(--navy-2)}
+  .conta[open] .rot{transform:rotate(180deg)}
+  .conta-corpo{padding:2px 14px 16px;border-top:1px solid var(--border)}
+  .conta-corpo label{margin-top:12px}
+  .senha-campo{position:relative}
+  .senha-campo input{padding-right:48px}
+  button.olho{position:absolute;right:6px;top:50%;transform:translateY(-50%);width:36px;height:36px;margin:0;padding:0;border-radius:8px;
+    background:transparent;color:var(--text-3);display:flex;align-items:center;justify-content:center}
+  button.olho:hover{background:var(--bg);color:var(--navy)}
+  button.olho.on{color:var(--navy-2)}
+  button.sair{display:flex;align-items:center;justify-content:center;gap:8px;margin-top:16px;background:transparent;color:var(--text-2);border:1.5px solid var(--border)}
+  button.sair:hover{background:#FEF2F2;color:#B91C1C;border-color:#FECACA}
+  .contato{display:flex;align-items:center;justify-content:center;gap:8px;flex-wrap:wrap;text-align:center;color:var(--text-3);font-size:12.5px;padding:4px 16px 30px;line-height:1.6}
+  .contato strong{color:var(--text-2);white-space:nowrap}
+  body:has(#logado:not(.hide)) .wrap{max-width:520px}
+</style>
 </head>
 <body>
 <div class="hdr"><div class="hdr-in"><img class="hdr-logo" src="assets/logo-branca.png" alt="RBCIP"><div><h1>Reembolso de Deslocamento</h1><p>Acesso ao sistema</p></div></div></div>
@@ -18,28 +65,61 @@
   </div>
 
   <!-- JÁ LOGADO -->
-  <div id="logado" class="card hide">
-    <div class="who">
-      <div>
+  <div id="logado" class="card home hide">
+    <div class="perfil">
+      <div class="avatar" id="lg_avatar" aria-hidden="true">—</div>
+      <div class="perfil-txt">
+        <span class="ola">Olá,</span>
         <h2 id="lg_nome">—</h2>
-        <span class="pill" id="lg_papel">—</span>
-        <div class="muted" id="lg_email" style="margin-top:6px"></div>
+        <div class="email" id="lg_email"></div>
+        <span class="papel" id="lg_papel">—</span>
       </div>
     </div>
-    <a id="lg_admin" class="hide" href="autorizados.html"><button class="ghost" style="margin-top:16px">Gerir e-mails autorizados →</button></a>
-    <a id="lg_painel" class="hide" href="painel.html"><button class="ghost"><svg class='ico' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M4 20V11'/><path d='M10 20V5'/><path d='M16 20v-6'/><path d='M3 20h18'/></svg> Painel</button></a>
-    <a id="lg_diarias" class="hide" href="diarias.html"><button class="ghost"><svg class='ico' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><rect x='3' y='4.5' width='18' height='16' rx='2'/><path d='M3 9h18M8 2.5v4M16 2.5v4'/></svg> Registrar Diárias</button></a>
-    <a id="lg_registro" class="hide" href="registro.html"><button class="ghost"><svg class='ico' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M4 20h4L19 9l-4-4L4 16v4z'/><path d='M14 6l4 4'/></svg> Registrar deslocamento</button></a>
 
-    <div id="lg_senha_box" class="hide" style="margin-top:14px;border-top:1px solid #E2E8F0;padding-top:14px">
-      <label>Definir / alterar senha</label>
-      <p class="muted" style="margin:2px 0 8px">Defina uma senha para poder entrar com <b>e-mail e senha</b> (sem depender do código).</p>
-      <input id="lg_nova_senha" type="password" placeholder="Nova senha (mínimo 6 caracteres)" autocomplete="new-password">
-      <button id="btnSenhaSet" onclick="definirSenha()">Salvar senha</button>
-      <div id="lg_senha_msg" class="msg"></div>
+    <div class="home-corpo">
+      <div class="sec-tit">Acessos</div>
+      <nav class="tiles">
+    <a id="lg_painel" class="tile hide" href="painel.html">
+      <span class="t-ico azul"><svg viewBox='0 0 24 24' width='20' height='20' fill='none' stroke='currentColor' stroke-width='1.9' stroke-linecap='round' stroke-linejoin='round' aria-hidden='true'><path d='M3 3v18h18'/><path d='M7.5 16v-5'/><path d='M12 16V8'/><path d='M16.5 16v-8.5'/></svg></span>
+      <span class="t-txt"><b>Painel de reembolsos</b><small>Analisar, aprovar e pagar as solicitações</small></span>
+      <span class="t-chev"><svg viewBox='0 0 24 24' width='18' height='18' fill='none' stroke='currentColor' stroke-width='1.9' stroke-linecap='round' stroke-linejoin='round' aria-hidden='true'><path d='m9 18 6-6-6-6'/></svg></span>
+    </a>
+    <a id="lg_diarias" class="tile hide" href="diarias.html">
+      <span class="t-ico verde"><svg viewBox='0 0 24 24' width='20' height='20' fill='none' stroke='currentColor' stroke-width='1.9' stroke-linecap='round' stroke-linejoin='round' aria-hidden='true'><rect x='3' y='4.5' width='18' height='16.5' rx='2.2'/><path d='M3 9.5h18M8 2.5v4M16 2.5v4'/><path d='m9 15 2 2 4-4'/></svg></span>
+      <span class="t-txt"><b>Registrar diárias</b><small>Quem atua em cada dia e resumo do mês</small></span>
+      <span class="t-chev"><svg viewBox='0 0 24 24' width='18' height='18' fill='none' stroke='currentColor' stroke-width='1.9' stroke-linecap='round' stroke-linejoin='round' aria-hidden='true'><path d='m9 18 6-6-6-6'/></svg></span>
+    </a>
+    <a id="lg_registro" class="tile hide" href="registro.html">
+      <span class="t-ico ambar"><svg viewBox='0 0 24 24' width='20' height='20' fill='none' stroke='currentColor' stroke-width='1.9' stroke-linecap='round' stroke-linejoin='round' aria-hidden='true'><circle cx='6' cy='19' r='2.6'/><path d='M8.6 19h8.4a3.5 3.5 0 0 0 0-7H7a3.5 3.5 0 0 1 0-7h8.4'/><circle cx='18' cy='5' r='2.6'/></svg></span>
+      <span class="t-txt"><b>Registrar deslocamento</b><small>Check-in, paradas e check-out da viagem</small></span>
+      <span class="t-chev"><svg viewBox='0 0 24 24' width='18' height='18' fill='none' stroke='currentColor' stroke-width='1.9' stroke-linecap='round' stroke-linejoin='round' aria-hidden='true'><path d='m9 18 6-6-6-6'/></svg></span>
+    </a>
+    <a id="lg_admin" class="tile hide" href="autorizados.html">
+      <span class="t-ico roxo"><svg viewBox='0 0 24 24' width='20' height='20' fill='none' stroke='currentColor' stroke-width='1.9' stroke-linecap='round' stroke-linejoin='round' aria-hidden='true'><path d='M12 21.5s7.5-3.6 7.5-9.5V5.3L12 2.5 4.5 5.3V12c0 5.9 7.5 9.5 7.5 9.5z'/><path d='m9 12 2.1 2.1L15.2 10'/></svg></span>
+      <span class="t-txt"><b>Gerir acessos</b><small>E-mails autorizados e papéis de cada pessoa</small></span>
+      <span class="t-chev"><svg viewBox='0 0 24 24' width='18' height='18' fill='none' stroke='currentColor' stroke-width='1.9' stroke-linecap='round' stroke-linejoin='round' aria-hidden='true'><path d='m9 18 6-6-6-6'/></svg></span>
+    </a>
+      </nav>
+
+      <details id="lg_senha_box" class="conta hide">
+        <summary>
+          <span class="t-ico cinza"><svg viewBox='0 0 24 24' width='20' height='20' fill='none' stroke='currentColor' stroke-width='1.9' stroke-linecap='round' stroke-linejoin='round' aria-hidden='true'><circle cx='7.5' cy='15.5' r='4.5'/><path d='m10.7 12.3 8.8-8.8'/><path d='m16.5 6.5 2.5 2.5'/><path d='m14 9 2 2'/></svg></span>
+          <span class="t-txt"><b>Definir / alterar senha</b><small>Entre com e-mail e senha, sem precisar do código</small></span>
+          <span class="t-chev rot"><svg viewBox='0 0 24 24' width='18' height='18' fill='none' stroke='currentColor' stroke-width='1.9' stroke-linecap='round' stroke-linejoin='round' aria-hidden='true'><path d='m6 9 6 6 6-6'/></svg></span>
+        </summary>
+        <div class="conta-corpo">
+          <label for="lg_nova_senha">Nova senha</label>
+          <div class="senha-campo">
+            <input id="lg_nova_senha" type="password" placeholder="Mínimo de 6 caracteres" autocomplete="new-password">
+            <button type="button" class="olho" id="lg_olho" onclick="verSenha()" aria-label="Mostrar senha" title="Mostrar senha"><svg viewBox='0 0 24 24' width='18' height='18' fill='none' stroke='currentColor' stroke-width='1.9' stroke-linecap='round' stroke-linejoin='round' aria-hidden='true'><path d='M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z'/><circle cx='12' cy='12' r='3'/></svg></button>
+          </div>
+          <button id="btnSenhaSet" onclick="definirSenha()">Salvar senha</button>
+          <div id="lg_senha_msg" class="msg"></div>
+        </div>
+      </details>
+
+      <button class="sair" onclick="sair()"><svg viewBox='0 0 24 24' width='18' height='18' fill='none' stroke='currentColor' stroke-width='1.9' stroke-linecap='round' stroke-linejoin='round' aria-hidden='true'><path d='M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4'/><path d='m16 17 5-5-5-5'/><path d='M21 12H9'/></svg> Sair</button>
     </div>
-
-    <button class="ghost" onclick="sair()">Sair</button>
   </div>
 
   <!-- LOGIN POR CÓDIGO (motorista / van) -->
@@ -79,7 +159,7 @@
 
 </div>
 
-<div style="text-align:center;color:#94A3B8;font-size:12.5px;padding:8px 16px 28px;line-height:1.6"><svg class='ico' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M6 3h3l2 5-2.5 1.5a12 12 0 0 0 5 5L16 14l5 2v3a2 2 0 0 1-2.2 2A17 17 0 0 1 4 5.2 2 2 0 0 1 6 3z'/></svg> Qualquer problema ou dúvida, fale comigo:<br><strong style="color:#64748B">+55 11 93623-3054</strong></div>
+<div class="contato"><svg viewBox='0 0 24 24' width='15' height='15' fill='none' stroke='currentColor' stroke-width='1.9' stroke-linecap='round' stroke-linejoin='round' aria-hidden='true'><path d='M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1 1 .4 1.9.7 2.8a2 2 0 0 1-.5 2.1L8 9.9a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.8.7a2 2 0 0 1 1.7 2z'/></svg><span>Qualquer problema ou dúvida, fale comigo: <strong>+55 11 93623-3054</strong></span></div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="config.js"></script>
@@ -94,6 +174,8 @@ function mostrar(id){
 function msg(box, tipo, texto){
   var m = el(box); m.className = "msg show " + tipo; m.textContent = texto;
 }
+function iniciais(n){ var p=String(n||"").replace(/@.*/,"").trim().split(/[\s._-]+/).filter(Boolean); if(!p.length) return "?"; return ((p[0][0]||"")+(p.length>1?p[p.length-1][0]:"")).toUpperCase(); }
+function verSenha(){ var i=el("lg_nova_senha"), b=el("lg_olho"), mostrar=i.type==="password"; i.type=mostrar?"text":"password"; b.classList.toggle("on",mostrar); b.title=b.ariaLabel=mostrar?"Ocultar senha":"Mostrar senha"; }
 function limpaMsg(box){ var m = el(box); m.className = "msg"; m.textContent=""; }
 
 function configOk(){
@@ -115,7 +197,9 @@ async function refreshUI(){
   var papel = (perfil && perfil.papel) || "";
   el("lg_nome").textContent  = (perfil && perfil.nome) || session.user.email;
   el("lg_email").textContent = session.user.email;
-  el("lg_papel").textContent = papel || "—";
+  var ROTULO={admin:"Administrador", supervisor:"Supervisor", motorista:"Motorista", van:"Motorista da van"};
+  el("lg_papel").textContent = ROTULO[papel] || papel || "—";
+  el("lg_avatar").textContent = iniciais((perfil && perfil.nome) || session.user.email);
   el("lg_admin").classList.toggle("hide", papel !== "admin");
   el("lg_painel").classList.toggle("hide", papel !== "admin");
   // Admin e supervisor podem definir senha para entrar com e-mail e senha.
