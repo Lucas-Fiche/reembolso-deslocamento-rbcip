@@ -100,14 +100,55 @@ button.kpi:hover{border-color:var(--acc);transform:translateY(-1px);box-shadow:0
 @media(max-width:640px){.kpi-notas{margin-left:0;width:100%}}
 
 /* Filters */
-.filters{display:flex;gap:10px;padding:10px 20px;background:var(--surface);border-bottom:1px solid var(--border);flex-wrap:wrap;align-items:center}
-.filters select,.filters input{background:var(--bg);border:1px solid var(--border);color:var(--text);padding:7px 12px;border-radius:var(--radius-sm);font-family:inherit;font-size:13px;outline:none;transition:border-color .15s,box-shadow .15s}
-.filters input#fBusca{flex:1;min-width:180px}
-.filters input[type=date]{flex:0 0 auto;min-width:0;max-width:160px}
-.filters select:focus,.filters input:focus{border-color:var(--primary);box-shadow:0 0 0 3px var(--primary-light)}
-.filters .clr{background:var(--surface);border:1px solid var(--border);color:var(--text2);padding:7px 14px;border-radius:var(--radius-sm);font-family:inherit;font-size:13px;font-weight:500;cursor:pointer;flex:0 0 auto}
-.filters .clr:hover{background:var(--bg);border-color:var(--text3);color:var(--text)}
-#filtroAtivo{flex-basis:100%;font-size:12px;color:var(--warning);font-weight:600;padding:2px 2px 0}
+.filters{display:flex;gap:10px;padding:12px 20px;background:var(--surface);border-bottom:1px solid var(--border);flex-wrap:wrap;align-items:center}
+/* Cada filtro é um "campo" com ícone; o campo ganha destaque quando está em uso */
+.f-campo{position:relative;display:flex;align-items:center;height:38px;background:var(--bg);border:1px solid var(--border);
+  border-radius:9px;transition:border-color .15s,box-shadow .15s,background .15s;min-width:0}
+.f-campo:focus-within{border-color:var(--primary);box-shadow:0 0 0 3px var(--primary-light)}
+.f-campo.uso{border-color:var(--primary);background:var(--surface)}
+.f-campo>.ico{color:var(--text3);margin-left:11px}
+.f-campo.uso>.ico{color:var(--primary)}
+.f-campo input,.f-campo select{border:0;background:transparent;height:100%;padding:0 10px;font-family:inherit;font-size:13px;color:var(--text);outline:none;min-width:0}
+.f-campo select{cursor:pointer}
+.f-busca{flex:1 1 300px}
+.f-busca input{flex:1}
+.f-status{flex:0 1 270px}
+.f-status select{flex:1;width:100%;padding-left:8px}
+.f-periodo{flex:0 0 auto}
+.f-periodo select{padding:0 6px 0 8px;font-weight:600;color:var(--text2);border-right:1px solid var(--border);border-radius:0}
+.f-periodo input[type=date]{width:128px;padding:0 6px 0 10px}
+.f-periodo .ate{font-size:12px;color:var(--text3);flex:0 0 auto}
+.f-x{display:none;align-items:center;justify-content:center;width:24px;height:24px;margin:0 6px 0 2px;padding:0;border:0;border-radius:50%;
+  background:transparent;color:var(--text3);cursor:pointer;flex:0 0 auto}
+.f-x:hover{background:var(--border);color:var(--text)}
+.f-x .ico{width:14px;height:14px;vertical-align:0}
+.f-campo.uso .f-x{display:inline-flex}
+.f-acoes{margin-left:auto;display:flex;gap:8px}
+.f-acoes .btn{height:38px;display:inline-flex;align-items:center;gap:6px;border-radius:9px}
+/* Filtro ativo: etiquetas removíveis + nº de resultados */
+#filtroAtivo{flex-basis:100%;display:flex;flex-wrap:wrap;align-items:center;gap:6px;font-size:12px;padding:0 2px}
+#filtroAtivo.hide{display:none}
+.f-chip{display:inline-flex;align-items:center;gap:4px;padding:3px 3px 3px 10px;border-radius:999px;font-weight:600;
+  background:var(--primary-light);color:#1D4ED8;border:1px solid #BFDBFE}
+.f-chip span{font-weight:500;opacity:.8}
+.f-chip button{display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;padding:0;margin:0;border:0;border-radius:50%;
+  background:transparent;color:inherit;cursor:pointer}
+.f-chip button:hover{background:rgba(37,99,235,.18)}
+.f-chip button .ico{width:12px;height:12px;vertical-align:0}
+:root[data-theme="dark"] .f-chip{color:#BFDBFE;background:rgba(37,99,235,.16);border-color:rgba(96,165,250,.35)}
+.f-res{color:var(--text2);font-weight:600;margin-left:4px}
+.f-limpar{background:none;border:0;padding:3px 6px;margin:0;font:inherit;font-size:12px;font-weight:600;color:var(--text3);cursor:pointer;border-radius:6px}
+.f-limpar:hover{color:var(--danger);background:var(--danger-light)}
+@media(max-width:760px){
+  .f-busca,.f-status,.f-periodo{flex:1 1 100%}
+  .f-periodo{flex-wrap:wrap;height:auto}
+  .f-periodo select{flex:1 1 calc(100% - 70px);height:38px;border-right:0}
+  .f-periodo .f-x{order:1}
+  .f-periodo input[type=date],.f-periodo .ate{order:2;height:38px;border-top:1px solid var(--border)}
+  .f-periodo input[type=date]{flex:1 1 40%;width:auto}
+  .f-periodo .ate{line-height:38px;padding:0 4px}
+  .f-acoes{margin-left:0;flex:1 1 100%}.f-acoes .btn{flex:1;justify-content:center}
+}
 
 /* Table */
 .wrap{padding:16px 20px}
@@ -323,25 +364,52 @@ tbody tr.sel{background:var(--primary-light)}
   <div class="kpis" id="cards"></div>
 
   <div class="filters">
-    <select id="fStatus" onchange="render()">
-      <option value="">Todos os status</option>
-      <option value="__ANALISE">Para analisar (aguardando + corrigidos)</option>
-      <option value="__PESQ">Com o pesquisador (revisão + em andamento)</option>
-      <option value="ABERTO">Aberto (em andamento)</option>
-      <option value="COMPLETO">Aguardando análise</option>
-      <option value="REVISÃO">Em revisão</option>
-      <option value="CORRIGIDO">Corrigido</option>
-      <option value="APROVADO">Aprovado</option>
-      <option value="PAGO">Pago</option>
-      <option value="REPROVADO">Reprovado</option>
-      <option value="__PEND">Com pedágio pendente</option>
-      <option value="__SUSP">Suspeitas (verificação)</option>
-    </select>
-    <input type="date" id="fDe" onchange="render()" title="Data inicial (check-in)">
-    <input type="date" id="fAte" onchange="render()" title="Data final (check-in)">
-    <button class="clr" onclick="limparData()" title="Limpar datas">✕ datas</button>
-    <input id="fBusca" type="text" placeholder="Buscar por nome, CPF ou protocolo…" oninput="renderDepois()">
-    <button class="btn" style="background:var(--primary);color:#fff;border-color:var(--primary)" onclick="baixarSolicitacoesCSV()" title="Baixa em planilha (CSV/Excel) as solicitações do filtro atual"><svg class='ico' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M12 3v12'/><path d='M7.5 11 12 15.5 16.5 11'/><path d='M4.5 20h15'/></svg> Baixar (CSV)</button>
+    <label class="f-campo f-busca" id="fcBusca" title="Buscar por nome, CPF ou protocolo">
+      <svg class='ico' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><circle cx='11' cy='11' r='6'/><path d='M20 20l-3.6-3.6'/></svg>
+      <input id="fBusca" type="text" placeholder="Buscar por nome, CPF ou protocolo…" oninput="renderDepois()" autocomplete="off">
+      <button type="button" class="f-x" onclick="tirarFiltro('q')" title="Limpar busca" aria-label="Limpar busca"><svg class='ico' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2.4' stroke-linecap='round'><path d='M6 6l12 12M18 6 6 18'/></svg></button>
+    </label>
+    <label class="f-campo f-status" id="fcStatus" title="Filtrar por status">
+      <svg class='ico' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M3.5 5h17l-6.5 7.5V19l-4 2v-8.5z'/></svg>
+      <select id="fStatus" onchange="render()" aria-label="Status">
+        <option value="">Todos os status</option>
+        <optgroup label="Atalhos">
+          <option value="__ANALISE" title="Aguardando análise + corrigidos">Para analisar</option>
+          <option value="__PESQ" title="Em revisão + em andamento">Com o pesquisador</option>
+        </optgroup>
+        <optgroup label="Status">
+          <option value="ABERTO">Aberto (em andamento)</option>
+          <option value="COMPLETO">Aguardando análise</option>
+          <option value="REVISÃO">Em revisão</option>
+          <option value="CORRIGIDO">Corrigido</option>
+          <option value="APROVADO">Aprovado</option>
+          <option value="PAGO">Pago</option>
+          <option value="REPROVADO">Reprovado</option>
+        </optgroup>
+        <optgroup label="Verificação">
+          <option value="__PEND">Com pedágio pendente</option>
+          <option value="__SUSP">Suspeitas (verificação)</option>
+        </optgroup>
+      </select>
+    </label>
+    <div class="f-campo f-periodo" id="fcPeriodo" title="Período pela data do check-in">
+      <svg class='ico' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><rect x='3' y='4.5' width='18' height='16' rx='2'/><path d='M3 9h18M8 2.5v4M16 2.5v4'/></svg>
+      <select id="fPeriodo" onchange="aplicarPeriodo(this.value)" aria-label="Período">
+        <option value="">Qualquer data</option>
+        <option value="mes">Este mês</option>
+        <option value="mesant">Mês passado</option>
+        <option value="30d">Últimos 30 dias</option>
+        <option value="ano">Este ano</option>
+        <option value="custom">Personalizado</option>
+      </select>
+      <input type="date" id="fDe" onchange="render()" title="De (data do check-in)" aria-label="De">
+      <span class="ate">até</span>
+      <input type="date" id="fAte" onchange="render()" title="Até (data do check-in)" aria-label="Até">
+      <button type="button" class="f-x" onclick="tirarFiltro('per')" title="Limpar período" aria-label="Limpar período"><svg class='ico' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2.4' stroke-linecap='round'><path d='M6 6l12 12M18 6 6 18'/></svg></button>
+    </div>
+    <div class="f-acoes">
+      <button class="btn" style="background:var(--primary);color:#fff;border-color:var(--primary)" onclick="baixarSolicitacoesCSV()" title="Baixa em planilha (CSV/Excel) as solicitações do filtro atual"><svg class='ico' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M12 3v12'/><path d='M7.5 11 12 15.5 16.5 11'/><path d='M4.5 20h15'/></svg> Baixar (CSV)</button>
+    </div>
     <div id="filtroAtivo" class="hide"></div>
   </div>
 
@@ -559,6 +627,7 @@ var IC={
   chevr:_IP+"<path d='m9 18 6-6-6-6'/>"+_IE,
   info:_IP+"<circle cx='12' cy='12' r='9'/><path d='M12 11v5.5'/><path d='M12 7.6v.1'/>"+_IE,
   filter:_IP+"<path d='M3.5 5h17l-6.5 7.5V19l-4 2v-8.5z'/>"+_IE,
+  x:_IP+"<path d='M6 6l12 12M18 6 6 18'/>"+_IE,
   check:_IP+"<path d='M5 12l4.5 4.5L19 7'/>"+_IE
 };
 function ic(n){ return IC[n]||""; }
@@ -876,18 +945,59 @@ function aplicarFiltro(){
   var _ts=function(v){ return v ? (new Date(v).getTime()||Infinity) : Infinity; };
   if(st==="APROVADO") FILTRADOS.sort(function(a,b){ return _ts(a.aprovado_em)-_ts(b.aprovado_em); });
   else if(st==="PAGO") FILTRADOS.sort(function(a,b){ return _ts(a.pago_em)-_ts(b.pago_em); });
-  // texto de filtro ativo
-  var partes=[];
-  if(st){ var opt=document.querySelector('#fStatus option[value="'+st+'"]'); partes.push("Status: "+(opt?opt.textContent:st)); }
-  if(de||ate){ if(de&&ate)partes.push("Período: "+fmtDataBR(de)+" a "+fmtDataBR(ate)); else if(de)partes.push("A partir de "+fmtDataBR(de)); else partes.push("Até "+fmtDataBR(ate)); }
-  if(q)partes.push('Busca: "'+el("fBusca").value.trim()+'"');
+  // Campos em uso ganham destaque; atalho de período acompanha as datas
+  el("fcBusca").classList.toggle("uso", !!q);
+  el("fcStatus").classList.toggle("uso", !!st);
+  el("fcPeriodo").classList.toggle("uso", !!(de||ate));
+  _syncPeriodo();
+  // Filtro ativo: etiquetas removíveis + nº de resultados
+  var chips=[];
+  var chip=function(rot,val,tipo){ return '<span class="f-chip">'+rot+' <span>'+esc(val)+'</span><button type="button" onclick="tirarFiltro(\''+tipo+'\')" title="Remover" aria-label="Remover filtro">'+ic('x')+'</button></span>'; };
+  if(st){ var opt=document.querySelector('#fStatus option[value="'+st+'"]'); chips.push(chip("Status:",opt?opt.textContent:st,"st")); }
+  if(de||ate){
+    var ps=el("fPeriodo"), pr=(ps.value&&ps.value!=="custom")?ps.options[ps.selectedIndex].textContent+" · ":"";
+    chips.push(chip("Período:", pr+(de&&ate?fmtDataBR(de)+" a "+fmtDataBR(ate):de?"a partir de "+fmtDataBR(de):"até "+fmtDataBR(ate)),"per"));
+  }
+  if(q) chips.push(chip("Busca:",'"'+el("fBusca").value.trim()+'"',"q"));
   var fa=el("filtroAtivo");
-  if(partes.length){ fa.classList.remove("hide"); fa.innerHTML=ic('search')+" Filtro ativo — "+partes.join(" · ")+" · "+FILTRADOS.length+" resultado(s)"; }
-  else fa.classList.add("hide");
+  if(chips.length){
+    fa.classList.remove("hide");
+    fa.innerHTML=chips.join("")+'<span class="f-res">'+FILTRADOS.length.toLocaleString("pt-BR")+' resultado(s)</span>'
+      +(chips.length>1?'<button type="button" class="f-limpar" onclick="limparFiltros()">Limpar tudo</button>':'');
+  } else fa.classList.add("hide");
 }
 var _rdT=null;
 function renderDepois(){ clearTimeout(_rdT); _rdT=setTimeout(render, 220); }
-function limparData(){ el("fDe").value=""; el("fAte").value=""; render(); }
+function limparData(){ el("fDe").value=""; el("fAte").value=""; el("fPeriodo").value=""; render(); }
+function tirarFiltro(t){
+  if(t==="st") el("fStatus").value="";
+  else if(t==="per"){ el("fDe").value=""; el("fAte").value=""; el("fPeriodo").value=""; }
+  else if(t==="q"){ el("fBusca").value=""; }
+  render();
+}
+function limparFiltros(){ el("fStatus").value=""; el("fBusca").value=""; el("fDe").value=""; el("fAte").value=""; el("fPeriodo").value=""; render(); }
+// Atalhos de período (pela data do check-in)
+function _intervaloPeriodo(v){
+  var h=new Date(), y=h.getFullYear(), m=h.getMonth();
+  if(v==="mes")    return [ymd(new Date(y,m,1)), ymd(new Date(y,m+1,0))];
+  if(v==="mesant") return [ymd(new Date(y,m-1,1)), ymd(new Date(y,m,0))];
+  if(v==="30d")    return [ymd(new Date(y,m,h.getDate()-29)), ymd(h)];
+  if(v==="ano")    return [ymd(new Date(y,0,1)), ymd(new Date(y,11,31))];
+  return null;
+}
+function aplicarPeriodo(v){
+  if(v==="custom"){ try{ el("fDe").showPicker(); }catch(e){ el("fDe").focus(); } return; }
+  var iv=_intervaloPeriodo(v);
+  el("fDe").value=iv?iv[0]:""; el("fAte").value=iv?iv[1]:"";
+  render();
+}
+function _syncPeriodo(){
+  var de=el("fDe").value, ate=el("fAte").value, s=el("fPeriodo");
+  if(!de&&!ate){ if(s.value!=="custom") s.value=""; return; }
+  var achou="custom";
+  ["mes","mesant","30d","ano"].forEach(function(k){ var iv=_intervaloPeriodo(k); if(iv[0]===de&&iv[1]===ate) achou=k; });
+  s.value=achou;
+}
 
 // Cards do topo: só o essencial, e clicáveis (filtram a lista).
 // Contam respeitando período e busca, mas NÃO o filtro de status — assim
