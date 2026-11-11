@@ -42,20 +42,21 @@ function enviarConfirmacao(d){
   if(!d.jwt || !d.protocolo) return _jr({success:false, error:"Dados incompletos."});
   var perfil = _sbGet("perfis?select=papel", d.jwt);
   if(!perfil || !perfil.length) return _jr({success:false, error:"Não autorizado."});
-  var arr = _sbGet("vw_reembolsos?protocolo=eq." + encodeURIComponent(d.protocolo) +
-    "&select=nome,email,val_total,val_real,val_pedagios,dist_total,usou_estimativa,preco_base,preco_real", d.jwt);
-  if(!arr || !arr.length) return _jr({success:false, error:"Protocolo não encontrado."});
-  var r = arr[0];
-  if(!r.email) return _jr({success:true, enviado:false, motivo:"sem e-mail"});
-  var dTot=Number(r.dist_total||0), vReal=Number(r.val_real||0), vTot=Number(r.val_total||0), tPed=Number(r.val_pedagios||0);
-  var usouEstim = r.usou_estimativa===true;
-  var pReal = usouEstim ? Number(r.preco_base||0) : Number(r.preco_real||r.preco_base||0);
-  var rodape='<div style="margin-top:16px;padding:12px;background:#F4F6FA;border-radius:8px;border:1px solid #E2E8F0"><p style="font-size:13px;color:#475569;margin:0">📱 Qualquer problema ou dúvida, fale comigo: <strong>'+CONTATO_BUSINESS+'</strong></p></div>';
+  var m = _dadosViagem(d.protocolo, d.jwt);   // RLS: o pesquisador só lê o que é dele
+  if(!m) return _jr({success:false, error:"Protocolo não encontrado."});
+  if(!m.email) return _jr({success:true, enviado:false, motivo:"sem e-mail"});
+  var envio;
   try{
-    MailApp.sendEmail({ to:r.email, subject:"📝 Reembolso registrado — "+d.protocolo,
-      htmlBody:'<div style="font-family:Arial,sans-serif;max-width:500px;margin:0 auto"><div style="background:#1A3A5C;color:#fff;padding:16px 20px;border-radius:10px 10px 0 0"><h2 style="margin:0;font-size:18px">Reembolso Registrado</h2></div><div style="background:#F4F6FA;padding:20px;border-radius:0 0 10px 10px"><p>Olá <strong>'+(r.nome||"")+'</strong>, sua solicitação foi registrada com sucesso.</p><p>Protocolo: <strong>'+d.protocolo+'</strong></p><p>Distância: '+dTot+' km</p><p>Combustível (R$ '+pReal.toFixed(2)+'/L'+(usouEstim?' — estimativa':'')+'): R$ '+vReal.toFixed(2)+'</p>'+(tPed?'<p>Pedágios: R$ '+tPed.toFixed(2)+'</p>':'')+'<p style="font-size:20px;color:#1A3A5C;font-weight:700">Total: R$ '+vTot.toFixed(2)+'</p><hr style="border:none;border-top:1px solid #ddd;margin:16px 0"><div style="background:#DBEAFE;padding:12px;border-radius:8px;border:1px solid #93C5FD"><p style="font-size:13px;color:#1E40AF;margin:0">🕐 Prazo: até <strong>5 dias úteis</strong> para processamento.</p></div>'+rodape+'</div></div>' });
-  }catch(err){ return _jr({success:false, error:"Falha no e-mail: "+String(err && err.message || err)}); }
-  return _jr({success:true, enviado:true, para:r.email});
+    var im = _imagensEmail(EMAIL_REGISTRO.ilus, m), em = _htmlRegistro(m, im.src);
+    envio = { to:m.email, subject:em.assunto, htmlBody:em.html, inlineImages:im.inline, name:"RBCIP · Reembolsos" };
+  }catch(montErr){
+    envio = { to:m.email, subject:EMAIL_REGISTRO.assunto+d.protocolo, name:"RBCIP · Reembolsos",
+      htmlBody:'<div style="font-family:Arial,sans-serif;max-width:520px;margin:0 auto"><h2 style="color:#0B4F6C">'+_h(EMAIL_REGISTRO.titulo(m.primeiroNome))+'</h2>'
+        +'<p>'+_h(EMAIL_REGISTRO.sub)+'</p><p>Protocolo: <b>'+_h(d.protocolo)+'</b> · '+_brl(m.total)+'</p><p>Dúvidas: '+CONTATO_BUSINESS+'</p></div>' };
+  }
+  try{ MailApp.sendEmail(envio); }
+  catch(err){ return _jr({success:false, error:"Falha no e-mail: "+String(err && err.message || err)}); }
+  return _jr({success:true, enviado:true, para:m.email});
 }
 
 // ── Upload de imagem ao Drive (para o formulário do motorista) ──
@@ -110,7 +111,7 @@ function uploadImagens(d){
   }
 }
 
-function doGet(){ return _jr({status:"ok", carteiro:"rbcip", v:"1.3"}); }
+function doGet(){ return _jr({status:"ok", carteiro:"rbcip", v:"1.4"}); }
 
 // Rode UMA vez no editor (menu ▶ Executar) para autorizar Drive + Docs.
 function autorizar(){
@@ -278,7 +279,7 @@ var EMAIL_STATUS = {
                  assunto:"Recibo do seu reembolso — ",
                  titulo:function(n){ return n+", este é o recibo do seu reembolso"; },
                  sub:"O pagamento foi realizado. Obrigado pelo seu trabalho em campo!", totalRot:"Total pago" },
-  "REVISÃO":   { ilus:"revisao",   rotulo:"Ajuste necessário",   cor:"#D97706", fundo:"#FFFBEB", etapa:1,
+  "REVISÃO":   { ilus:"revisao",   rotulo:"Ajuste necessário",   cor:"#D97706", fundo:"#FFFBEB", etapa:1, ajuste:true,
                  assunto:"Sua solicitação precisa de um ajuste — ",
                  titulo:function(n){ return n+", sua solicitação precisa de um ajuste"; },
                  sub:"Faça a correção pelo sistema para seguirmos com a análise.", totalRot:"Total solicitado" },
@@ -287,6 +288,12 @@ var EMAIL_STATUS = {
                  titulo:function(n){ return n+", sua solicitação não foi aprovada"; },
                  sub:"Veja abaixo o motivo informado pela equipe.", totalRot:"Total solicitado" }
 };
+
+// E-mail ao REGISTRAR a solicitação (enviado ao próprio pesquisador)
+var EMAIL_REGISTRO = { ilus:"registro", rotulo:"Recebida", cor:"#14738F", fundo:"#ECF7F8", etapa:1,
+  assunto:"Recebemos sua solicitação de reembolso — ",
+  titulo:function(n){ return n+", recebemos sua solicitação"; },
+  sub:"A equipe vai analisar em até 5 dias úteis. Você recebe um e-mail a cada atualização.", totalRot:"Total solicitado" };
 
 function _site(){ return String(_props().getProperty("SITE_URL") || "https://reembolsosp.rbcip.org").replace(/\/+$/,""); }
 function _h(s){ return String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;"); }
@@ -407,7 +414,7 @@ function _aviso(cor, fundo, titulo, texto){
     +'<div style="font-size:15px;line-height:1.5;color:'+COR.texto+'">'+texto+'</div></td></tr></table></td></tr>'; }
 function _progresso(cfg){
   if(cfg.etapa<0) return "";
-  var et=["Enviado","Em análise","Aprovado","Pago"]; if(cfg.etapa===1) et[1]="Ajuste";
+  var et=["Enviado","Em análise","Aprovado","Pago"]; if(cfg.ajuste) et[1]="Ajuste";
   var cel=et.map(function(t,i){
     var feito=i<cfg.etapa || (i===cfg.etapa && cfg.etapa===3), atual=(i===cfg.etapa);
     var c = atual ? cfg.cor : (feito ? COR.turquesa : "#DCE3EA");
@@ -525,6 +532,23 @@ function _htmlAvisoStatus(m, novo, obs, src){
     preheader:cfg.sub+" Protocolo "+m.protocolo+" · "+_brl(m.total), corpo:c }) };
 }
 
+// ── E-mail de confirmação do registro ──
+function _htmlRegistro(m, src){
+  var cfg=EMAIL_REGISTRO, c="";
+  c+=_progresso(cfg);
+  c+=_par("Protocolo", '<span style="font-family:Consolas,Menlo,monospace">'+_h(m.protocolo)+'</span>', {pad:'22px 0 0', fs:13, cor:COR.texto3});
+  c+=_blocoValores(m, cfg.totalRot);
+  c+='<tr><td style="padding:12px 0 0;font-family:'+FONTE+';font-size:12px;color:'+COR.texto3+';line-height:1.5">O valor final é confirmado na análise da equipe.</td></tr>';
+  c+=_blocoViagem(m, src);
+  c+=_cartao('<div style="font-family:'+FONTE+';font-size:16px;font-weight:700;color:'+COR.texto+'">Acompanhe sua solicitação</div>'
+      +'<div style="font-family:'+FONTE+';font-size:14px;color:'+COR.texto2+';margin:6px 0 16px;line-height:1.5">Veja o andamento e o histórico das suas viagens no sistema.</div>'
+      +_botao("Acessar o sistema", _site()+"/login.html", COR.marca, true));
+  c+=_cartaoAjuda();
+  var assunto=cfg.assunto+m.protocolo;
+  return { assunto:assunto, html:_layout({ assunto:assunto, src:src, pill:{txt:cfg.rotulo, cor:cfg.cor}, titulo:cfg.titulo(m.primeiroNome), sub:cfg.sub,
+    preheader:"Protocolo "+m.protocolo+" · "+_brl(m.total)+". "+cfg.sub, corpo:c }) };
+}
+
 // ── E-mail interno (financeiro) com o recibo em PDF anexo ──
 function _htmlReciboInterno(m, numero, pdfUrl, src){
   var c="";
@@ -560,7 +584,7 @@ function _enviarReciboInterno(emails, d, r, num, pdf, blob){
 }
 
 // ── TESTE: rode no editor (▶ Executar → enviarPreviaEmails) para receber no SEU
-// e-mail os 4 avisos de status + o e-mail interno, com dados FICTÍCIOS e o mapa
+// e-mail o de registro, os 4 avisos de status e o e-mail interno, com dados FICTÍCIOS e o mapa
 // real do Google. Não toca no Supabase nem envia nada a pesquisadores.
 function enviarPreviaEmails(){
   var eu=Session.getActiveUser().getEmail(); if(!eu) throw new Error("Não consegui identificar seu e-mail.");
@@ -576,7 +600,9 @@ function enviarPreviaEmails(){
     var im=_imagensEmail(EMAIL_STATUS[st].ilus, m), em=_htmlAvisoStatus(m, st, obs[st]||"", im.src);
     MailApp.sendEmail({to:eu, subject:"[TESTE] "+em.assunto, htmlBody:em.html, inlineImages:im.inline, name:"RBCIP · Reembolsos"});
   });
+  var imR=_imagensEmail(EMAIL_REGISTRO.ilus, m), emR=_htmlRegistro(m, imR.src);
+  MailApp.sendEmail({to:eu, subject:"[TESTE] "+emR.assunto, htmlBody:emR.html, inlineImages:imR.inline, name:"RBCIP · Reembolsos"});
   var imI=_imagensEmail("recibo", m), emI=_htmlReciboInterno(m, "000/"+new Date().getFullYear(), "https://drive.google.com", imI.src);
   MailApp.sendEmail({to:eu, subject:"[TESTE] "+emI.assunto, htmlBody:emI.html, inlineImages:imI.inline, name:"RBCIP · Reembolsos"});
-  return "5 e-mails de teste enviados para "+eu+(imI.inline.mapa?" (com mapa)":" (SEM mapa — confira o serviço de mapas)");
+  return "6 e-mails de teste enviados para "+eu+(imI.inline.mapa?" (com mapa)":" (SEM mapa — confira o serviço de mapas)");
 }
