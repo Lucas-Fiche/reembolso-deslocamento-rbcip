@@ -83,6 +83,21 @@ button.kpi:hover{border-color:var(--acc);transform:translateY(-1px);box-shadow:0
 .kpi-resumo b{color:var(--text2);font-weight:700}
 .kpi-resumo .lk{background:none;border:0;padding:0;margin:0;font:inherit;color:inherit;cursor:pointer;text-decoration:underline dotted;text-underline-offset:3px}
 .kpi-resumo .lk:hover{color:var(--text)}
+/* Aviso de critério (card pequeno em destaque, à direita do resumo) */
+.kpi-notas{margin-left:auto;display:flex;flex-wrap:wrap;gap:6px}
+.kpi-nota{display:inline-flex;align-items:center;gap:7px;padding:5px 11px 5px 8px;border-radius:999px;
+  font-size:12px;font-weight:500;line-height:1.3;color:#1E40AF;background:#EFF6FF;border:1px solid #BFDBFE}
+.kpi-nota b{color:inherit;font-weight:700}
+.kpi-nota .n-ico{display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border-radius:50%;
+  background:#DBEAFE;color:#2563EB;flex:0 0 auto}
+.kpi-nota .n-ico .ico{width:13px;height:13px;vertical-align:0}
+.kpi-nota.filtro{color:#92400E;background:#FFFBEB;border-color:#FDE68A}
+.kpi-nota.filtro .n-ico{background:#FEF3C7;color:#D97706}
+:root[data-theme="dark"] .kpi-nota{color:#BFDBFE;background:rgba(37,99,235,.14);border-color:rgba(96,165,250,.35)}
+:root[data-theme="dark"] .kpi-nota .n-ico{background:rgba(96,165,250,.2);color:#93C5FD}
+:root[data-theme="dark"] .kpi-nota.filtro{color:#FDE68A;background:rgba(217,119,6,.14);border-color:rgba(251,191,36,.35)}
+:root[data-theme="dark"] .kpi-nota.filtro .n-ico{background:rgba(251,191,36,.2);color:#FCD34D}
+@media(max-width:640px){.kpi-notas{margin-left:0;width:100%}}
 
 /* Filters */
 .filters{display:flex;gap:10px;padding:10px 20px;background:var(--surface);border-bottom:1px solid var(--border);flex-wrap:wrap;align-items:center}
@@ -542,6 +557,8 @@ var IC={
   userclock:_IP+"<circle cx='9' cy='7' r='4'/><path d='M2 21v-1a6 6 0 0 1 9.4-4.9'/><circle cx='17.5' cy='16.5' r='4.5'/><path d='M17.5 14.5v2l1.4 1'/>"+_IE,
   checkc:_IP+"<circle cx='12' cy='12' r='9'/><path d='m8 12 2.8 2.8L16 9.5'/>"+_IE,
   chevr:_IP+"<path d='m9 18 6-6-6-6'/>"+_IE,
+  info:_IP+"<circle cx='12' cy='12' r='9'/><path d='M12 11v5.5'/><path d='M12 7.6v.1'/>"+_IE,
+  filter:_IP+"<path d='M3.5 5h17l-6.5 7.5V19l-4 2v-8.5z'/>"+_IE,
   check:_IP+"<path d='M5 12l4.5 4.5L19 7'/>"+_IE
 };
 function ic(n){ return IC[n]||""; }
@@ -922,7 +939,11 @@ function contarCards(){
     +'<button type="button" class="lk" onclick="filtrarCard(\'REPROVADO\')"><b>'+n(c.REPROVADO)+'</b> reprovadas</button>'
     +'<span><b>'+km1(kmSemRep)+' km</b> rodados</span>'
     +'<span><b>'+brl(valSemRep)+'</b> em reembolsos</span>'
-    +'<span>(km e valor sem reprovados'+((el("fDe").value||el("fAte").value||el("fBusca").value.trim())?" · considerando período/busca":"")+')</span>'
+    +'<span class="kpi-notas">'
+    +  '<span class="kpi-nota" title="Solicitações reprovadas não são somadas no km rodado nem no valor em reembolsos."><span class="n-ico">'+ic('info')+'</span><span>Km e valor <b>não incluem reprovados</b></span></span>'
+    +  ((el("fDe").value||el("fAte").value||el("fBusca").value.trim())
+        ? '<span class="kpi-nota filtro" title="Os números acima consideram apenas o período e a busca aplicados."><span class="n-ico">'+ic('filter')+'</span><span>Filtrado por <b>período/busca</b></span></span>' : '')
+    +'</span>'
     +'</div>';
   el("cards").innerHTML=h;
 }
