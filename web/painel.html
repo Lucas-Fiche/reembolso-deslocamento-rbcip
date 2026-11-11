@@ -164,14 +164,38 @@ tbody tr.sel{background:var(--primary-light)}
 .total{font-weight:700}
 
 /* Status badges */
-.st{display:inline-block;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:600;white-space:nowrap}
-.st-ABERTO{background:#E2E8F0;color:#475569}
-.st-COMPLETO{background:#DCFCE7;color:#166534}
-.st-REVISÃO,.st-REVISAO{background:#FEF3C7;color:#92400E}
-.st-CORRIGIDO{background:#E0E7FF;color:#3730A3}
-.st-APROVADO{background:#DBEAFE;color:#1E40AF}
-.st-PAGO{background:#CCFBF1;color:#0F766E}
-.st-REPROVADO{background:#FEE2E2;color:#991B1B}
+/* Status: etiqueta sóbria (cantos suaves, bolinha de cor, nome por extenso) */
+.st{--c:#64748B;--bg:#F1F5F9;--bd:#E2E8F0;--tx:#334155;
+  display:inline-flex;align-items:center;gap:6px;padding:3px 9px 3px 8px;border-radius:6px;font-size:12px;font-weight:600;
+  line-height:1.35;white-space:nowrap;background:var(--bg);color:var(--tx);border:1px solid var(--bd)}
+.st::before{content:"";width:7px;height:7px;border-radius:50%;background:var(--c);flex:0 0 auto}
+.st-ABERTO{--c:#64748B;--bg:#F1F5F9;--bd:#E2E8F0;--tx:#334155}
+.st-COMPLETO{--c:#16A34A;--bg:#F0FDF4;--bd:#BBF7D0;--tx:#166534}
+.st-REVISÃO,.st-REVISAO{--c:#D97706;--bg:#FFFBEB;--bd:#FDE68A;--tx:#92400E}
+.st-CORRIGIDO{--c:#6366F1;--bg:#EEF2FF;--bd:#C7D2FE;--tx:#3730A3}
+.st-APROVADO{--c:#2563EB;--bg:#EFF6FF;--bd:#BFDBFE;--tx:#1E40AF}
+.st-PAGO{--c:#0D9488;--bg:#F0FDFA;--bd:#99F6E4;--tx:#115E59}
+.st-REPROVADO{--c:#DC2626;--bg:#FEF2F2;--bd:#FECACA;--tx:#991B1B}
+:root[data-theme="dark"] .st{--bg:rgba(148,163,184,.12);--bd:rgba(148,163,184,.25);--tx:#CBD5E1}
+:root[data-theme="dark"] .st-ABERTO{--c:#94A3B8}
+:root[data-theme="dark"] .st-COMPLETO{--c:#4ADE80;--bg:rgba(34,197,94,.12);--bd:rgba(74,222,128,.28);--tx:#BBF7D0}
+:root[data-theme="dark"] .st-REVISÃO,:root[data-theme="dark"] .st-REVISAO{--c:#FBBF24;--bg:rgba(245,158,11,.12);--bd:rgba(251,191,36,.28);--tx:#FDE68A}
+:root[data-theme="dark"] .st-CORRIGIDO{--c:#A5B4FC;--bg:rgba(99,102,241,.14);--bd:rgba(165,180,252,.3);--tx:#C7D2FE}
+:root[data-theme="dark"] .st-APROVADO{--c:#60A5FA;--bg:rgba(59,130,246,.14);--bd:rgba(96,165,250,.3);--tx:#BFDBFE}
+:root[data-theme="dark"] .st-PAGO{--c:#2DD4BF;--bg:rgba(20,184,166,.12);--bd:rgba(45,212,191,.28);--tx:#99F6E4}
+:root[data-theme="dark"] .st-REPROVADO{--c:#F87171;--bg:rgba(239,68,68,.12);--bd:rgba(248,113,113,.3);--tx:#FECACA}
+/* Sinais de conferência: discretos (contorno neutro, só o ícone colorido) */
+.st-cel{display:flex;flex-wrap:wrap;align-items:center;gap:5px}
+.st-cel .st-data{flex-basis:100%;font-size:11px;color:var(--text3);font-weight:500}
+.sinal{display:inline-flex;align-items:center;gap:5px;padding:2px 8px 2px 6px;border-radius:6px;font-size:11.5px;font-weight:600;
+  line-height:1.35;white-space:nowrap;background:var(--surface);color:var(--text2);border:1px solid var(--border);cursor:help}
+.sinal .ico{width:13px;height:13px;vertical-align:0}
+.sinal.aviso .ico{color:#D97706}
+.sinal.risco{color:#B91C1C;border-color:#FECACA}
+.sinal.risco .ico{color:#DC2626}
+:root[data-theme="dark"] .sinal.aviso .ico{color:#FBBF24}
+:root[data-theme="dark"] .sinal.risco{color:#FCA5A5;border-color:rgba(248,113,113,.35)}
+:root[data-theme="dark"] .sinal.risco .ico{color:#F87171}
 
 /* Gate / mensagens */
 .center{min-height:70vh;display:flex;align-items:center;justify-content:center;padding:20px}
@@ -887,7 +911,7 @@ function ymd(v){ if(!v)return ""; var d=new Date(v); if(isNaN(d))return ""; var 
 function fmtDataBR(s){ var m=String(s||"").match(/^(\d{4})-(\d{2})-(\d{2})/); return m?m[3]+"/"+m[2]+"/"+m[1]:(s||""); }
 // duração entre dois timestamps -> "Xh YYmin" / "N min"
 function dur(a,b){ if(!a||!b)return "—"; var ms=new Date(b)-new Date(a); if(isNaN(ms)||ms<0)return "—"; var min=Math.round(ms/60000); var h=Math.floor(min/60), m=min%60; return h>0?(h+"h"+("0"+m).slice(-2)+"min"):(m+"min"); }
-function statusLabel(s){ return ({ABERTO:"Aberto",COMPLETO:"Aguardando Análise",CORRIGIDO:"Corrigido",APROVADO:"Aprovado",PAGO:"Pago","REVISÃO":"Em Revisão",REPROVADO:"Reprovado"}[s])||s; }
+function statusLabel(s){ return ({ABERTO:"Aberto",COMPLETO:"Aguardando análise",CORRIGIDO:"Corrigido",APROVADO:"Aprovado",PAGO:"Pago","REVISÃO":"Em revisão",REPROVADO:"Reprovado"}[s])||s; }
 
 var _toastT=null;
 // tipo: true/"err" = erro (vermelho) · "ok" = sucesso (verde) · "info" = em andamento (azul) · vazio = neutro
@@ -1065,13 +1089,16 @@ function render(){
   el("vazio").classList.toggle("hide", rows.length>0);
   var _fst=el("fStatus").value;
   el("tbody").innerHTML = rows.map(function(r){
-    var _sdtStyle='font-size:10.5px;color:var(--text3);margin-top:3px;font-weight:500';
-    var _sdt = (_fst==="APROVADO") ? ('<div style="'+_sdtStyle+'">aprovado '+(r.aprovado_em?dt(r.aprovado_em):'— sem data disponível')+'</div>')
-             : (_fst==="PAGO") ? ('<div style="'+_sdtStyle+'">pago '+(r.pago_em?dt(r.pago_em):'— sem data disponível')+'</div>') : '';
+    var _sdt = (_fst==="APROVADO") ? ('<span class="st-data">aprovado '+(r.aprovado_em?dt(r.aprovado_em):'— sem data disponível')+'</span>')
+             : (_fst==="PAGO") ? ('<span class="st-data">pago '+(r.pago_em?dt(r.pago_em):'— sem data disponível')+'</span>') : '';
     var fv=flagsValor(r), fo=flagsOutros(r);
     return '<tr class="clk'+(sel&&sel.id===r.id?" sel":"")+'" data-id="'+r.id+'" onclick="abrirDetalhe(\''+r.id+'\')">'
       +'<td class="proto">'+esc(r.protocolo)+'</td>'
-      +'<td><span class="st st-'+esc(r.status)+'">'+esc(r.status)+'</span>'+(r.qtd_ped_pendentes>0?' <span class="st" style="background:#FEF3C7;color:#92400E">'+ic('alert')+' pedágio</span>':'')+(fv.length?' <span class="st" style="background:#FEF3C7;color:#92400E" title="'+esc(fv.join(" · "))+'">'+ic('money')+' acima do esperado</span>':'')+(fo.length?' <span class="st" style="background:#FEE2E2;color:#991B1B" title="'+esc(fo.join(" · "))+'">'+ic('search')+' suspeita</span>':'')+_sdt+'</td>'
+      +'<td><div class="st-cel"><span class="st st-'+esc(r.status)+'">'+esc(statusLabel(r.status))+'</span>'
+      +(r.qtd_ped_pendentes>0?'<span class="sinal aviso" title="'+r.qtd_ped_pendentes+' pedágio(s) aguardando conferência">'+ic('alert')+'Pedágio pendente</span>':'')
+      +(fv.length?'<span class="sinal aviso" title="'+esc(fv.join(" · "))+'">'+ic('money')+'Acima do esperado</span>':'')
+      +(fo.length?'<span class="sinal risco" title="'+esc(fo.join(" · "))+'">'+ic('search')+'Suspeita</span>':'')
+      +_sdt+'</div></td>'
       +'<td>'+esc(r.nome||"—")+'</td>'
       +'<td>'+esc(r.veiculo||"—")+(r.placa?" · "+esc(r.placa):"")+'</td>'
       +'<td class="mono">'+dt(r.checkin_em)+'</td>'
@@ -1410,7 +1437,7 @@ function renderExtrato(){
     grupos.forEach(function(g){
       subN+=g.viagens; subK+=g.km; subV+=g.valor;
       _extratoRows.push({motorista:dr.nome, cpf:dr.cpf, mes:_mesBR(g.mes), status:g.status, viagens:g.viagens, km:g.km, valor:g.valor});
-      h+='<tr><td>'+_mesBR(g.mes)+'</td><td><span class="st st-'+esc(g.status)+'">'+esc(g.status)+'</span></td><td class="right">'+g.viagens+'</td><td class="right">'+km1(g.km)+' km</td><td class="right">'+brlv(g.valor)+'</td></tr>';
+      h+='<tr><td>'+_mesBR(g.mes)+'</td><td><span class="st st-'+esc(g.status)+'">'+esc(statusLabel(g.status))+'</span></td><td class="right">'+g.viagens+'</td><td class="right">'+km1(g.km)+' km</td><td class="right">'+brlv(g.valor)+'</td></tr>';
     });
     h+='<tr style="font-weight:700;border-top:2px solid var(--border)"><td>Total do motorista</td><td></td><td class="right">'+subN+'</td><td class="right">'+km1(subK)+' km</td><td class="right">'+brlv(subV)+'</td></tr>';
     h+='</tbody></table></div>';
@@ -1746,7 +1773,7 @@ function renderStats(){
   }
 
   h+='<div class="grp-title">Por status</div>';
-  h+='<table><tbody>'+Object.keys(porStatus).map(function(s){ return '<tr><td><span class="st st-'+esc(s)+'">'+esc(s)+'</span></td><td class="right">'+porStatus[s]+'</td></tr>'; }).join("")+'</tbody></table>';
+  h+='<table><tbody>'+Object.keys(porStatus).map(function(s){ return '<tr><td><span class="st st-'+esc(s)+'">'+esc(statusLabel(s))+'</span></td><td class="right">'+porStatus[s]+'</td></tr>'; }).join("")+'</tbody></table>';
 
   el("stats_corpo").innerHTML=h;
 }
