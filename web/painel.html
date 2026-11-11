@@ -294,6 +294,30 @@ tbody tr.sel{background:var(--primary-light)}
 .detail-links{padding:8px 14px;display:flex;flex-direction:column;gap:6px}
 .detail-links a{color:var(--primary);font-size:13px;text-decoration:none}
 .detail-links a:hover{text-decoration:underline}
+/* Conversa da análise (mensagens da equipe × correções do pesquisador) */
+.chat{padding:14px;display:flex;flex-direction:column;gap:10px;background:var(--surface2)}
+.msg-l,.msg-r{display:flex;gap:8px;align-items:flex-end;max-width:88%}
+.msg-r{align-self:flex-end;flex-direction:row-reverse}
+.msg-l{align-self:flex-start}
+.av{width:28px;height:28px;border-radius:50%;flex:0 0 auto;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#fff;background:#0B4F6C}
+.msg-l .av{background:#64748B}
+.bal{padding:9px 12px 7px;border-radius:14px;font-size:13px;line-height:1.5;color:var(--text);word-break:break-word;box-shadow:var(--shadow-sm)}
+.msg-r .bal{background:#E0F2FE;border:1px solid #BAE6FD;border-bottom-right-radius:4px}
+.msg-l .bal{background:var(--surface);border:1px solid var(--border);border-bottom-left-radius:4px}
+.bal-top{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:3px;font-size:11.5px}
+.bal-top b{font-weight:700;color:var(--text)}
+.bal-tag{font-size:10.5px;font-weight:700;padding:1px 7px;border-radius:999px;background:#FEF3C7;color:#92400E}
+.bal-tag.rep{background:#FEE2E2;color:#991B1B}.bal-tag.ok{background:#DCFCE7;color:#166534}.bal-tag.neu{background:#E2E8F0;color:#475569}
+.bal-rod{font-size:10.5px;color:var(--text3);margin-top:4px;text-align:right}
+.bal-x2{font-size:10.5px;font-weight:700;color:#0369A1;margin-left:6px}
+.msg-l .bal ul{margin:4px 0 0;padding-left:18px;font-size:12px;color:var(--text2)}
+.chat-sis{align-self:center;font-size:11.5px;color:var(--text2);background:var(--surface);border:1px dashed var(--border);border-radius:999px;padding:4px 12px;text-align:center;max-width:92%}
+.chat-vazio{font-size:12px;color:var(--text3);text-align:center;padding:4px}
+:root[data-theme="dark"] .msg-r .bal{background:#0C3B57;border-color:#155E85}
+:root[data-theme="dark"] .bal-tag{background:#3A2C10;color:#FDE68A}
+:root[data-theme="dark"] .bal-tag.rep{background:#3A1A1A;color:#FCA5A5}:root[data-theme="dark"] .bal-tag.ok{background:#12331E;color:#86EFAC}
+:root[data-theme="dark"] .bal-tag.neu{background:#334155;color:#CBD5E1}
+:root[data-theme="dark"] .bal-x2{color:#7DD3FC}
 .segment{padding:7px 14px;border-bottom:1px solid var(--border);font-size:12px;color:var(--text2)}
 .segment:last-child{border-bottom:none}
 .segment .seg-label{font-size:11px;color:var(--text3);font-weight:600;display:block;margin-bottom:2px}
@@ -1161,6 +1185,69 @@ var REV_META={
 function _revFmt(campo,v){ var m=REV_META[campo]; return m&&m.fmt ? String(m.fmt(v)) : (v==null||v===""?"—":String(v)); }
 function _revLbl(campo){ var m=REV_META[campo]; return m ? m.lbl : campo; }
 // Monta a seção "campos alterados na correção" (uma vez por rodada de revisão).
+// ── Conversa da análise ──
+// O campo "validacao" guarda as mensagens separadas por " | ":
+//   "ADMIN (Nome): texto"                       (antigas, sem data)
+//   "ADMIN (Nome · 11/11/2026, 14:30 · Em revisão): texto"   (novas)
+//   "CORREÇÃO (Nome, 11/11/2026, 14:30): status de X para Y…"
+// As correções do pesquisador vêm de reembolso_revisoes (com data).
+function _dataBR(s){ var m=String(s||"").match(/(\d{2})\/(\d{2})\/(\d{4}),?\s*(\d{2}):(\d{2})/); return m?new Date(+m[3],+m[2]-1,+m[1],+m[4],+m[5]).getTime():null; }
+function _parseValidacao(txt){
+  if(!txt) return [];
+  return String(txt).split(/\s+\|\s+/).map(function(t){ return t.trim(); }).filter(Boolean).map(function(t){
+    var m=t.match(/^ADMIN\s*\(([^)]*)\):\s*([\s\S]*)$/);
+    if(m){ var partes=m[1].split(" · "); return {tipo:"admin", autor:partes[0]||"Equipe", ts:_dataBR(partes[1]), quando:partes[1]||"", status:partes[2]||"", texto:m[2]}; }
+    var c=t.match(/^CORREÇÃO\s*\(([^,]*),\s*([^)]*)\):\s*([\s\S]*)$/);
+    if(c) return {tipo:"sis", autor:c[1], ts:_dataBR(c[2]), quando:c[2], texto:"Status corrigido por "+c[1]+": "+c[3].replace(/^status\s+/i,"")};
+    return {tipo:"nota", ts:null, texto:t};
+  });
+}
+function _iniciais(n){ var p=String(n||"").trim().split(/\s+/); return ((p[0]||"?")[0]+(p.length>1?p[p.length-1][0]:"")).toUpperCase(); }
+function _tagStatus(st){
+  if(!st) return "";
+  var cls = /reprov/i.test(st)?"rep":/aprov|pago/i.test(st)?"ok":/revis/i.test(st)?"":"neu";
+  return '<span class="bal-tag '+cls+'">'+esc(st)+'</span>';
+}
+function _conversaSection(d){
+  var msgs=_parseValidacao(d.validacao);
+  var revs=(DET_REVISOES||[]).slice().sort(function(a,b){ return new Date(a.criado_em)-new Date(b.criado_em); })
+    .map(function(r){ return {tipo:"pesq", ts:new Date(r.criado_em).getTime(), quando:dt(r.criado_em), alt:r.alteracoes||[]}; });
+  if(!msgs.length && !revs.length) return "";
+  // mantém a ordem do campo; intercala as correções pela data quando a mensagem tem data
+  var itens=[], ri=0;
+  msgs.forEach(function(m){
+    if(m.ts!=null){ while(ri<revs.length && revs[ri].ts<=m.ts) itens.push(revs[ri++]); }
+    var ant=itens[itens.length-1];
+    if(m.tipo==="admin" && ant && ant.tipo==="admin" && ant.texto===m.texto && ant.autor===m.autor){ ant.vezes=(ant.vezes||1)+1; if(m.quando) ant.quando=m.quando; return; }
+    itens.push(m);
+  });
+  while(ri<revs.length) itens.push(revs[ri++]);
+  var h='<div class="detail-section"><div class="detail-section-title">'+ic('mail')+' Conversa da análise</div><div class="chat">';
+  itens.forEach(function(it){
+    if(it.tipo==="admin"){
+      var eu = QUEM && it.autor===QUEM;
+      h+='<div class="msg-r"><div class="av" title="'+esc(it.autor)+'">'+esc(_iniciais(it.autor))+'</div><div class="bal">'
+        +'<div class="bal-top"><b>'+(eu?"Você":esc(it.autor))+'</b>'+_tagStatus(it.status)+(it.vezes>1?'<span class="bal-x2">enviada '+it.vezes+'×</span>':'')+'</div>'
+        +esc(it.texto).replace(/\n/g,"<br>")
+        +(it.quando?'<div class="bal-rod">'+esc(it.quando)+'</div>':'')+'</div></div>';
+    } else if(it.tipo==="pesq"){
+      var lst=it.alt.slice(0,6).map(function(c){ return '<li>'+esc(_revLbl(c.campo))+'</li>'; }).join("")+(it.alt.length>6?'<li>+'+(it.alt.length-6)+' outro(s)</li>':'');
+      h+='<div class="msg-l"><div class="av" title="Pesquisador">'+esc(_iniciais(d.nome))+'</div><div class="bal">'
+        +'<div class="bal-top"><b>'+esc(String(d.nome||"Pesquisador").split(/\s+/)[0])+'</b><span class="bal-tag neu">Correção enviada</span></div>'
+        +(it.alt.length?'Alterou '+it.alt.length+' campo(s):<ul>'+lst+'</ul>':'Reenviou sem alterar os campos monitorados.')
+        +'<div class="bal-rod">'+esc(it.quando)+'</div></div></div>';
+    } else if(it.tipo==="sis"){
+      h+='<div class="chat-sis">'+ic('refresh')+' '+esc(it.texto)+(it.quando?' · '+esc(it.quando):'')+'</div>';
+    } else {
+      h+='<div class="chat-sis">'+esc(it.texto)+'</div>';
+    }
+  });
+  if(msgs.some(function(m){return m.tipo==="admin" && m.ts==null;}) && revs.length)
+    h+='<div class="chat-vazio">Mensagens antigas não têm data registrada; a ordem das correções em relação a elas é aproximada.</div>';
+  h+='</div></div>';
+  return h;
+}
+
 function _revSection(){
   if(!DET_REVISOES.length) return "";
   var h='<div class="detail-section" style="border-color:#A5B4FC"><div class="detail-section-title" style="color:#3730A3;background:#EEF2FF">'+ic('refresh')+' Correção do pesquisador — campos alterados (confira)</div>';
@@ -1194,6 +1281,9 @@ function renderDetail(){
 
   // CONFERÊNCIA DA CORREÇÃO — o que o pesquisador mudou (REVISÃO → CORRIGIDO)
   h+=_revSection();
+
+  // CONVERSA DA ANÁLISE — mensagens da equipe (campo validacao) + correções do pesquisador
+  h+=_conversaSection(d);
 
   // IDENTIFICAÇÃO
   h+='<div class="detail-section"><div class="detail-section-title">Identificação</div>';
@@ -1235,7 +1325,6 @@ function renderDetail(){
   var _rkm=custoPorKm(d);
   h+=drow("Custo por km", (_rkm>0?('R$ '+_rkm.toFixed(2).replace(".",",")+'/km'):'—') + (_rkm>LIMITE_KM?' <span style="color:#991B1B;font-weight:700">'+ic('alert')+' acima de R$ '+LIMITE_KM.toFixed(2).replace(".",",")+'</span>':''));
   h+=drow("Total a Reembolsar",'<strong style="font-size:15px">'+brlv(d.val_total)+'</strong>'+(Number(d.val_total)>LIMITE_VIAGEM?' <span style="color:#991B1B;font-weight:700">'+ic('alert')+' acima de R$ '+LIMITE_VIAGEM+'/viagem</span>':''));
-  h+=drow("Validação automática",esc(d.validacao||"—"));
   h+='</div>';
 
   // PEDÁGIOS PENDENTES (recurso novo — precisa de análise)
@@ -1358,7 +1447,7 @@ async function mudarStatus(id, novo, obsArg){
     if(obs){
       var cur=await sb.from("reembolsos").select("validacao").eq("id",id).maybeSingle();
       var base=(cur && cur.data && cur.data.validacao)?cur.data.validacao+" | ":"";
-      upd.validacao=base+"ADMIN ("+(QUEM||"admin")+"): "+obs;
+      upd.validacao=base+"ADMIN ("+(QUEM||"admin")+" · "+dt(new Date().toISOString())+" · "+statusLabel(novo)+"): "+obs.replace(/\s+\|\s+/g," / ");
     }
     var { error }=await sb.from("reembolsos").update(upd).eq("id",id);
     if(error){ msgTopo("Erro ao atualizar: "+error.message, true); return; }
