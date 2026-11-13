@@ -241,6 +241,11 @@ tbody tr.sel{background:var(--primary-light)}
 .stats-base b{color:var(--text)}
 .lim-ok{color:#16A34A}.lim-perto{color:#D97706}.lim-acima{color:#DC2626}
 .grp-sub{font-size:11.5px;color:var(--text3);margin:-4px 0 8px;line-height:1.45}
+.st-per{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:14px}
+.st-per label{margin:0;font-size:12px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.04em}
+.st-per select{height:36px;padding:0 10px;border:1px solid var(--border);border-radius:9px;background:var(--surface);color:var(--text);font-family:inherit;font-size:13.5px;font-weight:600;min-width:240px;cursor:pointer}
+.st-per select:focus{outline:none;border-color:var(--primary);box-shadow:0 0 0 3px var(--primary-light)}
+.st-per .dica{font-size:11.5px;color:var(--text3)}
 .grp-title{font-size:12px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;margin:18px 0 8px}
 .evc-top{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
 .evc-cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px;margin-top:8px}
@@ -1890,6 +1895,39 @@ function _nomeTitulo(n){
   return String(n||"").trim().toLowerCase().split(/\s+/).map(function(w,i){ return (i&&min[w])?w:(w.charAt(0).toUpperCase()+w.slice(1)); }).join(" ");
 }
 function _limCls(v, lim){ return v>=lim?"lim-acima":(v>=0.9*lim?"lim-perto":"lim-ok"); }
+// Seletor de mês do Resumo: aplica o mês no PRÓPRIO filtro de datas do painel
+// (lista, CSV e estatísticas ficam sempre com o mesmo período).
+var _MESES_EXT=["janeiro","fevereiro","março","abril","maio","junho","julho","agosto","setembro","outubro","novembro","dezembro"];
+function _mesExt(k){ var p=String(k).split("-"); return _MESES_EXT[+p[1]-1]+" de "+p[0]; }
+function _limitesMes(k){ var p=String(k).split("-"), y=+p[0], m=+p[1]; return [ymd(new Date(y,m-1,1)), ymd(new Date(y,m,0))]; }
+function _seletorMes(){
+  var meses={}; DADOS.forEach(function(r){ var k=_mesYM(r.checkin_em||r.criado_em); if(k && k!=="0000-00") meses[k]=1; });
+  var ks=Object.keys(meses).sort().reverse(), kHoje=_mesYM(new Date());
+  var de=el("fDe").value, ate=el("fAte").value, atual="custom";
+  if(!de && !ate) atual="";
+  else ks.forEach(function(k){ var lm=_limitesMes(k); if(lm[0]===de && lm[1]===ate) atual=k; });
+  var o='<option value=""'+(atual===""?" selected":"")+'>Todo o período</option>';
+  if(atual==="custom") o+='<option value="custom" selected>Período do painel: '+(de?fmtDataBR(de):"início")+' a '+(ate?fmtDataBR(ate):"hoje")+'</option>';
+  o+=ks.map(function(k){ return '<option value="'+k+'"'+(atual===k?" selected":"")+'>'+_mesExt(k)+(k===kHoje?" (em andamento)":"")+'</option>'; }).join("");
+  return '<div class="st-per"><label for="st_mes">Mês</label><select id="st_mes" onchange="statsMes(this.value)">'+o+'</select>'
+    +'<span class="dica">Aplica o mês também ao filtro do painel (lista e CSV).</span></div>';
+}
+function statsMes(k){
+  if(k==="custom") return;
+  if(k){ var lm=_limitesMes(k); el("fDe").value=lm[0]; el("fAte").value=lm[1]; }
+  else { el("fDe").value=""; el("fAte").value=""; }
+  el("fPeriodo").value="";            // o atalho do painel se ajusta sozinho (ex.: "Mês passado")
+  render(); renderStats();
+}
+// Descreve os filtros em vigor (para a faixa "Base" das estatísticas)
+function _descFiltro(){
+  var p=[], de=el("fDe").value, ate=el("fAte").value, st=el("fStatus").value, q=el("fBusca").value.trim();
+  if(de||ate){ var mk=null; if(de&&ate){ var k=de.slice(0,7), lm=_limitesMes(k); if(lm[0]===de&&lm[1]===ate) mk=k; }
+    p.push(mk ? "mês: <b>"+_mesExt(mk)+"</b>" : "período: <b>"+(de?fmtDataBR(de):"início")+" a "+(ate?fmtDataBR(ate):"hoje")+"</b>"); }
+  if(st){ var opt=document.querySelector('#fStatus option[value="'+st+'"]'); p.push("status: <b>"+esc(opt?opt.textContent:st)+"</b>"); }
+  if(q) p.push('busca: <b>"'+esc(q)+'"</b>');
+  return p.length ? p.join(" · ") : "";
+}
 var ORDEM_STATUS=["ABERTO","COMPLETO","REVISÃO","CORRIGIDO","APROVADO","PAGO","REPROVADO"];
 function renderStats(){
   aplicarFiltro();
@@ -1917,9 +1955,10 @@ function renderStats(){
   var nfmt=function(x){ return Number(x).toLocaleString("pt-BR"); };
 
   function box(l,v,sub){ return '<div class="stat-box"><div class="l">'+l+'</div><div class="v">'+v+'</div>'+(sub?'<div class="s">'+sub+'</div>':'')+'</div>'; }
-  var h='<div class="stats-base">Base: <b>'+nfmt(n)+' viagens enviadas</b>'
-    +' — não entram '+nfmt(nRep)+' reprovada(s) nem '+nfmt(nAb)+' em andamento (ainda sem check-out)'
-    +(filtro?' · <b>respeitando o filtro atual do painel</b>':'')+'.</div>';
+  var _df=_descFiltro();
+  var h=_seletorMes()+'<div class="stats-base">Base: <b>'+nfmt(n)+' viagens enviadas</b>'
+    +' — não entram '+nfmt(nRep)+' reprovada(s) nem '+nfmt(nAb)+' em andamento (ainda sem check-out).'
+    +(_df?'<br>Filtro aplicado — '+_df+'.':' Sem filtro: todo o período.')+'</div>';
   h+='<div class="grp-title">Totais</div><div class="stat-boxes" style="margin-top:0">'
     +box("Viagens", nfmt(n), arr.length+" pessoa(s)")
     +box("Km rodados", km1(totalKm)+" km", nDias+" dia(s) com viagem")
