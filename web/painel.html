@@ -308,6 +308,11 @@ tbody tr.sel{background:var(--primary-light)}
 .detail-links a{color:var(--primary);font-size:13px;text-decoration:none}
 .detail-links a:hover{text-decoration:underline}
 /* Conversa da análise (mensagens da equipe × correções do pesquisador) */
+.tag-edit{display:inline-block;margin-left:6px;background:#EDE9FE;color:#5B21B6;font-size:10px;font-weight:700;padding:1px 6px;border-radius:4px;cursor:help;vertical-align:1px}
+:root[data-theme="dark"] .tag-edit{background:#2E1065;color:#C4B5FD}
+.ref-preco{font-size:11px;color:#B45309;font-weight:500;margin-top:3px}
+.bal-tag.edi{background:#EDE9FE;color:#5B21B6}:root[data-theme="dark"] .bal-tag.edi{background:#2E1065;color:#C4B5FD}
+.bal ul.edi-lista{margin:4px 0 0;padding-left:18px;font-size:12.5px;color:var(--text2)}
 .rev-hist summary{list-style:none}.rev-hist summary::-webkit-details-marker{display:none}
 .rev-hist summary::after{content:"▸";float:right;color:var(--text3)}.rev-hist[open] summary::after{content:"▾"}
 .chat{padding:14px;display:flex;flex-direction:column;gap:10px;background:var(--surface2)}
@@ -665,7 +670,7 @@ tbody tr.sel{background:var(--primary-light)}
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="config.js"></script>
 <script>
-var sb=null, DADOS=[], FILTRADOS=[], sel=null, QUEM="", DET_PARADAS=[], DET_PEDAGIOS=[], DET_REVISOES=[], DET_STATUSLOG=[], NOMES_PERFIL={};
+var sb=null, DADOS=[], FILTRADOS=[], sel=null, QUEM="", DET_PARADAS=[], DET_PEDAGIOS=[], DET_REVISOES=[], DET_STATUSLOG=[], DET_EDICOES=[], NOMES_PERFIL={}, PRECOS_TAB=null;
 function el(id){return document.getElementById(id);}
 // Busca TODAS as linhas paginando (a API do Supabase devolve no máximo 1000 por consulta).
 async function _buscarTodos(montar){
@@ -1186,13 +1191,17 @@ async function abrirDetalhe(id){
     sb.from("paradas").select("fase,ordem,origem,destino,km,horario,maps_link,lat,lng,adicionada_checkout,justificativa").eq("reembolso_id",id).order("fase").order("ordem"),
     sb.from("pedagios").select("id,fase,ordem,valor,comprovante_link,pendente").eq("reembolso_id",id).order("ordem"),
     sb.from("reembolso_revisoes").select("criado_em,alteracoes").eq("reembolso_id",id).order("criado_em",{ascending:false}),
-    sb.from("reembolso_status_log").select("de,para,por,em").eq("reembolso_id",id).order("em")
+    sb.from("reembolso_status_log").select("de,para,por,em").eq("reembolso_id",id).order("em"),
+    sb.from("reembolso_edicoes").select("por,em,alteracoes").eq("reembolso_id",id).order("em"),
+    PRECOS_TAB ? Promise.resolve(null) : sb.from("precos_gasolina").select("inicio,fim,valor").order("inicio")
   ]);
   if(!sel || sel.id!==id) return; // abriu outro pedido enquanto carregava
   DET_PARADAS = res[0].data||[]; DET_PEDAGIOS = res[1].data||[]; DET_REVISOES = (res[2]&&res[2].data)||[];
   DET_STATUSLOG = (res[3] && !res[3].error && res[3].data) || [];
-  // nomes de quem mudou o status (uma consulta só, com cache)
-  var faltam=DET_STATUSLOG.map(function(l){return l.por;}).filter(function(u,i,a){ return u && !NOMES_PERFIL[u] && a.indexOf(u)===i; });
+  DET_EDICOES   = (res[4] && !res[4].error && res[4].data) || [];      // existe após a migração 0021
+  if(res[5] && !res[5].error) PRECOS_TAB = res[5].data || [];
+  // nomes de quem mudou status ou editou dados (uma consulta só, com cache)
+  var faltam=DET_STATUSLOG.concat(DET_EDICOES).map(function(l){return l.por;}).filter(function(u,i,a){ return u && !NOMES_PERFIL[u] && a.indexOf(u)===i; });
   if(faltam.length){ try{ var pf=await sb.from("perfis").select("id,nome").in("id",faltam);
     (pf.data||[]).forEach(function(x){ NOMES_PERFIL[x.id]=x.nome||"—"; }); }catch(e){} }
   if(!sel || sel.id!==id) return;
@@ -1215,6 +1224,22 @@ function _preCarregarAnexos(){
 function fecharDetalhe(){ el("detailModal").classList.remove("show"); sel=null; _marcarLinha(null); }
 
 function drow(k,v){ return '<div class="drow"><span class="k">'+k+'</span><span class="v">'+v+'</span></div>'; }
+// Selo "EDITADO" quando a equipe alterou algum dos campos (última alteração no tooltip)
+function _editTag(campos){
+  var ult=null;
+  (DET_EDICOES||[]).forEach(function(e){ (e.alteracoes||[]).forEach(function(c){ if(campos.indexOf(c.campo)>=0) ult={e:e,c:c}; }); });
+  if(!ult) return "";
+  var quem=ult.e.por?(NOMES_PERFIL[ult.e.por]||"admin"):"sistema";
+  var tip="Alterado por "+quem+" em "+dt(ult.e.em)+": "+_revLbl(ult.c.campo)+" "+_revFmt(ult.c.campo,ult.c.de)+" → "+_revFmt(ult.c.campo,ult.c.para);
+  return ' <span class="tag-edit" title="'+esc(tip)+'">EDITADO</span>';
+}
+function _r2v(v){ return (v==null||v==="")?"—":Number(v).toFixed(2).replace(".",","); }
+// Preço da tabela vigente numa data (para comparar com o preço usado na estimativa)
+function _precoTabela(iso){
+  if(!PRECOS_TAB || !PRECOS_TAB.length || !iso) return null;
+  var d=ymd(iso), v=null; PRECOS_TAB.forEach(function(p){ if(p.inicio<=d && (!p.fim || p.fim>=d)) v=Number(p.valor); });
+  return v;
+}
 
 // ── Conferência da correção: rótulos e formatação de cada campo alterado ──
 var REV_META={
@@ -1224,8 +1249,13 @@ var REV_META={
   checkout_foto:   {lbl:"Foto do odômetro (chegada)", fmt:function(v){ return v; }},
   cupom_foto:      {lbl:"Foto do cupom de combustível", fmt:function(v){ return v; }},
   foto_consumo:    {lbl:"Foto do consumo do veículo", fmt:function(v){ return v; }},
-  preco_base:      {lbl:"Preço base",            fmt:function(v){ return (v==null?"—":"R$ "+v+"/L"); }},
-  preco_real:      {lbl:"Preço do cupom",        fmt:function(v){ return (v==null||v===""?"—":"R$ "+v+"/L"); }},
+  preco_base:      {lbl:"Preço do combustível (base)", fmt:function(v){ return (v==null?"—":"R$ "+Number(v).toFixed(2).replace(".",",")+"/L"); }},
+  preco_real:      {lbl:"Preço do cupom",        fmt:function(v){ return (v==null||v===""?"—":"R$ "+Number(v).toFixed(2).replace(".",",")+"/L"); }},
+  checkin_foto:    {lbl:"Foto do odômetro (saída)", fmt:function(v){ return v; }},
+  nome:{lbl:"Nome"}, cpf:{lbl:"CPF"}, rg:{lbl:"RG"}, orgao:{lbl:"Órgão"}, email:{lbl:"E-mail"}, telefone:{lbl:"Telefone"}, veiculo:{lbl:"Veículo"}, placa:{lbl:"Placa"},
+  checkin_em:      {lbl:"Check-in",              fmt:function(v){ return v?dt(v):"—"; }},
+  checkout_em:     {lbl:"Check-out",             fmt:function(v){ return v?dt(v):"—"; }},
+  parada:          {lbl:"Parada",                fmt:function(v){ return v==null?"(nenhuma)":String(v).replace(/\(([\d.]+) km\)/,function(_,n){ return "("+km1(n)+" km)"; }); }},
   val_estimado:    {lbl:"Valor estimado",        fmt:brlv},
   val_real:        {lbl:"Valor (combustível)",   fmt:brlv},
   caronas:         {lbl:"Caronas",               fmt:function(v){ return (v==null||v===""?"—":String(v)); }}
@@ -1253,7 +1283,7 @@ function _parseValidacao(txt){
 function _iniciais(n){ var p=String(n||"").trim().split(/\s+/); return ((p[0]||"?")[0]+(p.length>1?p[p.length-1][0]:"")).toUpperCase(); }
 function _tagStatus(st){
   if(!st) return "";
-  var cls = /reprov/i.test(st)?"rep":/aprov|pago/i.test(st)?"ok":/revis/i.test(st)?"":"neu";
+  var cls = /reprov/i.test(st)?"rep":/aprov|pago/i.test(st)?"ok":/revis/i.test(st)?"":/edi/i.test(st)?"edi":"neu";
   return '<span class="bal-tag '+cls+'">'+esc(st)+'</span>';
 }
 function _conversaSection(d){
@@ -1279,6 +1309,21 @@ function _conversaSection(d){
     }
     return true;
   }).map(function(l){ return {tipo:"log", ts:new Date(l.em).getTime(), quando:dt(l.em), de:l.de, para:l.para, por:l.por}; });
+  // Edições feitas pela equipe (migração 0021), agrupadas por pessoa em janelas de 3 min
+  var eds=[];
+  (DET_EDICOES||[]).forEach(function(e){
+    var t=new Date(e.em).getTime(), g=eds[eds.length-1];
+    if(g && g.por===e.por && t-g.tsFim<3*60000){ g.alt=g.alt.concat(e.alteracoes||[]); g.tsFim=t; }
+    else eds.push({tipo:"edit", ts:t, tsFim:t, quando:dt(e.em), por:e.por, alt:(e.alteracoes||[]).slice(), motivo:""});
+  });
+  // "Motivo da alteração" digitado na edição vira parte do mesmo balão
+  eds.forEach(function(g){
+    var nome=g.por?(NOMES_PERFIL[g.por]||""):"";
+    for(var i=0;i<itens.length;i++){ var m=itens[i];
+      if(m.tipo==="admin" && /edi[cç][aã]o de dados/i.test(m.status||"") && m.ts!=null && Math.abs(m.ts-g.tsFim)<5*60000 && (!nome || m.autor===nome)){
+        g.motivo=m.texto; itens.splice(i,1); break; } }
+  });
+  logs=logs.concat(eds);
   if(logs.length){
     var semData=itens.filter(function(x){ return x.ts==null; }), comData=itens.filter(function(x){ return x.ts!=null; }).concat(logs);
     comData.sort(function(a,b){ return a.ts-b.ts; });
@@ -1291,12 +1336,20 @@ function _conversaSection(d){
       h+='<div class="msg-r"><div class="av" title="'+esc(it.autor)+'">'+esc(_iniciais(it.autor))+'</div><div class="bal">'
         +'<div class="bal-top"><b>'+(eu?"Você":esc(it.autor))+'</b>'+_tagStatus(it.status)+(it.vezes>1?'<span class="bal-x2">enviada '+it.vezes+'×</span>':'')+'</div>'
         +esc(it.texto).replace(/\n/g,"<br>")
-        +(it.quando?'<div class="bal-rod">'+esc(it.quando)+'</div>':'')+'</div></div>';
+        +'<div class="bal-rod">'+(it.quando?esc(it.quando):'sem data · mensagem anterior a nov/2026, quando a data passou a ser registrada')+'</div>'+'</div></div>';
     } else if(it.tipo==="pesq"){
       var lst=it.alt.slice(0,6).map(function(c){ return '<li>'+esc(_revLbl(c.campo))+'</li>'; }).join("")+(it.alt.length>6?'<li>+'+(it.alt.length-6)+' outro(s)</li>':'');
       h+='<div class="msg-l"><div class="av" title="Pesquisador">'+esc(_iniciais(d.nome))+'</div><div class="bal">'
         +'<div class="bal-top"><b>'+esc(String(d.nome||"Pesquisador").split(/\s+/)[0])+'</b><span class="bal-tag neu">Correção enviada</span></div>'
         +(it.alt.length?'Alterou '+it.alt.length+' campo(s):<ul>'+lst+'</ul>':'Reenviou sem alterar os campos monitorados.')
+        +'<div class="bal-rod">'+esc(it.quando)+'</div></div></div>';
+    } else if(it.tipo==="edit"){
+      var quemE = it.por ? (NOMES_PERFIL[it.por] || "Equipe") : "Sistema (alteração direta no banco)";
+      var lista=it.alt.map(function(c){ return '<li><b>'+esc(_revLbl(c.campo))+'</b>: '+esc(_revFmt(c.campo,c.de))+' → '+esc(_revFmt(c.campo,c.para))+'</li>'; }).join("");
+      h+='<div class="msg-r"><div class="av" title="'+esc(quemE)+'">'+esc(_iniciais(quemE))+'</div><div class="bal">'
+        +'<div class="bal-top"><b>'+(QUEM && quemE===QUEM?"Você":esc(quemE))+'</b><span class="bal-tag edi">Edição de dados</span></div>'
+        +'Alterou '+it.alt.length+' informação(ões) da solicitação:<ul class="edi-lista">'+lista+'</ul>'
+        +(it.motivo?'<div style="margin-top:6px"><b>Motivo:</b> '+esc(it.motivo).replace(/\n/g,"<br>")+'</div>':'')
         +'<div class="bal-rod">'+esc(it.quando)+'</div></div></div>';
     } else if(it.tipo==="log"){
       var quem = it.por ? (NOMES_PERFIL[it.por] || "usuário") : "sistema";
@@ -1370,10 +1423,10 @@ function renderDetail(){
   h+='<div class="detail-section"><div class="detail-section-title">Identificação</div>';
   h+=drow("Protocolo",'<span style="font-family:\'Courier New\',monospace;font-size:12px;font-weight:600">'+esc(d.protocolo)+'</span>');
   h+=drow("Status",'<span class="st st-'+esc(d.status)+'">'+esc(statusLabel(d.status))+'</span>');
-  h+=drow("Nome",esc(d.nome||"—"));
-  h+=drow("CPF",esc(d.cpf||"—"));
-  h+=drow("RG",esc(d.rg||"—")+(d.orgao?" "+esc(d.orgao):""));
-  h+=drow("Veículo",esc(d.veiculo||"—")+(d.placa?" — "+esc(d.placa):""));
+  h+=drow("Nome",esc(d.nome||"—")+_editTag(["nome"]));
+  h+=drow("CPF",esc(d.cpf||"—")+_editTag(["cpf"]));
+  h+=drow("RG",esc(d.rg||"—")+(d.orgao?" "+esc(d.orgao):"")+_editTag(["rg","orgao"]));
+  h+=drow("Veículo",esc(d.veiculo||"—")+(d.placa?" — "+esc(d.placa):"")+_editTag(["veiculo","placa"]));
   if(d.caronas)h+=drow("Caronas",esc(d.caronas));
   if(d.recibo_link)h+=drow("Recibo",'<a href="'+esc(d.recibo_link)+'" target="_blank" style="color:var(--primary);font-weight:600">'+ic('file')+' Ver recibo (PDF)</a>');
   h+='</div>';
@@ -1390,19 +1443,24 @@ function renderDetail(){
 
   // VALORES
   h+='<div class="detail-section"><div class="detail-section-title">Valores</div>';
-  h+=drow("Distância Total",km1(d.dist_total||0)+" km");
+  h+=drow("Distância Total",km1(d.dist_total||0)+" km"+_editTag(["dist_total","parada"]));
   var conPad=(d.veiculo==="Moto"?49:10), conVal=parseFloat(d.consumo)||conPad;
   var conCustom=!!d.foto_consumo || (parseFloat(d.consumo)>0 && parseFloat(d.consumo)!==conPad);
   h+=drow("Consumo",conVal+" km/L "+(conCustom
       ?'<span style="background:#FEF3C7;color:#92400E;font-size:10px;font-weight:700;padding:1px 6px;border-radius:4px">INFORMADO</span>'
       :'<span style="background:#F1F5F9;color:#64748B;font-size:10px;font-weight:700;padding:1px 6px;border-radius:4px">PADRÃO</span>')
-      +(d.foto_consumo?' <a href="'+esc(d.foto_consumo)+'" target="_blank" style="color:var(--primary)">foto</a>':""));
+      +(d.foto_consumo?' <a href="'+esc(d.foto_consumo)+'" target="_blank" style="color:var(--primary)">foto</a>':"")+_editTag(["consumo"]));
   h+=drow("Pedágios",brlv(d.val_pedagios)+" ("+(parseInt(d.qtd_pedagios)||0)+" cobranças)");
-  h+=drow("Combustível", d.usou_estimativa
-      ?'<span style="background:#FEF3C7;color:#92400E;font-size:10px;font-weight:700;padding:2px 7px;border-radius:4px">ESTIMATIVA</span> R$ '+(d.preco_base||"")+'/L'
-      :'<span style="background:#DCFCE7;color:#166534;font-size:10px;font-weight:700;padding:2px 7px;border-radius:4px">VALOR REAL</span> R$ '+(d.preco_real||d.preco_base||"")+'/L (cupom)');
+  h+=drow("Combustível", (d.usou_estimativa
+      ?'<span style="background:#FEF3C7;color:#92400E;font-size:10px;font-weight:700;padding:2px 7px;border-radius:4px">ESTIMATIVA</span> R$ '+_r2v(d.preco_base)+'/L'
+      :'<span style="background:#DCFCE7;color:#166534;font-size:10px;font-weight:700;padding:2px 7px;border-radius:4px">VALOR REAL</span> R$ '+_r2v(d.preco_real||d.preco_base)+'/L (cupom)')
+      +_editTag(["preco_base","preco_real","usou_estimativa"])
+      +(function(){ // estimativa com preço diferente da tabela da data: pode ter sido alterado à mão
+        if(!d.usou_estimativa) return "";
+        var ref=_precoTabela(d.checkout_em||d.checkin_em); if(ref==null || Math.abs(ref-Number(d.preco_base))<0.005) return "";
+        return '<div class="ref-preco">tabela na data: R$ '+ref.toFixed(2).replace(".",",")+'/L — o preço usado é diferente</div>'; })());
   h+=drow("Val. Estimado",brlv(d.val_estimado));
-  h+=drow("Val. Real",brlv(d.val_real));
+  h+=drow("Val. Real",brlv(d.val_real)+_editTag(["val_real"]));
   var _rkm=custoPorKm(d);
   h+=drow("Custo por km", (_rkm>0?('R$ '+_rkm.toFixed(2).replace(".",",")+'/km'):'—') + (_rkm>LIMITE_KM?' <span style="color:#991B1B;font-weight:700">'+ic('alert')+' acima de R$ '+LIMITE_KM.toFixed(2).replace(".",",")+'</span>':''));
   h+=drow("Total a Reembolsar",'<strong style="font-size:15px">'+brlv(d.val_total)+'</strong>'+(Number(d.val_total)>LIMITE_VIAGEM?' <span style="color:#991B1B;font-weight:700">'+ic('alert')+' acima de R$ '+LIMITE_VIAGEM+'/viagem</span>':''));
@@ -2104,6 +2162,8 @@ async function editarDados(id){
   h+='<div class="ed-sec-title"><span>Paradas / trechos</span><button class="btn" onclick="edSomarKm(\''+id+'\')">Σ Somar km → Distância</button></div>';
   h+='<div id="edit_paradas"></div>';
   h+='<button class="btn" style="width:100%;margin-top:4px" onclick="edAddParada()">+ Adicionar parada</button>';
+  h+='<label style="display:block;font-size:12px;font-weight:600;color:var(--text2);margin:14px 0 4px">Motivo da alteração <span style="font-weight:500;color:var(--text3)">(recomendado — aparece na conversa da análise junto com o que foi alterado)</span></label>'
+    +'<textarea id="ed-motivo-'+id+'" rows="2" style="width:100%;padding:9px 11px;border:1px solid var(--border);border-radius:6px;font-family:inherit;font-size:13.5px;background:var(--bg);color:var(--text);resize:vertical" placeholder="Ex.: preço ajustado para a média dos dois cupons (R$ 3,78 e R$ 4,37)"></textarea>';
   h+='<div style="margin-top:16px;display:flex;gap:8px;justify-content:flex-end"><button class="btn" onclick="fecharEdit()">Cancelar</button><button class="btn" style="background:var(--primary);color:#fff;border-color:var(--primary)" onclick="salvarEdicao(\''+id+'\')">Salvar alterações</button></div>';
   el("edit_corpo").innerHTML=h;
   Array.prototype.forEach.call(_editParadas, function(p){ edParadaRow(p); });
@@ -2133,6 +2193,15 @@ async function salvarEdicao(id){
     else { var ins=await sb.from("paradas").insert({reembolso_id:id,fase:fase,ordem:ordem,origem:orig,destino:dest,km:km}); if(ins.error){ alert("Erro ao inserir parada: "+ins.error.message); return; } }
   }
   for(var m=0;m<_editParadas.length;m++){ var op=_editParadas[m]; if(op.id && !mantidos[op.id]){ await sb.from("paradas").delete().eq("id",op.id); } }
+  // Motivo digitado vai para a conversa (com data), ao lado do registro automático do que mudou
+  var motivo=(el("ed-motivo-"+id)&&el("ed-motivo-"+id).value.trim())||"";
+  if(motivo){
+    try{
+      var cur=await sb.from("reembolsos").select("validacao").eq("id",id).maybeSingle();
+      var base=(cur && cur.data && cur.data.validacao)?cur.data.validacao+" | ":"";
+      await sb.from("reembolsos").update({validacao: base+"ADMIN ("+(QUEM||"admin")+" · "+dt(new Date().toISOString())+" · Edição de dados): "+motivo.replace(/\s+\|\s+/g," / ")}).eq("id",id);
+    }catch(e){}
+  }
   msgTopo("Dados atualizados ✓");
   fecharEdit();
   await recarregarUm(id); abrirDetalhe(id);
