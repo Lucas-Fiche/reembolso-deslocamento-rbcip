@@ -308,6 +308,8 @@ tbody tr.sel{background:var(--primary-light)}
 .detail-links a{color:var(--primary);font-size:13px;text-decoration:none}
 .detail-links a:hover{text-decoration:underline}
 /* Conversa da análise (mensagens da equipe × correções do pesquisador) */
+.rev-hist summary{list-style:none}.rev-hist summary::-webkit-details-marker{display:none}
+.rev-hist summary::after{content:"▸";float:right;color:var(--text3)}.rev-hist[open] summary::after{content:"▾"}
 .chat{padding:14px;display:flex;flex-direction:column;gap:10px;background:var(--surface2)}
 .msg-l,.msg-r{display:flex;gap:8px;align-items:flex-end;max-width:88%}
 .msg-r{align-self:flex-end;flex-direction:row-reverse}
@@ -663,7 +665,7 @@ tbody tr.sel{background:var(--primary-light)}
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="config.js"></script>
 <script>
-var sb=null, DADOS=[], FILTRADOS=[], sel=null, QUEM="", DET_PARADAS=[], DET_PEDAGIOS=[], DET_REVISOES=[];
+var sb=null, DADOS=[], FILTRADOS=[], sel=null, QUEM="", DET_PARADAS=[], DET_PEDAGIOS=[], DET_REVISOES=[], DET_STATUSLOG=[], NOMES_PERFIL={};
 function el(id){return document.getElementById(id);}
 // Busca TODAS as linhas paginando (a API do Supabase devolve no máximo 1000 por consulta).
 async function _buscarTodos(montar){
@@ -1183,10 +1185,17 @@ async function abrirDetalhe(id){
   var res = await Promise.all([
     sb.from("paradas").select("fase,ordem,origem,destino,km,horario,maps_link,lat,lng,adicionada_checkout,justificativa").eq("reembolso_id",id).order("fase").order("ordem"),
     sb.from("pedagios").select("id,fase,ordem,valor,comprovante_link,pendente").eq("reembolso_id",id).order("ordem"),
-    sb.from("reembolso_revisoes").select("criado_em,alteracoes").eq("reembolso_id",id).order("criado_em",{ascending:false})
+    sb.from("reembolso_revisoes").select("criado_em,alteracoes").eq("reembolso_id",id).order("criado_em",{ascending:false}),
+    sb.from("reembolso_status_log").select("de,para,por,em").eq("reembolso_id",id).order("em")
   ]);
   if(!sel || sel.id!==id) return; // abriu outro pedido enquanto carregava
   DET_PARADAS = res[0].data||[]; DET_PEDAGIOS = res[1].data||[]; DET_REVISOES = (res[2]&&res[2].data)||[];
+  DET_STATUSLOG = (res[3] && !res[3].error && res[3].data) || [];
+  // nomes de quem mudou o status (uma consulta só, com cache)
+  var faltam=DET_STATUSLOG.map(function(l){return l.por;}).filter(function(u,i,a){ return u && !NOMES_PERFIL[u] && a.indexOf(u)===i; });
+  if(faltam.length){ try{ var pf=await sb.from("perfis").select("id,nome").in("id",faltam);
+    (pf.data||[]).forEach(function(x){ NOMES_PERFIL[x.id]=x.nome||"—"; }); }catch(e){} }
+  if(!sel || sel.id!==id) return;
   renderDetail(); renderActions();
   setTimeout(function(){ renderMap(); if(_map)_map.invalidateSize(); }, 70);
   setTimeout(_preCarregarAnexos, 400);
@@ -1212,6 +1221,9 @@ var REV_META={
   dist_total:      {lbl:"Distância total",       fmt:function(v){ return km1(v)+" km"; }},
   consumo:         {lbl:"Consumo",               fmt:function(v){ return (v==null?"—":v+" km/L"); }},
   usou_estimativa: {lbl:"Tipo de combustível",   fmt:function(v){ return v?"Estimativa":"Valor real (cupom)"; }},
+  checkout_foto:   {lbl:"Foto do odômetro (chegada)", fmt:function(v){ return v; }},
+  cupom_foto:      {lbl:"Foto do cupom de combustível", fmt:function(v){ return v; }},
+  foto_consumo:    {lbl:"Foto do consumo do veículo", fmt:function(v){ return v; }},
   preco_base:      {lbl:"Preço base",            fmt:function(v){ return (v==null?"—":"R$ "+v+"/L"); }},
   preco_real:      {lbl:"Preço do cupom",        fmt:function(v){ return (v==null||v===""?"—":"R$ "+v+"/L"); }},
   val_estimado:    {lbl:"Valor estimado",        fmt:brlv},
@@ -1258,6 +1270,20 @@ function _conversaSection(d){
     itens.push(m);
   });
   while(ri<revs.length) itens.push(revs[ri++]);
+  // Histórico de status (migração 0020): entra pela data, como nota central com quem e quando.
+  var logs=(DET_STATUSLOG||[]).filter(function(l){
+    if(!l.de) return false;                                           // criação: não precisa aparecer
+    if(l.para==="CORRIGIDO"){                                          // reenvio do pesquisador: já vira balão
+      var t=new Date(l.em).getTime();
+      if(revs.some(function(r){ return Math.abs(r.ts-t)<5*60000; })) return false;
+    }
+    return true;
+  }).map(function(l){ return {tipo:"log", ts:new Date(l.em).getTime(), quando:dt(l.em), de:l.de, para:l.para, por:l.por}; });
+  if(logs.length){
+    var semData=itens.filter(function(x){ return x.ts==null; }), comData=itens.filter(function(x){ return x.ts!=null; }).concat(logs);
+    comData.sort(function(a,b){ return a.ts-b.ts; });
+    itens=semData.concat(comData);
+  }
   var h='<div class="detail-section"><div class="detail-section-title">'+ic('mail')+' Conversa da análise</div><div class="chat">';
   itens.forEach(function(it){
     if(it.tipo==="admin"){
@@ -1272,6 +1298,10 @@ function _conversaSection(d){
         +'<div class="bal-top"><b>'+esc(String(d.nome||"Pesquisador").split(/\s+/)[0])+'</b><span class="bal-tag neu">Correção enviada</span></div>'
         +(it.alt.length?'Alterou '+it.alt.length+' campo(s):<ul>'+lst+'</ul>':'Reenviou sem alterar os campos monitorados.')
         +'<div class="bal-rod">'+esc(it.quando)+'</div></div></div>';
+    } else if(it.tipo==="log"){
+      var quem = it.por ? (NOMES_PERFIL[it.por] || "usuário") : "sistema";
+      var cor = it.para==="REVISÃO"?"#92400E":(it.para==="REPROVADO"?"#991B1B":(it.para==="CORRIGIDO"?"#3730A3":"var(--text2)"));
+      h+='<div class="chat-sis">'+ic('refresh')+' <b style="color:'+cor+'">'+esc(statusLabel(it.de))+' → '+esc(statusLabel(it.para))+'</b> · por '+esc(quem)+' · '+esc(it.quando)+'</div>';
     } else if(it.tipo==="sis"){
       h+='<div class="chat-sis">'+ic('refresh')+' '+esc(it.texto)+(it.quando?' · '+esc(it.quando):'')+'</div>';
     } else {
@@ -1286,18 +1316,33 @@ function _conversaSection(d){
 
 function _revSection(){
   if(!DET_REVISOES.length) return "";
-  var h='<div class="detail-section" style="border-color:#A5B4FC"><div class="detail-section-title" style="color:#3730A3;background:#EEF2FF">'+ic('refresh')+' Correção do pesquisador — campos alterados (confira)</div>';
-  DET_REVISOES.forEach(function(rev,idx){
-    var alt=rev.alteracoes||[];
-    if(DET_REVISOES.length>1) h+='<div style="font-size:11px;font-weight:700;color:#4338CA;margin:'+(idx?'12':'2')+'px 0 4px">Correção '+(DET_REVISOES.length-idx)+' · '+dt(rev.criado_em)+'</div>';
-    if(!alt.length){ h+='<div class="segment" style="color:var(--text3)">Nenhum campo monitorado mudou nesta correção.</div>'; return; }
+  var pend = sel && sel.status==="CORRIGIDO";            // só há correção a conferir se o status é Corrigido
+  function bloco(rev){
+    var alt=rev.alteracoes||[], h='';
+    if(!alt.length) return '<div class="segment" style="color:var(--text3)">Nenhum campo monitorado mudou nesta correção.</div>';
     alt.forEach(function(c){
       var de=esc(_revFmt(c.campo,c.de)), para=esc(_revFmt(c.campo,c.para));
       h+=drow(_revLbl(c.campo), '<span style="color:#991B1B;text-decoration:line-through">'+de+'</span> → <b style="color:#166534">'+para+'</b>');
     });
-  });
-  h+='<div class="segment" style="font-size:11px;color:var(--text3);border:none;padding-top:8px">Mudanças na rota/paradas aparecem como alteração da <b>Distância total</b>.</div>';
-  h+='</div>';
+    return h;
+  }
+  var tot=DET_REVISOES.length, h='';
+  var antigas = pend ? DET_REVISOES.slice(1) : DET_REVISOES;   // ordem: mais nova primeiro
+  if(pend){
+    h+='<div class="detail-section" style="border-color:#A5B4FC"><div class="detail-section-title" style="color:#3730A3;background:#EEF2FF">'+ic('refresh')
+      +' Correção enviada pelo pesquisador — confira'+(tot>1?' (correção '+tot+')':'')+' · '+dt(DET_REVISOES[0].criado_em)+'</div>'+bloco(DET_REVISOES[0]);
+    h+='<div class="segment" style="font-size:11px;color:var(--text3);border:none;padding-top:8px">Mudanças na rota/paradas aparecem como alteração da <b>Distância total</b>.</div></div>';
+  }
+  if(antigas.length){
+    h+='<details class="detail-section rev-hist"><summary class="detail-section-title" style="cursor:pointer">'+ic('clock')+' '
+      +(pend?'Correções anteriores ('+antigas.length+')':'Histórico de correções do pesquisador ('+tot+') — a última em '+dt(DET_REVISOES[0].criado_em))
+      +'</summary>';
+    antigas.forEach(function(rev){
+      var n=tot-DET_REVISOES.indexOf(rev);
+      h+='<div style="font-size:11px;font-weight:700;color:var(--text2);padding:8px 14px 2px">Correção '+n+' · '+dt(rev.criado_em)+'</div>'+bloco(rev);
+    });
+    h+='</details>';
+  }
   return h;
 }
 
@@ -1426,7 +1471,11 @@ function renderActions(){
     bar.innerHTML=h; return;
   }
   if(st==="CORRIGIDO")h+='<div class="corr-note">'+ic('refresh')+' Voltou da correção — reanalise antes de decidir.</div>';
-  else if(st==="REVISÃO")h+='<div class="corr-note" style="color:#92400E;background:#FEF3C7;border-color:#FCD34D">'+ic('clock')+' Aguardando o pesquisador enviar a correção.</div>';
+  else if(st==="REVISÃO"){
+    var _nc=(DET_REVISOES||[]).length, _ult=_nc?DET_REVISOES[0].criado_em:null;   // DET_REVISOES vem do mais novo ao mais antigo
+    h+='<div class="corr-note" style="color:#92400E;background:#FEF3C7;border-color:#FCD34D">'+ic('clock')+' Aguardando o pesquisador enviar a correção.'
+      +(_nc?'<div style="font-weight:500;margin-top:4px">Já houve '+_nc+' correção(ões) — a última em '+dt(_ult)+'. Depois dela, a solicitação foi devolvida para revisão.</div>':'')+'</div>';
+  }
   var btns={
     "PAGO":'<button class="abtn teal" onclick="mudarStatus(\''+id+'\',\'PAGO\')">Pago</button>',
     "APROVADO":'<button class="abtn green" onclick="mudarStatus(\''+id+'\',\'APROVADO\')">Aprovar</button>',
