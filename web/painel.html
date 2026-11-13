@@ -1704,25 +1704,34 @@ function _grade(s, tk, Y, pl, W, pr, fmtAxis){
 function _lineChart(pts, limite, fmtY, fmtAxis){
   if(!pts.length) return '<div class="evc-vazio">Sem dados no período.</div>';
   fmtAxis=fmtAxis||fmtY;
+  // limite de cada ponto: p.lim (variável, ex.: km equivalente) ou o limite fixo
+  var LIM=function(p){ return (p.lim!=null) ? p.lim : limite; };
+  var variavel=pts.some(function(p){ return p.lim!=null; });
   var id="lc"+(++_chartN), n=pts.length, W=1000, H=280, pl=70, pr=30, pt=28, pb=44, iw=W-pl-pr, ih=H-pt-pb;
-  var maxV=limite*1.15; pts.forEach(function(p){ if(p.v>maxV) maxV=p.v; });
+  var maxV=0; pts.forEach(function(p){ if(p.v>maxV) maxV=p.v; var l=LIM(p); if(l!=null && l*1.15>maxV) maxV=l*1.15; });
   var tk=_ticks(maxV*1.1);
   function X(i){ return pl + (n===1? iw/2 : iw*i/(n-1)); }
-  function Y(v){ return pt + ih*(1 - v/tk.top); }
+  function Y(v){ return pt + ih*(1 - Math.min(v,tk.top)/tk.top); }
   var s=['<svg class="evc-svg" viewBox="0 0 '+W+' '+H+'" role="img">',
     '<defs><linearGradient id="'+id+'" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#2563EB" stop-opacity=".25"/><stop offset="1" stop-color="#2563EB" stop-opacity="0"/></linearGradient></defs>'];
   _grade(s, tk, Y, pl, W, pr, fmtAxis);
   var d=""; pts.forEach(function(p,i){ d+=(i?" L":"M")+X(i).toFixed(1)+" "+Y(p.v).toFixed(1); });
   if(n>1) s.push('<path d="'+d+' L'+X(n-1).toFixed(1)+' '+(pt+ih)+' L'+X(0).toFixed(1)+' '+(pt+ih)+' Z" fill="url(#'+id+')"/>');
-  var yl=Y(limite).toFixed(1);
-  s.push('<line x1="'+pl+'" y1="'+yl+'" x2="'+(W-pr)+'" y2="'+yl+'" stroke="#DC2626" stroke-width="2" stroke-dasharray="8 6"/>');
+  if(variavel){
+    var dl="", ab=false; pts.forEach(function(p,i){ var l=LIM(p); if(l==null){ ab=false; return; } dl+=(ab?" L":" M")+X(i).toFixed(1)+" "+Y(l).toFixed(1); ab=true; });
+    s.push('<path d="'+dl+'" fill="none" stroke="#DC2626" stroke-width="2" stroke-dasharray="8 6" stroke-linejoin="round"/>');
+  } else if(limite!=null){
+    var yl=Y(limite).toFixed(1);
+    s.push('<line x1="'+pl+'" y1="'+yl+'" x2="'+(W-pr)+'" y2="'+yl+'" stroke="#DC2626" stroke-width="2" stroke-dasharray="8 6"/>');
+  }
   s.push('<path d="'+d+'" fill="none" stroke="#2563EB" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"/>');
   var cada=Math.max(1, Math.ceil(n/12)), comValor=n<=16;
   pts.forEach(function(p,i){
-    var cor=p.v>=limite?"#DC2626":(p.v>=0.9*limite?"#D97706":"#16A34A"), x=X(i).toFixed(1), y=Y(p.v).toFixed(1);
+    var l=LIM(p), cor=(l==null)?"#94A3B8":(p.v>=l?"#DC2626":(p.v>=0.9*l?"#D97706":"#16A34A")), x=X(i).toFixed(1), y=Y(p.v).toFixed(1);
+    var tit=esc((p.tip||p.label)+": "+fmtY(p.v)+(p.tipLim?" · "+p.tipLim:"")+(p.parcial?" (parcial, período em andamento)":""));
     s.push(p.parcial
-      ? '<circle cx="'+x+'" cy="'+y+'" r="'+(n>30?4:6.5)+'" style="fill:var(--surface)" stroke="'+cor+'" stroke-width="3"><title>'+esc((p.tip||p.label)+": "+fmtY(p.v)+" (parcial, período em andamento)")+'</title></circle>'
-      : '<circle cx="'+x+'" cy="'+y+'" r="'+(n>30?3.5:6)+'" fill="'+cor+'" style="stroke:var(--surface)" stroke-width="2.5"><title>'+esc((p.tip||p.label)+": "+fmtY(p.v))+'</title></circle>');
+      ? '<circle cx="'+x+'" cy="'+y+'" r="'+(n>30?4:6.5)+'" style="fill:var(--surface)" stroke="'+cor+'" stroke-width="3"><title>'+tit+'</title></circle>'
+      : '<circle cx="'+x+'" cy="'+y+'" r="'+(n>30?3.5:6)+'" fill="'+cor+'" style="stroke:var(--surface)" stroke-width="2.5"><title>'+tit+'</title></circle>');
     if(comValor || i===n-1) s.push('<text x="'+x+'" y="'+(y-13)+'" text-anchor="middle" font-size="13" font-weight="700" fill="'+cor+'" style="paint-order:stroke;stroke:var(--surface2);stroke-width:4px">'+fmtY(p.v)+'</text>');
     if((n-1-i)%cada===0) s.push('<text x="'+x+'" y="'+(pt+ih+26)+'" text-anchor="middle" font-size="12.5" style="fill:var(--text3)">'+esc(p.label)+'</text>');
     if(p.parcial) s.push('<text x="'+x+'" y="'+(pt+ih+41)+'" text-anchor="middle" font-size="11" style="fill:var(--text3)">parcial</text>');
@@ -1842,6 +1851,14 @@ function renderEvolucao(){
   var hoje=new Date(), kHoje = per==="dia" ? ymd(hoje) : (per==="mes" ? _mesYM(hoje) : _semKey(hoje));
   var ptsKm=keys.map(function(k){ var g=byP[k]; return {label:lbl(k), tip:tip(k)+" · "+g.n+" viagem(ns)", v: g.km>0? g.val/g.km : 0, parcial:k===kHoje}; });
   var ptsV =keys.map(function(k){ var g=byP[k]; return {label:lbl(k), tip:tip(k)+" · "+g.n+" viagem(ns)", v: g.n>0? g.val/g.n : 0, parcial:k===kHoje}; });
+  // Km por viagem + distância que levaria o período ao limite de R$/viagem
+  // (= limite ÷ custo por km do próprio período). Acima da linha ⇔ acima de R$ 150/viagem.
+  var _r2=function(v){ return "R$ "+v.toFixed(2).replace(".",","); };
+  var ptsKmV=keys.map(function(k){ var g=byP[k], ck=g.km>0? g.val/g.km : 0, lim=ck>0? LIMITE_VIAGEM/ck : null;
+    return {label:lbl(k), tip:tip(k)+" · "+g.n+" viagem(ns)", v: g.n>0? g.km/g.n : 0, parcial:k===kHoje, lim:lim,
+      tipLim: lim!=null ? "limite equivalente "+Math.round(lim)+" km (R$ "+LIMITE_VIAGEM+" ÷ "+_r2(ck)+"/km)" : "sem km registrado"}; });
+  var _kmTot=0,_valTot=0; keys.forEach(function(k){ _kmTot+=byP[k].km; _valTot+=byP[k].val; });
+  var _ckMed=_kmTot>0? _valTot/_kmTot : 0;
   var nomeP = per==="dia" ? "dia" : (per==="mes" ? "mês" : "semana");
   var desde = keys.length ? (per==="mes" ? _mesBR(keys[0]) : _diaBR(keys[0])) : "";
   var opt=function(v,t){ return '<option value="'+v+'"'+(per===v?" selected":"")+'>'+t+'</option>'; };
@@ -1849,10 +1866,20 @@ function renderEvolucao(){
     +'<label class="evc-sel">Ver por <select id="evol_gran" onchange="renderEvolucao()">'+opt("semana","Semana")+opt("mes","Mês")+opt("dia","Dia")+'</select></label></div>';
   var leg=function(lim){ return '<div class="evc-leg"><span><i style="border-color:#2563EB"></i>média de cada '+nomeP+'</span><span><i style="border-color:#DC2626;border-top-style:dashed"></i>limite '+lim+'</span>'
     +'<span><b style="color:#16A34A">●</b> dentro · <b style="color:#D97706">●</b> perto (≥ 90%) · <b style="color:#DC2626">●</b> acima · ○ '+nomeP+' atual (parcial)</span></div>'; };
+  if(keys.length) h+='<div class="evc-nota" style="margin:-2px 0 6px"><b>Como ler:</b> valor por viagem = custo por km × km por viagem. '
+    +'O custo por km depende do preço do combustível, do consumo e dos pedágios; o km por viagem depende só da distância percorrida. '
+    +'Por isso o valor por viagem pode subir com o custo por km estável: as viagens ficaram mais longas.</div>';
   if(keys.length) h+='<div class="evc-nota" style="margin:-2px 0 8px">Cada ponto é a média de '+(per==="semana"?"uma semana":(per==="mes"?"um mês":"um dia"))+' com viagens, desde '+desde+' (períodos sem viagem não aparecem). Usa o valor total (combustível + pedágios), como os limites.</div>';
   var limKm="R$ "+LIMITE_KM.toFixed(2).replace(".",",")+"/km";
   h+='<div class="evc-box"><div class="evc-tt">Custo por km</div>'+leg(limKm)
     +'<div class="evc-scroll">'+_lineChart(ptsKm, LIMITE_KM, function(v){return "R$ "+v.toFixed(2).replace(".",",");})+'</div></div>';
+  h+='<div class="evc-box"><div class="evc-tt">Km por viagem</div>'
+    +'<div class="evc-leg"><span><i style="border-color:#2563EB"></i>km médio por viagem em cada '+nomeP+'</span>'
+    +'<span><i style="border-color:#DC2626;border-top-style:dashed"></i>distância equivalente ao limite de R$ '+LIMITE_VIAGEM+' (R$ '+LIMITE_VIAGEM+' ÷ custo por km '+(per==="semana"?"da semana":(per==="mes"?"do mês":"do dia"))+')</span>'
+    +'<span><b style="color:#16A34A">●</b> dentro · <b style="color:#D97706">●</b> perto (≥ 90%) · <b style="color:#DC2626">●</b> acima · ○ '+nomeP+' atual (parcial)</span></div>'
+    +'<div class="evc-scroll">'+_lineChart(ptsKmV, null, function(v){return Math.round(v)+" km";})+'</div>'
+    +'<div class="evc-nota" style="margin:0 0 8px">A linha vermelha muda junto com o custo por km: com '+_r2(_ckMed)+'/km (média do período), R$ '+LIMITE_VIAGEM+' correspondem a <b>'+(_ckMed>0?Math.round(LIMITE_VIAGEM/_ckMed):"—")+' km</b> por viagem. '
+    +'Um ponto acima da linha corresponde exatamente ao mesmo período acima de R$ '+LIMITE_VIAGEM+' no gráfico abaixo.</div></div>';
   h+='<div class="evc-box"><div class="evc-tt">Valor por viagem</div>'+leg("R$ "+LIMITE_VIAGEM)
     +'<div class="evc-scroll">'+_lineChart(ptsV, LIMITE_VIAGEM, function(v){return "R$ "+Math.round(v);})+'</div></div>';
   el("stats_evolucao").innerHTML=h;
