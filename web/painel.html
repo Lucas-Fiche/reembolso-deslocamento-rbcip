@@ -233,6 +233,14 @@ tbody tr.sel{background:var(--primary-light)}
 .stat-box{flex:1 1 150px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:10px 12px}
 .stat-box .l{font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;font-weight:600}
 .stat-box .v{font-size:17px;font-weight:700;color:var(--text);margin-top:3px}
+.stat-box .s{font-size:11.5px;color:var(--text3);margin-top:3px;line-height:1.4}
+.modal .right{text-align:right}
+.modal td.right{font-variant-numeric:tabular-nums;white-space:nowrap}
+.modal tr.tot td{font-weight:700;border-top:2px solid var(--border);background:var(--surface2)}
+.stats-base{font-size:12px;color:var(--text2);background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:8px 12px;margin-top:14px;line-height:1.5}
+.stats-base b{color:var(--text)}
+.lim-ok{color:#16A34A}.lim-perto{color:#D97706}.lim-acima{color:#DC2626}
+.grp-sub{font-size:11.5px;color:var(--text3);margin:-4px 0 8px;line-height:1.45}
 .grp-title{font-size:12px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;margin:18px 0 8px}
 .evc-top{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
 .evc-cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px;margin-top:8px}
@@ -1712,9 +1720,12 @@ function _lineChart(pts, limite, fmtY, fmtAxis){
   var cada=Math.max(1, Math.ceil(n/12)), comValor=n<=16;
   pts.forEach(function(p,i){
     var cor=p.v>=limite?"#DC2626":(p.v>=0.9*limite?"#D97706":"#16A34A"), x=X(i).toFixed(1), y=Y(p.v).toFixed(1);
-    s.push('<circle cx="'+x+'" cy="'+y+'" r="'+(n>30?3.5:6)+'" fill="'+cor+'" style="stroke:var(--surface)" stroke-width="2.5"><title>'+esc((p.tip||p.label)+": "+fmtY(p.v))+'</title></circle>');
+    s.push(p.parcial
+      ? '<circle cx="'+x+'" cy="'+y+'" r="'+(n>30?4:6.5)+'" style="fill:var(--surface)" stroke="'+cor+'" stroke-width="3"><title>'+esc((p.tip||p.label)+": "+fmtY(p.v)+" (parcial, período em andamento)")+'</title></circle>'
+      : '<circle cx="'+x+'" cy="'+y+'" r="'+(n>30?3.5:6)+'" fill="'+cor+'" style="stroke:var(--surface)" stroke-width="2.5"><title>'+esc((p.tip||p.label)+": "+fmtY(p.v))+'</title></circle>');
     if(comValor || i===n-1) s.push('<text x="'+x+'" y="'+(y-13)+'" text-anchor="middle" font-size="13" font-weight="700" fill="'+cor+'" style="paint-order:stroke;stroke:var(--surface2);stroke-width:4px">'+fmtY(p.v)+'</text>');
     if((n-1-i)%cada===0) s.push('<text x="'+x+'" y="'+(pt+ih+26)+'" text-anchor="middle" font-size="12.5" style="fill:var(--text3)">'+esc(p.label)+'</text>');
+    if(p.parcial) s.push('<text x="'+x+'" y="'+(pt+ih+41)+'" text-anchor="middle" font-size="11" style="fill:var(--text3)">parcial</text>');
   });
   s.push('</svg>'); return s.join("");
 }
@@ -1744,7 +1755,7 @@ function statsTab(t){
   var ev=(t==="evol");
   el("stab_resumo").classList.toggle("on",!ev); el("stab_evol").classList.toggle("on",ev);
   el("stats_corpo").classList.toggle("hide",ev); el("stats_evolucao").classList.toggle("hide",!ev);
-  el("stats_lbl").textContent = ev ? "Gasto semanal e evolução dos indicadores" : el("stats_lbl").textContent;
+  el("stats_lbl").textContent = ev ? "Gasto semanal e evolução dos indicadores" : "Totais, médias e limites das viagens enviadas";
   if(ev) renderEvolucao();
 }
 // ── Semanas (segunda a domingo) ──
@@ -1807,11 +1818,12 @@ function renderEvolucao(){
     +_evCard("Média semanal", S.nSem+" semana(s) completa(s)", brlv(S.media), "semana passada "+_varHtml(S.pass.comb, S.media, "vs. a média"))
     +_evCard("Tendência", "média das últimas 4 semanas", brlv(S.m4), _varHtml(S.m4, S.a4, "vs. as 4 anteriores"))
     +'</div>';
-  h+='<div class="evc-box"><div class="evc-leg"><span><i style="border-color:#2563EB;border-top-width:10px;width:12px"></i>gasto da semana</span>'
-    +'<span><i style="border-color:#D97706;border-top-style:dashed"></i>média semanal ('+brlv(S.media)+')</span><span>barra listrada = semana atual (parcial)</span></div>'
+  h+='<div class="evc-box"><div class="evc-tt" style="font-size:14px">Últimas 12 semanas <span style="font-weight:500;color:var(--text3)">(segunda a domingo)</span></div><div class="evc-leg"><span><i style="border-color:#2563EB;border-top-width:10px;width:12px"></i>gasto da semana</span>'
+    +'<span><i style="border-color:#D97706;border-top-style:dashed"></i>média semanal de '+S.nSem+' semana(s) completa(s) ('+brlv(S.media)+')</span><span>barra listrada = semana atual (parcial)</span></div>'
     +'<div class="evc-scroll">'+_barChart(S.serie, S.media, brlv, _brlC)+'</div></div>';
-  h+='<div class="evc-nota">Combustível = valor de combustível reembolsado (sem pedágios), pela data da viagem. Considera os pedidos enviados, exceto reprovados'
-    +(filtro?' — <b>respeitando o filtro atual do painel</b>.':'.')+'</div>';
+  h+='<div class="evc-nota">Combustível = valor de combustível dos pedidos (sem pedágios), agrupado pela <b>data da viagem</b>. Considera os pedidos enviados '
+    +'(aguardando análise, em revisão, corrigidos, aprovados e pagos), exceto reprovados e viagens em andamento'
+    +(filtro?' — <b>respeitando o filtro atual do painel</b>':'')+'. Como pedidos podem ser enviados dias depois da viagem, os valores de semanas recentes ainda podem subir.</div>';
   _resumoSemTxt="Gasto com reembolso de combustível (app):\n"
     +"• Esta semana ("+_ddmm(S.kAtual)+" até hoje, parcial): "+brlv(S.atual.comb)+"\n"
     +"• Semana passada ("+_semLbl(S.kPass)+"): "+brlv(S.pass.comb)+(_varTxt(S.pass.comb,S.pp.comb)?" ("+_varTxt(S.pass.comb,S.pp.comb)+" vs. semana anterior)":"")+"\n"
@@ -1827,13 +1839,17 @@ function renderEvolucao(){
   var keys=Object.keys(byP).sort();
   var lbl=function(k){ return per==="mes" ? _mesBR(k) : _ddmm(k); };
   var tip=function(k){ return per==="mes" ? _mesBR(k) : (per==="dia" ? _diaBR(k) : "Semana "+_semLbl(k)); };
-  var ptsKm=keys.map(function(k){ var g=byP[k]; return {label:lbl(k), tip:tip(k), v: g.km>0? g.val/g.km : 0}; });
-  var ptsV =keys.map(function(k){ var g=byP[k]; return {label:lbl(k), tip:tip(k), v: g.n>0? g.val/g.n : 0}; });
+  var hoje=new Date(), kHoje = per==="dia" ? ymd(hoje) : (per==="mes" ? _mesYM(hoje) : _semKey(hoje));
+  var ptsKm=keys.map(function(k){ var g=byP[k]; return {label:lbl(k), tip:tip(k)+" · "+g.n+" viagem(ns)", v: g.km>0? g.val/g.km : 0, parcial:k===kHoje}; });
+  var ptsV =keys.map(function(k){ var g=byP[k]; return {label:lbl(k), tip:tip(k)+" · "+g.n+" viagem(ns)", v: g.n>0? g.val/g.n : 0, parcial:k===kHoje}; });
+  var nomeP = per==="dia" ? "dia" : (per==="mes" ? "mês" : "semana");
+  var desde = keys.length ? (per==="mes" ? _mesBR(keys[0]) : _diaBR(keys[0])) : "";
   var opt=function(v,t){ return '<option value="'+v+'"'+(per===v?" selected":"")+'>'+t+'</option>'; };
   h+='<div class="evc-top" style="margin-top:22px"><div class="grp-title" style="margin:0">Indicadores vs. limites</div>'
     +'<label class="evc-sel">Ver por <select id="evol_gran" onchange="renderEvolucao()">'+opt("semana","Semana")+opt("mes","Mês")+opt("dia","Dia")+'</select></label></div>';
-  var leg=function(lim){ return '<div class="evc-leg"><span><i style="border-color:#2563EB"></i>média do período</span><span><i style="border-color:#DC2626;border-top-style:dashed"></i>limite '+lim+'</span>'
-    +'<span><b style="color:#16A34A">●</b> dentro · <b style="color:#D97706">●</b> perto · <b style="color:#DC2626">●</b> acima</span></div>'; };
+  var leg=function(lim){ return '<div class="evc-leg"><span><i style="border-color:#2563EB"></i>média de cada '+nomeP+'</span><span><i style="border-color:#DC2626;border-top-style:dashed"></i>limite '+lim+'</span>'
+    +'<span><b style="color:#16A34A">●</b> dentro · <b style="color:#D97706">●</b> perto (≥ 90%) · <b style="color:#DC2626">●</b> acima · ○ '+nomeP+' atual (parcial)</span></div>'; };
+  if(keys.length) h+='<div class="evc-nota" style="margin:-2px 0 8px">Cada ponto é a média de '+(per==="semana"?"uma semana":(per==="mes"?"um mês":"um dia"))+' com viagens, desde '+desde+' (períodos sem viagem não aparecem). Usa o valor total (combustível + pedágios), como os limites.</div>';
   var limKm="R$ "+LIMITE_KM.toFixed(2).replace(".",",")+"/km";
   h+='<div class="evc-box"><div class="evc-tt">Custo por km</div>'+leg(limKm)
     +'<div class="evc-scroll">'+_lineChart(ptsKm, LIMITE_KM, function(v){return "R$ "+v.toFixed(2).replace(".",",");})+'</div></div>';
@@ -1841,55 +1857,84 @@ function renderEvolucao(){
     +'<div class="evc-scroll">'+_lineChart(ptsV, LIMITE_VIAGEM, function(v){return "R$ "+Math.round(v);})+'</div></div>';
   el("stats_evolucao").innerHTML=h;
 }
+// Nome em formato de título (só para exibir: "NANCY AYUMI" → "Nancy Ayumi")
+function _nomeTitulo(n){
+  var min={da:1,de:1,"do":1,das:1,dos:1,e:1};
+  return String(n||"").trim().toLowerCase().split(/\s+/).map(function(w,i){ return (i&&min[w])?w:(w.charAt(0).toUpperCase()+w.slice(1)); }).join(" ");
+}
+function _limCls(v, lim){ return v>=lim?"lim-acima":(v>=0.9*lim?"lim-perto":"lim-ok"); }
+var ORDEM_STATUS=["ABERTO","COMPLETO","REVISÃO","CORRIGIDO","APROVADO","PAGO","REPROVADO"];
 function renderStats(){
   aplicarFiltro();
-  var base=FILTRADOS;
-  var map={}, totalKm=0, totalVal=0, n=0, dias={}, porStatus={};
+  // Base das estatísticas = viagens ENVIADAS: exclui reprovadas e as que ainda
+  // estão em andamento (ABERTO: km/valor incompletos). Mesma base da aba Evolução.
+  var todos=FILTRADOS, base=[], nRep=0, nAb=0, porStatus={};
+  todos.forEach(function(d){
+    var ps=porStatus[d.status]||(porStatus[d.status]={n:0,val:0}); ps.n++; ps.val+=Number(d.val_total)||0;
+    if(d.status==="REPROVADO"){ nRep++; return; }
+    if(d.status==="ABERTO"){ nAb++; return; }
+    base.push(d);
+  });
+  var map={}, totalKm=0, totalVal=0, totalComb=0, totalPed=0, n=base.length, dias={};
   base.forEach(function(d){
-    porStatus[d.status]=(porStatus[d.status]||0)+1;
-    if(d.status==="REPROVADO") return;
-    var kmv=parseFloat(d.dist_total)||0, val=parseFloat(d.val_total)||0;
-    totalKm+=kmv; totalVal+=val; n++;
-    var dia=ymd(d.checkin_em); if(dia)dias[dia]=1;
-    var key=(d.cpf||d.nome||"?");
-    if(!map[key])map[key]={nome:d.nome||"—",km:0,val:0,n:0};
+    var kmv=Number(d.dist_total)||0, val=Number(d.val_total)||0;
+    totalKm+=kmv; totalVal+=val; totalComb+=Number(d.val_real)||0; totalPed+=Number(d.val_pedagios)||0;
+    var dia=ymd(d.checkin_em||d.criado_em); if(dia) dias[dia]=1;
+    var key=_chaveMotorista(d);                        // CPF só com dígitos (ou nome)
+    if(!map[key]) map[key]={nome:_nomeTitulo(d.nome)||"—",km:0,val:0,n:0};
     map[key].km+=kmv; map[key].val+=val; map[key].n++;
   });
-  var nDias=0; for(var k in dias)nDias++;
-  var arr=[]; for(var k in map)arr.push(map[k]);
-  arr.sort(function(a,b){return b.km-a.km;});
-  el("stats_lbl").textContent="Filtro atual, sem reprovados · "+arr.length+" pessoas";
+  var nDias=Object.keys(dias).length, arr=[]; for(var k in map) arr.push(map[k]);
+  arr.sort(function(a,b){ return b.km-a.km; });
+  var filtro=!el("filtroAtivo").classList.contains("hide");
+  var nfmt=function(x){ return Number(x).toLocaleString("pt-BR"); };
 
-  function box(l,v){ return '<div class="stat-box"><div class="l">'+l+'</div><div class="v">'+v+'</div></div>'; }
-  var h='<div class="stat-boxes">'
-    +box("KM total",km1(totalKm)+" km")
-    +box("Valor total",brlv(totalVal))
-    +box("Viagens",n)
-    +box("Dias com viagem",nDias)
-    +box("KM média/dia",(nDias?km1(totalKm/nDias):"0")+" km")
-    +box("Valor médio/dia",brlv(nDias?totalVal/nDias:0))
-    +box("KM média/viagem",(n?km1(totalKm/n):"0")+" km")
-    +box("Valor médio/viagem",brlv(n?totalVal/n:0))
+  function box(l,v,sub){ return '<div class="stat-box"><div class="l">'+l+'</div><div class="v">'+v+'</div>'+(sub?'<div class="s">'+sub+'</div>':'')+'</div>'; }
+  var h='<div class="stats-base">Base: <b>'+nfmt(n)+' viagens enviadas</b>'
+    +' — não entram '+nfmt(nRep)+' reprovada(s) nem '+nfmt(nAb)+' em andamento (ainda sem check-out)'
+    +(filtro?' · <b>respeitando o filtro atual do painel</b>':'')+'.</div>';
+  h+='<div class="grp-title">Totais</div><div class="stat-boxes" style="margin-top:0">'
+    +box("Viagens", nfmt(n), arr.length+" pessoa(s)")
+    +box("Km rodados", km1(totalKm)+" km", nDias+" dia(s) com viagem")
+    +box("Valor total", brlv(totalVal), "combustível "+brlv(totalComb)+" + pedágios "+brlv(totalPed))
+    +'</div>';
+  h+='<div class="grp-title">Médias</div><div class="stat-boxes" style="margin-top:0">'
+    +box("Km por viagem", (n?km1(totalKm/n):"0")+" km")
+    +box("Valor por viagem", brlv(n?totalVal/n:0))
+    +box("Km por dia com viagem", (nDias?km1(totalKm/nDias):"0")+" km", "soma do dia, todas as pessoas")
+    +box("Valor por dia com viagem", brlv(nDias?totalVal/nDias:0), "soma do dia, todas as pessoas")
     +'</div>';
 
   // Indicadores de limite (verde/âmbar/vermelho conforme se aproxima/ultrapassa)
   var _rkmMed = totalKm>0 ? totalVal/totalKm : 0, _vviaMed = n>0 ? totalVal/n : 0;
-  h+='<div class="grp-title">Indicadores de limite (média do período)</div>';
+  h+='<div class="grp-title">Indicadores de limite (média do período)</div>'
+    +'<div class="grp-sub">Calculados sobre o valor total (combustível + pedágios): custo por km = valor total ÷ km rodados; valor por viagem = valor total ÷ viagens. Âmbar a partir de 90% do limite.</div>';
   h+='<div style="display:flex;flex-wrap:wrap;gap:10px">'
     + _indicador("Custo médio por km", _rkmMed, LIMITE_KM, function(v){return "R$ "+v.toFixed(2).replace(".",",")+"/km";})
     + _indicador("Valor médio por viagem", _vviaMed, LIMITE_VIAGEM, function(v){return "R$ "+v.toFixed(2).replace(".",",");})
     + '</div>';
 
-  h+='<div class="grp-title">Por pessoa</div>';
+  h+='<div class="grp-title">Por pessoa</div><div class="grp-sub">Ordenado por km rodados. Cores das duas últimas colunas em relação aos limites.</div>';
   if(!arr.length){ h+='<div style="color:var(--text3);font-size:13px">Sem dados.</div>'; }
   else{
-    h+='<div style="overflow-x:auto"><table><thead><tr><th>Nome</th><th class="right">Viagens</th><th class="right">Total km</th><th class="right">Valor</th></tr></thead><tbody>';
-    h+=arr.map(function(p){ return '<tr><td>'+esc(p.nome)+'</td><td class="right">'+p.n+'</td><td class="right" style="font-weight:600">'+km1(p.km)+' km</td><td class="right">'+brlv(p.val)+'</td></tr>'; }).join("");
+    h+='<div style="overflow-x:auto"><table><thead><tr><th>Nome</th><th class="right">Viagens</th><th class="right">Km</th><th class="right">Valor</th><th class="right">Valor/viagem</th><th class="right">R$/km</th></tr></thead><tbody>';
+    h+=arr.map(function(p){
+      var vv=p.n?p.val/p.n:0, rk=p.km>0?p.val/p.km:0;
+      return '<tr><td>'+esc(p.nome)+'</td><td class="right">'+p.n+'</td><td class="right" style="font-weight:600">'+km1(p.km)+' km</td><td class="right">'+brlv(p.val)+'</td>'
+        +'<td class="right '+_limCls(vv,LIMITE_VIAGEM)+'">'+brlv(vv)+'</td><td class="right '+(p.km>0?_limCls(rk,LIMITE_KM):'')+'">'+(p.km>0?"R$ "+rk.toFixed(2).replace(".",","):"—")+'</td></tr>';
+    }).join("");
+    h+='<tr class="tot"><td>Total ('+arr.length+' pessoas)</td><td class="right">'+nfmt(n)+'</td><td class="right">'+km1(totalKm)+' km</td><td class="right">'+brlv(totalVal)+'</td>'
+      +'<td class="right">'+brlv(_vviaMed)+'</td><td class="right">R$ '+_rkmMed.toFixed(2).replace(".",",")+'</td></tr>';
     h+='</tbody></table></div>';
   }
 
-  h+='<div class="grp-title">Por status</div>';
-  h+='<table><tbody>'+Object.keys(porStatus).map(function(s){ return '<tr><td><span class="st st-'+esc(s)+'">'+esc(statusLabel(s))+'</span></td><td class="right">'+porStatus[s]+'</td></tr>'; }).join("")+'</tbody></table>';
+  // Por status: TODAS as solicitações do filtro (inclui reprovadas e em andamento), na ordem do fluxo
+  var totN=todos.length, totV=0; Object.keys(porStatus).forEach(function(s){ totV+=porStatus[s].val; });
+  var ord=ORDEM_STATUS.filter(function(s){ return porStatus[s]; }).concat(Object.keys(porStatus).filter(function(s){ return ORDEM_STATUS.indexOf(s)<0; }));
+  h+='<div class="grp-title">Por status</div><div class="grp-sub">Todas as solicitações do filtro, inclusive reprovadas e em andamento, na ordem do fluxo.</div>';
+  h+='<table><thead><tr><th>Status</th><th class="right">Solicitações</th><th class="right">%</th><th class="right">Valor</th></tr></thead><tbody>'
+    +ord.map(function(s){ var ps=porStatus[s]; return '<tr><td><span class="st st-'+esc(s)+'">'+esc(statusLabel(s))+'</span></td><td class="right">'+nfmt(ps.n)+'</td><td class="right">'+(totN?(ps.n/totN*100).toFixed(1).replace(".",","):"0")+'%</td><td class="right">'+brlv(ps.val)+'</td></tr>'; }).join("")
+    +'<tr class="tot"><td>Total</td><td class="right">'+nfmt(totN)+'</td><td class="right">100%</td><td class="right">'+brlv(totV)+'</td></tr></tbody></table>';
 
   el("stats_corpo").innerHTML=h;
 }
