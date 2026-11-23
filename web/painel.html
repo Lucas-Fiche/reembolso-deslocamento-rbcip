@@ -271,6 +271,12 @@ tbody tr.sel{background:var(--primary-light)}
 /* Modal de detalhes (mapa + ações + dados) — réplica do painel antigo */
 .detail-modal{position:fixed;inset:0;background:rgba(15,23,42,.5);display:none;align-items:center;justify-content:center;z-index:400;padding:20px}
 .detail-modal.show{display:flex}
+/* Janela aberta = fundo congelado: a roda do mouse não rola a lista atrás.
+   scrollbar-gutter evita que a página "pule" quando a barra some. */
+html{scrollbar-gutter:stable}
+html.trava,html.trava body{overflow:hidden}
+html:has(.detail-modal.show),html:has(.modal-bg:not(.hide)),html:has(.img-modal:not(.hide)){overflow:hidden}
+#detail,.modal-bg,.img-modal{overscroll-behavior:contain}  /* só nas áreas que rolam (em todos os filhos bloquearia a rolagem interna) */
 .detail-modal-box{background:var(--surface);border-radius:12px;width:min(1180px,97vw);height:88vh;max-height:94vh;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 24px 60px rgba(0,0,0,.3);position:relative}
 .detail-modal-close{position:absolute;top:10px;right:12px;z-index:1000;width:34px;height:34px;border-radius:50%;border:none;background:rgba(255,255,255,.95);color:var(--text2);font-size:22px;line-height:1;cursor:pointer;box-shadow:var(--shadow)}
 .detail-modal-close:hover{background:#fff;color:var(--text)}
@@ -1221,6 +1227,16 @@ function _preCarregarAnexos(){
     var im=new Image(); try{ im.fetchPriority="low"; }catch(e){} im.src=driveImg(a.getAttribute("data-drive"));
   });
 }
+// Trava o fundo enquanto houver alguma janela aberta (também cobre navegadores sem :has)
+function _atualizaTrava(){
+  var aberta=!!document.querySelector(".detail-modal.show, .modal-bg:not(.hide), .img-modal:not(.hide)");
+  document.documentElement.classList.toggle("trava", aberta);
+}
+document.addEventListener("DOMContentLoaded", function(){
+  var mo=new MutationObserver(_atualizaTrava);
+  document.querySelectorAll(".detail-modal, .modal-bg, .img-modal").forEach(function(m){ mo.observe(m,{attributes:true, attributeFilter:["class"]}); });
+  _atualizaTrava();
+});
 function fecharDetalhe(){ el("detailModal").classList.remove("show"); sel=null; _marcarLinha(null); }
 
 function drow(k,v){ return '<div class="drow"><span class="k">'+k+'</span><span class="v">'+v+'</span></div>'; }
