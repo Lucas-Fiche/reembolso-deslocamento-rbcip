@@ -360,11 +360,25 @@ html:has(.detail-modal.show),html:has(.modal-bg:not(.hide)),html:has(.img-modal:
 .ed-grid input{width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:6px;background:var(--bg);color:var(--text);font-family:inherit;font-size:14px}
 .ed-sec-title{font-size:12px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;margin:16px 0 8px;display:flex;justify-content:space-between;align-items:center;gap:8px}
 .edp-row{display:flex;gap:6px;align-items:center;margin-bottom:8px}
+.edg-row{display:flex;gap:6px;align-items:center;margin-bottom:8px;padding:4px;border-radius:8px;border:1px solid transparent;flex-wrap:wrap}
+.edg-row.dup{border-color:#FCD34D;background:#FFFBEB}:root[data-theme="dark"] .edg-row.dup{background:#3A2C10;border-color:#92400E}
+.edg-row .edg-fase{flex:0 0 78px;padding:8px;border:1px solid var(--border);border-radius:6px;background:var(--bg);color:var(--text);font-family:inherit}
+.edg-row .edg-val{flex:0 0 120px;padding:8px 10px;border:1px solid var(--border);border-radius:6px;background:var(--bg);color:var(--text);font-family:inherit;font-size:14px}
+.edg-comp{flex:1 1 220px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:12.5px}
+.edg-comp a,.edi-st a{color:var(--primary);font-weight:600}
+.edg-btn{display:inline-flex;align-items:center;height:28px;box-sizing:border-box;line-height:1;width:auto;padding:0 10px;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--text2);font-size:12px;font-weight:600;cursor:pointer;margin:0;font-family:inherit}
+.edg-btn:hover{border-color:var(--text3);color:var(--text)}
+.edg-sem{color:var(--text3)}.edg-novo{color:#166534;font-weight:600}.edg-rem{color:#991B1B;font-weight:600}
+:root[data-theme="dark"] .edg-novo{color:#86EFAC}:root[data-theme="dark"] .edg-rem{color:#FCA5A5}
+.edg-pend{font-size:11px;font-weight:700;color:#92400E;background:#FEF3C7;padding:1px 7px;border-radius:999px}
+.ed-resumo{font-size:12.5px;color:var(--text2);margin:-2px 0 8px}.edg-aviso{color:#B45309;font-weight:600}
+.edi-row{display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid var(--border);flex-wrap:wrap;font-size:13px}
+.edi-lbl{flex:1 1 220px;color:var(--text)}.edi-st{flex:0 0 auto;font-size:12.5px}.edi-acoes{display:flex;gap:6px;margin-left:auto}
 .edp-row select,.edp-row input{padding:8px 8px;border:1px solid var(--border);border-radius:6px;font-family:inherit;font-size:13px;background:var(--bg);color:var(--text);min-width:0}
 .edp-row .edp-fase{flex:0 0 78px}
 .edp-row .edp-orig,.edp-row .edp-dest{flex:1 1 90px}
 .edp-row .edp-km{flex:0 0 64px;text-align:right}
-.edp-row .edp-rm{flex:0 0 auto;width:30px;height:30px;border:none;background:var(--danger-light);color:var(--danger);border-radius:6px;cursor:pointer;font-weight:700}
+.edp-row .edp-rm,.edg-row .edp-rm{flex:0 0 auto;width:30px;height:30px;border:none;background:var(--danger-light);color:var(--danger);border-radius:6px;cursor:pointer;font-weight:700}
 /* Modal de imagem (lightbox) para os anexos */
 .img-modal{position:fixed;inset:0;background:rgba(0,0,0,.86);z-index:700;display:flex;align-items:center;justify-content:center;padding:16px}
 .img-modal-inner{max-width:96vw;max-height:94vh;display:flex;flex-direction:column;gap:10px}
@@ -1271,6 +1285,7 @@ var REV_META={
   nome:{lbl:"Nome"}, cpf:{lbl:"CPF"}, rg:{lbl:"RG"}, orgao:{lbl:"Órgão"}, email:{lbl:"E-mail"}, telefone:{lbl:"Telefone"}, veiculo:{lbl:"Veículo"}, placa:{lbl:"Placa"},
   checkin_em:      {lbl:"Check-in",              fmt:function(v){ return v?dt(v):"—"; }},
   checkout_em:     {lbl:"Check-out",             fmt:function(v){ return v?dt(v):"—"; }},
+  pedagio:         {lbl:"Pedágio",               fmt:function(v){ return v==null?"(nenhum)":String(v); }},
   parada:          {lbl:"Parada",                fmt:function(v){ return v==null?"(nenhuma)":String(v).replace(/\(([\d.]+) km\)/,function(_,n){ return "("+km1(n)+" km)"; }); }},
   val_estimado:    {lbl:"Valor estimado",        fmt:brlv},
   val_real:        {lbl:"Valor (combustível)",   fmt:brlv},
@@ -1466,7 +1481,7 @@ function renderDetail(){
       ?'<span style="background:#FEF3C7;color:#92400E;font-size:10px;font-weight:700;padding:1px 6px;border-radius:4px">INFORMADO</span>'
       :'<span style="background:#F1F5F9;color:#64748B;font-size:10px;font-weight:700;padding:1px 6px;border-radius:4px">PADRÃO</span>')
       +(d.foto_consumo?' <a href="'+esc(d.foto_consumo)+'" target="_blank" style="color:var(--primary)">foto</a>':"")+_editTag(["consumo"]));
-  h+=drow("Pedágios",brlv(d.val_pedagios)+" ("+(parseInt(d.qtd_pedagios)||0)+" cobranças)");
+  h+=drow("Pedágios",brlv(d.val_pedagios)+" ("+(parseInt(d.qtd_pedagios)||0)+" cobranças)"+_editTag(["pedagio"]));
   h+=drow("Combustível", (d.usou_estimativa
       ?'<span style="background:#FEF3C7;color:#92400E;font-size:10px;font-weight:700;padding:2px 7px;border-radius:4px">ESTIMATIVA</span> R$ '+_r2v(d.preco_base)+'/L'
       :'<span style="background:#DCFCE7;color:#166534;font-size:10px;font-weight:700;padding:2px 7px;border-radius:4px">VALOR REAL</span> R$ '+_r2v(d.preco_real||d.preco_base)+'/L (cupom)')
@@ -2163,13 +2178,97 @@ function edSomarKm(id){
   var soma=0; Array.prototype.forEach.call(document.querySelectorAll("#edit_paradas .edp-km"),function(i){ soma+=parseFloat(String(i.value).replace(",","."))||0; });
   var e=el("ed-dist_total-"+id); if(e) e.value=(Math.round(soma*10)/10);
 }
+// ── Pedágios e imagens na edição (admin) ──
+var _editPedagios=[], _edImgs={}, _edCtx={};
+var ED_FOTOS=[{k:"checkin_foto",l:"Odômetro — saída"},{k:"checkout_foto",l:"Odômetro — chegada"},{k:"cupom_foto",l:"Cupom de combustível"},{k:"foto_consumo",l:"Foto do consumo"}];
+function _brl2(v){ return "R$ "+(Number(v)||0).toFixed(2).replace(".",","); }
+function edPedagioRow(pd){
+  pd=pd||{}; var box=el("edit_pedagios"); if(!box) return;
+  var d=document.createElement("div"); d.className="edg-row"; d.dataset.id=pd.id||""; d.dataset.link=pd.comprovante_link||""; d.dataset.pend=pd.pendente?"1":"";
+  d.innerHTML='<select class="edg-fase" onchange="edPedResumo()"><option value="ida"'+(pd.fase!=="volta"?" selected":"")+'>Ida</option><option value="volta"'+(pd.fase==="volta"?" selected":"")+'>Volta</option></select>'
+    +'<input class="edg-val" placeholder="Valor (R$)" inputmode="decimal" value="'+esc(pd.valor==null?"":String(pd.valor).replace(".",","))+'" oninput="edPedResumo()">'
+    +'<div class="edg-comp"></div>'
+    +'<button class="edp-rm" title="Remover pedágio" onclick="this.parentNode.remove();edPedResumo()">✕</button>';
+  box.appendChild(d); edPedComp(d); edPedResumo();
+}
+function edAddPedagio(){ edPedagioRow({fase:"ida"}); var r=el("edit_pedagios").lastChild; if(r) r.querySelector(".edg-val").focus(); }
+// Situação do comprovante de uma linha (ver / anexar / trocar / remover)
+function edPedComp(row){
+  var c=row.querySelector(".edg-comp"), link=row.dataset.link, f=row._file, h="";
+  if(f) h='<span class="edg-novo">nova: '+esc(f.name)+'</span>';
+  else if(link) h='<a href="'+esc(link)+'" target="_blank">ver comprovante</a>';
+  else h='<span class="edg-sem">sem comprovante</span>';
+  h+='<label class="edg-btn">'+(link||f?"Trocar":"Anexar")+'<input type="file" accept="image/*" hidden onchange="edPedArquivo(this)"></label>';
+  if(link||f) h+='<button class="edg-btn" onclick="edPedSemFoto(this)">Remover foto</button>';
+  if(row.dataset.pend) h+='<span class="edg-pend">aguardando análise</span>';
+  c.innerHTML=h;
+}
+function edPedArquivo(inp){ var row=inp.closest(".edg-row"); if(inp.files && inp.files[0]){ row._file=inp.files[0]; edPedComp(row); } }
+function edPedSemFoto(btn){ var row=btn.closest(".edg-row"); row._file=null; row.dataset.link=""; edPedComp(row); }
+// Soma e aviso de valores repetidos (o caso típico: pedágios lançados duas vezes)
+function edPedResumo(){
+  var rows=[].slice.call(document.querySelectorAll("#edit_pedagios .edg-row")), soma=0, cont={};
+  rows.forEach(function(r){ var v=parseFloat(String(r.querySelector(".edg-val").value).replace(",","."))||0; soma+=v;
+    var k=r.querySelector(".edg-fase").value+"|"+v.toFixed(2); cont[k]=(cont[k]||0)+1; r._k=k; });
+  rows.forEach(function(r){ r.classList.toggle("dup", cont[r._k]>1 && !/\|0\.00$/.test(r._k)); });
+  var nDup=rows.filter(function(r){ return r.classList.contains("dup"); }).length;
+  var e=el("ed_ped_resumo"); if(e) e.innerHTML=rows.length+' pedágio(s) · total <b>'+_brl2(soma)+'</b>'+(nDup?' · <span class="edg-aviso">'+nDup+' com fase e valor repetidos — confira se não estão duplicados</span>':'');
+}
+// Imagens da solicitação e dos mapas das paradas
+function edImgsRender(){
+  var box=el("edit_imgs"); if(!box) return; var h="";
+  _edCtx.imgs.forEach(function(it){
+    var st=_edImgs[it.k], atual=it.v, s;
+    if(st && st.acao==="trocar") s='<span class="edg-novo">nova: '+esc(st.file.name)+'</span>';
+    else if(st && st.acao==="remover") s='<span class="edg-rem">será removida</span>';
+    else s= atual ? '<a href="'+esc(atual)+'" target="_blank">ver imagem</a>' : '<span class="edg-sem">sem imagem</span>';
+    h+='<div class="edi-row"><span class="edi-lbl">'+esc(it.l)+'</span><span class="edi-st">'+s+'</span><span class="edi-acoes">'
+      +'<label class="edg-btn">'+(atual||st?"Trocar":"Anexar")+'<input type="file" accept="image/*" hidden onchange="edImgArquivo(\''+it.k+'\',this)"></label>'
+      +((atual && !(st&&st.acao==="remover")) || (st&&st.acao==="trocar")?'<button class="edg-btn" onclick="edImgRemover(\''+it.k+'\')">Remover</button>':'')
+      +(st?'<button class="edg-btn" onclick="edImgDesfazer(\''+it.k+'\')">Desfazer</button>':'')
+      +'</span></div>';
+  });
+  box.innerHTML=h;
+}
+function edImgArquivo(k,inp){ if(inp.files && inp.files[0]){ _edImgs[k]={acao:"trocar", file:inp.files[0]}; edImgsRender(); } }
+function edImgRemover(k){ var it=_edCtx.imgs.filter(function(x){return x.k===k;})[0]; _edImgs[k]= (it&&it.v) ? {acao:"remover"} : undefined; if(!_edImgs[k]) delete _edImgs[k]; edImgsRender(); }
+function edImgDesfazer(k){ delete _edImgs[k]; edImgsRender(); }
+// Reduz a foto (máx. 1600 px, JPEG) antes de enviar ao Drive
+function _edJpeg(file){ return new Promise(function(ok,no){
+  var r=new FileReader(); r.onerror=function(){ no(new Error("não foi possível ler "+file.name)); };
+  r.onload=function(){ var img=new Image();
+    img.onerror=function(){ no(new Error("formato não suportado em "+file.name+" (use JPG ou PNG)")); };
+    img.onload=function(){ var w=img.width,h=img.height,m=1600; if(w>m||h>m){ var f=m/Math.max(w,h); w=Math.round(w*f); h=Math.round(h*f); }
+      var c=document.createElement("canvas"); c.width=w; c.height=h; var g=c.getContext("2d"); g.fillStyle="#fff"; g.fillRect(0,0,w,h); g.drawImage(img,0,0,w,h);
+      ok(c.toDataURL("image/jpeg",.8)); };
+    img.src=r.result; };
+  r.readAsDataURL(file); }); }
+async function _edEnviarImagens(protocolo, itens){
+  var cfg=window.RBCIP_CONFIG||{};
+  if(!cfg.CARTEIRO_URL) throw new Error("envio de imagens não configurado (carteiro)");
+  var lista=[]; for(var i=0;i<itens.length;i++) lista.push({name:itens[i].name, base64: await _edJpeg(itens[i].file)});
+  var s=await sb.auth.getSession();
+  var resp=await fetchTimeout(cfg.CARTEIRO_URL,{method:"POST",redirect:"follow",headers:{"Content-Type":"text/plain"},
+    body:JSON.stringify({action:"upload_imagens", jwt:s.data.session.access_token, protocolo:protocolo, items:lista})}, 90000);
+  var out={}; try{ out=JSON.parse(await resp.text()); }catch(e){}
+  if(!out.success || !out.links) throw new Error(out.error||"o carteiro não respondeu");
+  return out.links;
+}
 async function editarDados(id){
-  var q=await sb.from("reembolsos").select("protocolo,nome,cpf,rg,orgao,email,telefone,veiculo,placa,dist_total,consumo,preco_base,preco_real,usou_estimativa").eq("id",id).maybeSingle();
-  var r=(q&&q.data)||{};
-  var pr=await sb.from("paradas").select("id,fase,ordem,origem,destino,km").eq("reembolso_id",id).order("fase").order("ordem");
-  _editParadas=(pr.data||[]);
+  var res=await Promise.all([
+    sb.from("reembolsos").select("protocolo,nome,cpf,rg,orgao,email,telefone,veiculo,placa,dist_total,consumo,preco_base,preco_real,usou_estimativa,checkin_foto,checkout_foto,cupom_foto,foto_consumo").eq("id",id).maybeSingle(),
+    sb.from("paradas").select("id,fase,ordem,origem,destino,km,maps_link").eq("reembolso_id",id).order("fase").order("ordem"),
+    sb.from("pedagios").select("id,fase,ordem,valor,comprovante_link,pendente").eq("reembolso_id",id).order("ordem")
+  ]);
+  var r=(res[0]&&res[0].data)||{};
+  _editParadas=(res[1].data||[]); _editPedagios=(res[2].data||[]); _edImgs={};
+  var cont={ida:0,volta:0};
+  _edCtx={ id:id, protocolo:r.protocolo||"",
+    imgs: ED_FOTOS.map(function(x){ return {k:x.k, l:x.l, v:r[x.k]||""}; })
+      .concat(_editParadas.map(function(p){ var n=++cont[p.fase==="volta"?"volta":"ida"];
+        return {k:"maps:"+p.id, l:"Maps "+(p.fase==="volta"?"volta":"ida")+" "+n+" ("+(p.origem||"?")+" → "+(p.destino||"?")+")", v:p.maps_link||""}; })) };
   function f(lbl,key,val,extra){ return '<div><label>'+lbl+'</label><input id="ed-'+key+'-'+id+'" value="'+esc(val==null?"":val)+'" '+(extra||"")+'></div>'; }
-  var h='<div style="font-size:12px;color:var(--text3);margin:8px 0 4px">Protocolo <b>'+esc(r.protocolo||"")+'</b> · os valores em R$ são recalculados pelo banco a partir de distância, consumo e preço.</div>';
+  var h='<div style="font-size:12px;color:var(--text3);margin:8px 0 4px">Protocolo <b>'+esc(r.protocolo||"")+'</b> · os valores em R$ são recalculados pelo banco a partir de distância, consumo, preço e pedágios.</div>';
   h+='<div class="ed-grid">';
   h+=f("Nome","nome",r.nome)+f("CPF","cpf",r.cpf)+f("RG","rg",r.rg)+f("Órgão","orgao",r.orgao)+f("E-mail","email",r.email)+f("Telefone","telefone",r.telefone)+f("Veículo","veiculo",r.veiculo)+f("Placa","placa",r.placa);
   h+=f("Distância (km)","dist_total",r.dist_total,'inputmode="decimal"')+f("Consumo (km/L)","consumo",r.consumo,'inputmode="decimal"')+f("Preço base","preco_base",r.preco_base,'inputmode="decimal"')+f("Preço real","preco_real",r.preco_real,'inputmode="decimal"');
@@ -2178,48 +2277,94 @@ async function editarDados(id){
   h+='<div class="ed-sec-title"><span>Paradas / trechos</span><button class="btn" onclick="edSomarKm(\''+id+'\')">Σ Somar km → Distância</button></div>';
   h+='<div id="edit_paradas"></div>';
   h+='<button class="btn" style="width:100%;margin-top:4px" onclick="edAddParada()">+ Adicionar parada</button>';
+  h+='<div class="ed-sec-title"><span>Pedágios</span></div><div class="ed-resumo" id="ed_ped_resumo"></div>';
+  h+='<div id="edit_pedagios"></div>';
+  h+='<button class="btn" style="width:100%;margin-top:4px" onclick="edAddPedagio()">+ Adicionar pedágio</button>';
+  h+='<div class="ed-sec-title"><span>Imagens</span></div>';
+  h+='<div id="edit_imgs"></div>';
   h+='<label style="display:block;font-size:12px;font-weight:600;color:var(--text2);margin:14px 0 4px">Motivo da alteração <span style="font-weight:500;color:var(--text3)">(recomendado — aparece na conversa da análise junto com o que foi alterado)</span></label>'
-    +'<textarea id="ed-motivo-'+id+'" rows="2" style="width:100%;padding:9px 11px;border:1px solid var(--border);border-radius:6px;font-family:inherit;font-size:13.5px;background:var(--bg);color:var(--text);resize:vertical" placeholder="Ex.: preço ajustado para a média dos dois cupons (R$ 3,78 e R$ 4,37)"></textarea>';
+    +'<textarea id="ed-motivo-'+id+'" rows="2" style="width:100%;padding:9px 11px;border:1px solid var(--border);border-radius:6px;font-family:inherit;font-size:13.5px;background:var(--bg);color:var(--text);resize:vertical" placeholder="Ex.: removidos os 2 pedágios lançados em duplicidade"></textarea>';
   h+='<div style="margin-top:16px;display:flex;gap:8px;justify-content:flex-end"><button class="btn" onclick="fecharEdit()">Cancelar</button><button class="btn" style="background:var(--primary);color:#fff;border-color:var(--primary)" onclick="salvarEdicao(\''+id+'\')">Salvar alterações</button></div>';
   el("edit_corpo").innerHTML=h;
-  Array.prototype.forEach.call(_editParadas, function(p){ edParadaRow(p); });
+  _editParadas.forEach(function(p){ edParadaRow(p); });
+  _editPedagios.forEach(function(p){ edPedagioRow(p); });
+  edPedResumo(); edImgsRender();
   el("modalEdit").classList.remove("hide");
 }
 async function salvarEdicao(id){
   function v(key){ var e=el("ed-"+key+"-"+id); return e?e.value.trim():null; }
   function num(key){ var s=v(key); if(!s)return null; var n=parseFloat(String(s).replace(",",".")); return isNaN(n)?null:n; }
-  var upd={ nome:v("nome")||null, cpf:v("cpf")||null, rg:v("rg")||null, orgao:v("orgao")||null, email:v("email")||null, telefone:v("telefone")||null, veiculo:v("veiculo")||null, placa:v("placa")||null,
-    dist_total:num("dist_total"), consumo:num("consumo"), preco_base:num("preco_base"), preco_real:num("preco_real"),
-    usou_estimativa: el("ed-usou-"+id)?el("ed-usou-"+id).checked:false };
-  var { error }=await sb.from("reembolsos").update(upd).eq("id",id);
-  if(error){ alert("Erro ao salvar: "+error.message); return; }
-  // ── Paradas: atualiza existentes, insere novas, apaga as removidas ──
-  var rows=Array.prototype.slice.call(document.querySelectorAll("#edit_paradas .edp-row"));
-  var mantidos={}, idaOrd=0, volOrd=0;
-  for(var k=0;k<rows.length;k++){
-    var row=rows[k];
-    var fase=row.querySelector(".edp-fase").value;
-    var orig=row.querySelector(".edp-orig").value.trim();
-    var dest=row.querySelector(".edp-dest").value.trim();
-    var km=parseFloat(String(row.querySelector(".edp-km").value).replace(",","."))||0;
-    if(!orig && !dest && !km){ continue; } // linha vazia: ignora
-    var ordem=(fase==="volta")?(++volOrd):(++idaOrd);
-    var pid=row.dataset.id;
-    if(pid){ mantidos[pid]=true; var u=await sb.from("paradas").update({fase:fase,ordem:ordem,origem:orig,destino:dest,km:km}).eq("id",pid); if(u.error){ alert("Erro ao salvar parada: "+u.error.message); return; } }
-    else { var ins=await sb.from("paradas").insert({reembolso_id:id,fase:fase,ordem:ordem,origem:orig,destino:dest,km:km}); if(ins.error){ alert("Erro ao inserir parada: "+ins.error.message); return; } }
-  }
-  for(var m=0;m<_editParadas.length;m++){ var op=_editParadas[m]; if(op.id && !mantidos[op.id]){ await sb.from("paradas").delete().eq("id",op.id); } }
-  // Motivo digitado vai para a conversa (com data), ao lado do registro automático do que mudou
-  var motivo=(el("ed-motivo-"+id)&&el("ed-motivo-"+id).value.trim())||"";
-  if(motivo){
-    try{
-      var cur=await sb.from("reembolsos").select("validacao").eq("id",id).maybeSingle();
-      var base=(cur && cur.data && cur.data.validacao)?cur.data.validacao+" | ":"";
-      await sb.from("reembolsos").update({validacao: base+"ADMIN ("+(QUEM||"admin")+" · "+dt(new Date().toISOString())+" · Edição de dados): "+motivo.replace(/\s+\|\s+/g," / ")}).eq("id",id);
-    }catch(e){}
-  }
-  msgTopo("Dados atualizados ✓");
-  fecharEdit();
+  // ── validação dos pedágios antes de mexer em qualquer coisa ──
+  var pRows=[].slice.call(document.querySelectorAll("#edit_pedagios .edg-row"));
+  for(var a=0;a<pRows.length;a++){ var vv=parseFloat(String(pRows[a].querySelector(".edg-val").value).replace(",","."));
+    if(!(vv>0)){ alert("Informe o valor do pedágio "+(a+1)+" (ou remova a linha)."); pRows[a].querySelector(".edg-val").focus(); return; } }
+  var nDup=pRows.filter(function(r){ return r.classList.contains("dup"); }).length;
+  if(nDup && !confirm("Há "+nDup+" pedágio(s) com a mesma fase e o mesmo valor. Salvar assim mesmo?")) return;
+  bloquear("Salvando alterações…");
+  try{
+    // ── 1) envia as imagens novas primeiro: se falhar, nada é alterado ──
+    var envios=[];
+    Object.keys(_edImgs).forEach(function(k){ if(_edImgs[k].acao==="trocar") envios.push({name:"admin_"+k.replace(":","_")+"_"+Date.now(), file:_edImgs[k].file, k:k}); });
+    pRows.forEach(function(r,ix){ if(r._file) envios.push({name:"admin_pedagio_"+(ix+1)+"_"+Date.now(), file:r._file, row:r}); });
+    var links={};
+    if(envios.length){
+      el("busyMsg").textContent="Enviando "+envios.length+" imagem(ns)…";
+      try{ links=await _edEnviarImagens(_edCtx.protocolo, envios); }
+      catch(e){ alert("Não foi possível enviar as imagens: "+(e&&e.message||e)+"\nNenhuma alteração foi salva."); return; }
+      el("busyMsg").textContent="Salvando alterações…";
+    }
+    var linkDe=function(nome){ return links[nome]||null; };
+    // ── 2) dados + fotos da solicitação ──
+    var upd={ nome:v("nome")||null, cpf:v("cpf")||null, rg:v("rg")||null, orgao:v("orgao")||null, email:v("email")||null, telefone:v("telefone")||null, veiculo:v("veiculo")||null, placa:v("placa")||null,
+      dist_total:num("dist_total"), consumo:num("consumo"), preco_base:num("preco_base"), preco_real:num("preco_real"),
+      usou_estimativa: el("ed-usou-"+id)?el("ed-usou-"+id).checked:false };
+    ED_FOTOS.forEach(function(x){ var st=_edImgs[x.k]; if(!st) return;
+      if(st.acao==="remover") upd[x.k]=null;
+      else { var e=envios.filter(function(z){return z.k===x.k;})[0]; var lk=e&&linkDe(e.name); if(lk) upd[x.k]=lk; } });
+    var { error }=await sb.from("reembolsos").update(upd).eq("id",id);
+    if(error){ alert("Erro ao salvar: "+error.message); return; }
+    // ── 3) paradas: atualiza existentes, insere novas, apaga as removidas ──
+    var rows=[].slice.call(document.querySelectorAll("#edit_paradas .edp-row"));
+    var mantidos={}, idaOrd=0, volOrd=0;
+    for(var k=0;k<rows.length;k++){
+      var row=rows[k];
+      var fase=row.querySelector(".edp-fase").value;
+      var orig=row.querySelector(".edp-orig").value.trim();
+      var dest=row.querySelector(".edp-dest").value.trim();
+      var km=parseFloat(String(row.querySelector(".edp-km").value).replace(",","."))||0;
+      if(!orig && !dest && !km){ continue; } // linha vazia: ignora
+      var ordem=(fase==="volta")?(++volOrd):(++idaOrd);
+      var pid=row.dataset.id;
+      if(pid){ mantidos[pid]=true;
+        var pu={fase:fase,ordem:ordem,origem:orig,destino:dest,km:km}, st=_edImgs["maps:"+pid];
+        if(st && st.acao==="remover") pu.maps_link=null;
+        else if(st && st.acao==="trocar"){ var em=envios.filter(function(z){return z.k==="maps:"+pid;})[0]; if(em && linkDe(em.name)) pu.maps_link=linkDe(em.name); }
+        var u=await sb.from("paradas").update(pu).eq("id",pid); if(u.error){ alert("Erro ao salvar parada: "+u.error.message); return; } }
+      else { var ins=await sb.from("paradas").insert({reembolso_id:id,fase:fase,ordem:ordem,origem:orig,destino:dest,km:km}); if(ins.error){ alert("Erro ao inserir parada: "+ins.error.message); return; } }
+    }
+    for(var m=0;m<_editParadas.length;m++){ var op=_editParadas[m]; if(op.id && !mantidos[op.id]){ await sb.from("paradas").delete().eq("id",op.id); } }
+    // ── 4) pedágios: atualiza, inclui e remove ──
+    var pedMantidos={};
+    for(var q=0;q<pRows.length;q++){
+      var pr=pRows[q], pdId=pr.dataset.id, val=Math.round(parseFloat(String(pr.querySelector(".edg-val").value).replace(",","."))*100)/100;
+      var dado={fase:pr.querySelector(".edg-fase").value, ordem:q+1, valor:val, comprovante_link:pr.dataset.link||null};
+      if(pr._file){ var ep=envios.filter(function(z){return z.row===pr;})[0]; if(ep && linkDe(ep.name)) dado.comprovante_link=linkDe(ep.name); }
+      if(pdId){ pedMantidos[pdId]=true; var pu2=await sb.from("pedagios").update(dado).eq("id",pdId); if(pu2.error){ alert("Erro ao salvar pedágio: "+pu2.error.message); return; } }
+      else { dado.reembolso_id=id; dado.pendente=false; var pi=await sb.from("pedagios").insert(dado); if(pi.error){ alert("Erro ao incluir pedágio: "+pi.error.message); return; } }
+    }
+    for(var w=0;w<_editPedagios.length;w++){ var opd=_editPedagios[w]; if(opd.id && !pedMantidos[opd.id]){ var pdl=await sb.from("pedagios").delete().eq("id",opd.id); if(pdl.error){ alert("Erro ao remover pedágio: "+pdl.error.message); return; } } }
+    // ── 5) motivo digitado vai para a conversa (com data), ao lado do registro automático do que mudou ──
+    var motivo=(el("ed-motivo-"+id)&&el("ed-motivo-"+id).value.trim())||"";
+    if(motivo){
+      try{
+        var cur=await sb.from("reembolsos").select("validacao").eq("id",id).maybeSingle();
+        var base=(cur && cur.data && cur.data.validacao)?cur.data.validacao+" | ":"";
+        await sb.from("reembolsos").update({validacao: base+"ADMIN ("+(QUEM||"admin")+" · "+dt(new Date().toISOString())+" · Edição de dados): "+motivo.replace(/\s+\|\s+/g," / ")}).eq("id",id);
+      }catch(e){}
+    }
+    msgTopo("Dados atualizados ✓","ok");
+    fecharEdit();
+  } finally { desbloquear(); }
   await recarregarUm(id); abrirDetalhe(id);
 }
 async function carregarPrecos(){
